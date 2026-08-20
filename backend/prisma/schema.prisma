@@ -29,6 +29,11 @@ enum NotificationType {
   post_repost
 }
 
+enum ReactionType {
+  like
+  dislike
+}
+
 model User {
   id                    String   @id @default(uuid())
   email                 String   @unique
@@ -39,6 +44,8 @@ model User {
   city                  String?
   about                 String?
   tags                  String[] @default([])
+  avatarUrl             String?
+  coverUrl              String?
   quietHours            Boolean  @default(true)
   showPresence          Boolean  @default(true)
   allowStrangerInvites  Boolean  @default(false)
@@ -46,9 +53,11 @@ model User {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  posts                 Post[]
-  postLikes             PostLike[]
+  posts                 Post[]   @relation("PostAuthor")
+  wallPosts             Post[]   @relation("PostWallOwner")
+  postReactions         PostReaction[]
   comments              Comment[]
+  galleryImages         GalleryImage[]
   sentMessages          Message[]
   threadParticipants    ThreadParticipant[]
   communityMemberships  CommunityMembership[]
@@ -70,10 +79,17 @@ model User {
 model Post {
   id             String   @id @default(uuid())
   authorId       String
-  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author         User     @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  /// Чья это стена — обычно совпадает с authorId (свой пост на своей
+  /// стене), но может отличаться: User A может написать на стене User B
+  /// (authorId = A, wallOwnerId = B). Обязательное поле — у существующих
+  /// записей бэкфилится из authorId при миграции (см. migration.sql).
+  wallOwnerId    String
+  wallOwner      User     @relation("PostWallOwner", fields: [wallOwnerId], references: [id], onDelete: Cascade)
   kind           PostKind @default(friends)
   text           String
   likesCount     Int      @default(0)
+  dislikesCount  Int      @default(0)
   commentsCount  Int      @default(0)
   viewsCount     Int      @default(0)
   repostsCount   Int      @default(0)
@@ -82,7 +98,7 @@ model Post {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  likes          PostLike[]
+  reactions      PostReaction[]
   comments       Comment[]
   notifications  Notification[]
 
@@ -96,19 +112,39 @@ model Post {
 
   @@unique([authorId, repostOfId])
   @@index([authorId, createdAt])
+  @@index([wallOwnerId, createdAt])
   @@map("posts")
 }
 
-model PostLike {
+/// Изображение в личной галерее пользователя. Файл на диске удаляется
+/// сервисом при удалении строки (см. GalleryService.remove) — Prisma
+/// cascade здесь чистит только БД, не файловую систему.
+model GalleryImage {
   id        String   @id @default(uuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
   createdAt DateTime @default(now())
 
+  @@index([userId, createdAt])
+  @@map("gallery_images")
+}
+
+/// Единая запись реакции на пост — like/dislike взаимоисключающие: один
+/// пользователь может иметь максимум одну реакцию на пост (переключение
+/// типа — update существующей строки, а не вторая независимая таблица).
+/// Название модели/таблицы обобщено с post_likes при добавлении dislike.
+model PostReaction {
+  id        String       @id @default(uuid())
+  postId    String
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ReactionType @default(like)
+  createdAt DateTime     @default(now())
+
   @@unique([postId, userId])
-  @@map("post_likes")
+  @@map("post_reactions")
 }
 
 /// Диалог. Сейчас всегда 1:1 (см. ThreadsService.getOrCreateDirectThread),
@@ -231,11 +267,19 @@ model Comment {
   authorId      String
   author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   text          String
+  /// Ответ на комментарий — только один уровень вложенности: если parentId
+  /// сам является ответом, сервис перепривязывает к его родителю (см.
+  /// PostsService.createComment), поэтому здесь всегда либо null, либо id
+  /// комментария верхнего уровня.
+  parentId      String?
+  parent        Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]      @relation("CommentReplies")
   createdAt     DateTime       @default(now())
 
   notifications Notification[]
 
   @@index([postId, createdAt])
+  @@index([parentId])
   @@map("comments")
 }
 

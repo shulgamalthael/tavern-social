@@ -6,9 +6,13 @@ import { mapPost, type PostResponse } from './map-post';
 
 export interface ToggleLikeResult {
   likes: number;
+  dislikes: number;
   isLikedByMe: boolean;
+  isDislikedByMe: boolean;
 }
 
+/** Лайк/дизлайк взаимоисключающие на backend (единая реакция) — ставя лайк
+ * поверх активного дизлайка, ответ уже несёт `isDislikedByMe: false`. */
 export async function togglePostLike(postId: string, like: boolean): Promise<ToggleLikeResult> {
   const token = await getSessionToken();
   if (!token) throw new Error('Сессия истекла — обновите страницу');
@@ -18,5 +22,10 @@ export async function togglePostLike(postId: string, like: boolean): Promise<Tog
     token,
   });
   const mapped = mapPost(post);
-  return { likes: mapped.likes, isLikedByMe: post.isLikedByMe };
+  return {
+    likes: mapped.likes,
+    dislikes: mapped.dislikes,
+    isLikedByMe: post.isLikedByMe,
+    isDislikedByMe: post.isDislikedByMe,
+  };
 }

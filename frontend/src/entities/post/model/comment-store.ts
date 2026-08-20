@@ -13,7 +13,7 @@ interface CommentState {
 
 interface CommentActions {
   loadComments: (postId: string) => Promise<void>;
-  addComment: (postId: string, text: string) => Promise<void>;
+  addComment: (postId: string, text: string, parentId?: string) => Promise<void>;
 }
 
 export type CommentStore = CommentState & CommentActions;
@@ -48,10 +48,10 @@ export const useCommentStore = create<CommentStore>((set) => ({
       }));
     }
   },
-  addComment: async (postId, text) => {
+  addComment: async (postId, text, parentId) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    const comment = await createCommentAction(postId, trimmed);
+    const comment = await createCommentAction(postId, trimmed, parentId);
     set((state) => ({
       commentsByPostId: {
         ...state.commentsByPostId,

@@ -23,6 +23,14 @@ export class PostsController {
     return this.postsService.listFeed(currentUser.id);
   }
 
+  @Get('wall/:userId')
+  async listWall(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('userId') userId: string,
+  ): Promise<PostDto[]> {
+    return this.postsService.listWall(userId, currentUser.id);
+  }
+
   @HttpPost()
   async create(
     @CurrentUser() currentUser: RequestUser,
@@ -69,6 +77,26 @@ export class PostsController {
     @Param('id') postId: string,
   ): Promise<PostDto> {
     return this.postsService.unlike(postId, currentUser.id);
+  }
+
+  // Лайк и дизлайк взаимоисключающие (единая реакция, см.
+  // PostsService.setReaction) — дизлайк не шлёт уведомление: это приватный
+  // сигнал автору контента не нужен, в отличие от лайка/репоста/комментария.
+  @HttpPost(':id/dislikes')
+  async dislike(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('id') postId: string,
+  ): Promise<PostDto> {
+    const { post } = await this.postsService.dislike(postId, currentUser.id);
+    return post;
+  }
+
+  @Delete(':id/dislikes')
+  async undislike(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('id') postId: string,
+  ): Promise<PostDto> {
+    return this.postsService.undislike(postId, currentUser.id);
   }
 
   @HttpPost(':id/reposts')

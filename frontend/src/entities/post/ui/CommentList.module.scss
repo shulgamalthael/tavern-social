@@ -9,7 +9,38 @@
 
 .comment-list__item {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comment-list__row {
+  display: flex;
   gap: 10px;
+}
+
+.comment-list__replies {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 0 34px;
+  padding: 0;
+  list-style: none;
+}
+
+.comment-list__reply-button {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
 }
 
 .comment-list__body {

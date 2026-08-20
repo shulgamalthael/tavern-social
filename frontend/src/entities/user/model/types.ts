@@ -6,10 +6,22 @@ export interface CurrentUser {
   tagline: string;
   /** Переопределяет --tavern-accent для этого пользователя. */
   accent?: string;
+  about: string | null;
+  city: string | null;
+  tags: string[];
+  avatarUrl: string | null;
+  coverUrl: string | null;
 }
 
-/** Поля профиля, которые пользователь может редактировать в Settings. */
-export type EditableProfile = Pick<CurrentUser, 'name' | 'initials' | 'tagline'>;
+/** Поля профиля, которые пользователь может редактировать на странице
+ * профиля/в Settings — см. `features/edit-profile`. Partial: патч может
+ * затрагивать только часть полей (например, только что загруженный аватар). */
+export type EditableProfile = Partial<
+  Pick<
+    CurrentUser,
+    'name' | 'initials' | 'tagline' | 'about' | 'city' | 'tags' | 'avatarUrl' | 'coverUrl'
+  >
+>;
 
 /** Тумблеры приватности — см. widgets/settings, SETTINGS_TOGGLES. */
 export interface PrivacySettings {

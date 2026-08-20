@@ -10,6 +10,7 @@ export interface CommentAuthorResponse {
 export interface CommentResponse {
   id: string;
   postId: string;
+  parentId: string | null;
   author: CommentAuthorResponse;
   text: string;
   createdAt: string;
@@ -19,6 +20,7 @@ export function mapComment(comment: CommentResponse): Comment {
   return {
     id: comment.id,
     postId: comment.postId,
+    parentId: comment.parentId,
     author: comment.author.name,
     initials: getInitials(comment.author.name),
     meta: formatRelativeTime(comment.createdAt),

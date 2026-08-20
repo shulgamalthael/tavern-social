@@ -9,6 +9,8 @@ export interface PublicProfile {
   city: string | null;
   about: string | null;
   tags: string[];
+  avatarUrl: string | null;
+  coverUrl: string | null;
 }
 
 /** Профиль текущего пользователя — включает приватные поля (email, настройки). */

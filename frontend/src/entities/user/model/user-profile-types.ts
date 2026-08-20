@@ -8,6 +8,8 @@ export interface UserProfile {
   city: string | null;
   about: string | null;
   tags: string[];
+  avatarUrl: string | null;
+  coverUrl: string | null;
   isFriend: boolean;
   hasOutgoingRequest: boolean;
   hasIncomingRequest: boolean;

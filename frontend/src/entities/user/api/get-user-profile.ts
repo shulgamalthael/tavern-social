@@ -12,6 +12,8 @@ interface UserProfileResponse {
   city: string | null;
   about: string | null;
   tags: string[];
+  avatarUrl: string | null;
+  coverUrl: string | null;
   friendship: {
     isFriend: boolean;
     hasOutgoingRequest: boolean;
@@ -33,6 +35,8 @@ export async function getUserProfile(userId: string): Promise<UserProfile> {
     city: user.city,
     about: user.about,
     tags: user.tags,
+    avatarUrl: user.avatarUrl,
+    coverUrl: user.coverUrl,
     isFriend: user.friendship.isFriend,
     hasOutgoingRequest: user.friendship.hasOutgoingRequest,
     hasIncomingRequest: user.friendship.hasIncomingRequest,

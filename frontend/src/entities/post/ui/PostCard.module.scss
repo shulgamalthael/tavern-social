@@ -21,6 +21,11 @@
   color: var(--tavern-muted);
 }
 
+.post__wall-owner {
+  color: var(--tavern-accent);
+  font-weight: 500;
+}
+
 .post__more-button {
   display: grid;
   place-items: center;
@@ -133,6 +138,14 @@
 .post__reaction--active {
   background: var(--tavern-soft);
   color: var(--tavern-accent);
+  font-weight: 500;
+}
+
+// Дизлайк — свой цвет вместо акцентного: иначе активные лайк и дизлайк
+// выглядели бы одинаково «одобрительно» рядом друг с другом.
+.post__reaction--active-negative {
+  background: var(--tavern-soft);
+  color: var(--tavern-danger);
   font-weight: 500;
 }
 

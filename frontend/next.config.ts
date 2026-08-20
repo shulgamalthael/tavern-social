@@ -37,6 +37,15 @@ const nextConfig: NextConfig = {
         source: '/socket.io/:path*',
         destination: `${BACKEND_URL}/socket.io/:path*`,
       },
+      // Тот же самый повод, что и для socket.io выше: `<img src="/uploads/...">`
+      // рендерится прямо в браузере (не через backendFetch, который
+      // server-only), поэтому должен быть на одном origin со страницей, а не
+      // тянуться напрямую с backend-порта — иначе mixed-content/CORS в тех
+      // же сценариях (ngrok, LAN, прод-домен без открытого backend наружу).
+      {
+        source: '/uploads/:path*',
+        destination: `${BACKEND_URL}/uploads/:path*`,
+      },
     ];
   },
 };

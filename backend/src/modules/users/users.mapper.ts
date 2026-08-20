@@ -17,6 +17,8 @@ export function toPublicProfile(user: User): PublicProfile {
     city: user.city,
     about: user.about,
     tags: user.tags,
+    avatarUrl: user.avatarUrl,
+    coverUrl: user.coverUrl,
   };
 }
 

@@ -12,13 +12,18 @@ import styles from './PostComposer.module.scss';
 export interface PostComposerProps {
   /** `feed` — полный композер с чипами, `wall` — однострочная запись на стене. */
   variant?: 'feed' | 'wall';
+  /** Чья стена — если не задано, публикация идёт на свою собственную (см.
+   * `entities/post`, `publishPost`). Задаётся на `UserProfileView`, когда
+   * пишешь на стене другого пользователя. */
+  wallOwnerId?: string;
 }
 
 /**
- * Публикация поста нужна и в ленте, и на стене профиля — один feature-компонент
- * с двумя визуальными вариантами вместо дублирования логики черновика/сабмита.
+ * Публикация поста нужна и в ленте, и на стене профиля (своей и чужой) —
+ * один feature-компонент с двумя визуальными вариантами вместо дублирования
+ * логики черновика/сабмита.
  */
-export function PostComposer({ variant = 'feed' }: PostComposerProps) {
+export function PostComposer({ variant = 'feed', wallOwnerId }: PostComposerProps) {
   const { currentUser } = useCurrentUser();
   const publishPost = usePostStore((state) => state.publishPost);
   const [draft, setDraft] = useState('');
@@ -30,7 +35,7 @@ export function PostComposer({ variant = 'feed' }: PostComposerProps) {
     setPending(true);
     setError(null);
     try {
-      await publishPost({ text: draft });
+      await publishPost({ text: draft, wallOwnerId });
       setDraft('');
     } catch (submitError) {
       setError(
@@ -42,14 +47,15 @@ export function PostComposer({ variant = 'feed' }: PostComposerProps) {
   };
 
   if (variant === 'wall') {
+    const isOwnWall = !wallOwnerId || wallOwnerId === currentUser.id;
     return (
       <Card className={cn(styles.composer, styles['composer--wall'])}>
-        <Avatar initials={currentUser.initials} />
+        <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} />
         <input
           className={styles['composer__input']}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Записать на своей стене…"
+          placeholder={isOwnWall ? 'Записать на своей стене…' : 'Написать на этой стене…'}
         />
         <Button onClick={submit} disabled={isPending}>
           Записать
@@ -62,7 +68,7 @@ export function PostComposer({ variant = 'feed' }: PostComposerProps) {
   return (
     <Card className={styles.composer}>
       <div className={styles.composer__top}>
-        <Avatar initials={currentUser.initials} />
+        <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} />
         <textarea
           className={styles['composer__textarea']}
           rows={2}

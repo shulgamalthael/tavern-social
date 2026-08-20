@@ -1,0 +1,93 @@
+@use '@/shared/styles/mixins' as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form__title {
+  margin: 0 0 14px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.form__images {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.form__cover-preview {
+  position: relative;
+  height: clamp(100px, 18vw, 150px);
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.form__cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Селектор с тегом (не просто класс) — гарантированно перебивает сброс
+// padding/background из ImageUploadButton__trigger независимо от порядка
+// подключения CSS-модулей.
+button.form__cover-trigger {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
+  font-size: 12.5px;
+}
+
+.form__avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+button.form__avatar-trigger {
+  padding: 7px 13px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+
+  input,
+  textarea {
+    @include control;
+    background: var(--tavern-sunk);
+    outline: none;
+    resize: vertical;
+  }
+}
+
+.form__field-label {
+  font-size: 13px;
+  color: var(--tavern-muted);
+}
+
+.form__error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--tavern-danger);
+}
+
+.form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}

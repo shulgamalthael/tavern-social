@@ -5,6 +5,8 @@ export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
 
 export interface AvatarProps {
   initials: string;
+  /** Картинка аватара — если задана, рисуется вместо инициалов. */
+  src?: string | null;
   size?: AvatarSize;
   /** Точка «в зале» — пользователь сейчас онлайн. */
   online?: boolean;
@@ -13,7 +15,7 @@ export interface AvatarProps {
   className?: string;
 }
 
-export function Avatar({ initials, size = 'md', online, bordered, className }: AvatarProps) {
+export function Avatar({ initials, src, size = 'md', online, bordered, className }: AvatarProps) {
   return (
     <span
       className={cn(
@@ -23,7 +25,12 @@ export function Avatar({ initials, size = 'md', online, bordered, className }: A
         className,
       )}
     >
-      {initials}
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- произвольные загруженные аватары, не подходят под статическую оптимизацию next/image
+        <img className={styles['avatar__image']} src={src} alt="" />
+      ) : (
+        initials
+      )}
       {online && <span className={styles['avatar__presence-dot']} aria-hidden="true" />}
     </span>
   );

@@ -147,7 +147,11 @@ async function main() {
 
   await prisma.post.createMany({
     data: [
-      { authorId: dina.id, text: 'Сегодня вечером собираем стол на «Каркассон». Кто с нами?' },
+      {
+        authorId: dina.id,
+        wallOwnerId: dina.id,
+        text: 'Сегодня вечером собираем стол на «Каркассон». Кто с нами?',
+      },
     ],
   });
 
@@ -157,6 +161,7 @@ async function main() {
     create: {
       id: 'seed-post-recipe',
       authorId: mark.id,
+      wallOwnerId: mark.id,
       text: 'Заварил новый сбор — заходите на стол, пока горячий.',
       // Совпадает с одним комментарием и одним репостом, заведёнными ниже —
       // сид не идёт через PostsService, поэтому счётчики выставлены явно.
@@ -170,6 +175,7 @@ async function main() {
     create: {
       id: 'seed-post-herb-map',
       authorId: demo.id,
+      wallOwnerId: demo.id,
       kind: 'communities',
       communityId: herbClub.id,
       text: 'Составила карту зарослей за старым мостом — держите на будущий сбор.',
@@ -181,6 +187,7 @@ async function main() {
     create: {
       id: 'seed-post-repost-recipe',
       authorId: dina.id,
+      wallOwnerId: dina.id,
       repostOfId: recipePost.id,
       text: '',
     },

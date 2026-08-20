@@ -21,8 +21,10 @@ export function FeedWidget() {
   const postsError = usePostStore((state) => state.error);
   const loadPosts = usePostStore((state) => state.loadPosts);
   const likedPostIds = usePostStore((state) => state.likedPostIds);
+  const dislikedPostIds = usePostStore((state) => state.dislikedPostIds);
   const repostedPostIds = usePostStore((state) => state.repostedPostIds);
   const toggleLike = usePostStore((state) => state.toggleLike);
+  const toggleDislike = usePostStore((state) => state.toggleDislike);
   const toggleRepost = usePostStore((state) => state.toggleRepost);
   const [activeTab, setActiveTab] = useState<FeedTab>(FEED_TABS[0]);
 
@@ -93,8 +95,10 @@ export function FeedWidget() {
                 key={post.id}
                 post={post}
                 isLiked={Boolean(likedPostIds[targetId])}
+                isDisliked={Boolean(dislikedPostIds[targetId])}
                 isReposted={Boolean(repostedPostIds[targetId])}
                 onToggleLike={() => toggleLike(targetId)}
+                onToggleDislike={() => toggleDislike(targetId)}
                 onToggleRepost={() => toggleRepost(targetId)}
               />
             );

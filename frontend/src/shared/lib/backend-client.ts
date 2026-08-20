@@ -71,3 +71,33 @@ export async function backendFetch<T>(
 
   return (await response.json()) as T;
 }
+
+/**
+ * Как `backendFetch`, но для multipart-запросов (загрузка файлов) — тело
+ * `FormData`, а не JSON. `Content-Type` намеренно не выставляется вручную:
+ * `fetch` сам подставит `multipart/form-data; boundary=...` из объекта
+ * `FormData`, а руками этот boundary не собрать.
+ */
+export async function backendUpload<T>(
+  path: string,
+  options: { token?: string | null; formData: FormData },
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${BACKEND_URL}${path}`, {
+      method: 'POST',
+      headers: options.token ? { Authorization: `Bearer ${options.token}` } : undefined,
+      body: options.formData,
+      cache: 'no-store',
+    });
+  } catch {
+    throw new BackendError('Сервер недоступен, попробуйте позже', 503);
+  }
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    throw new BackendError(extractErrorMessage(errorBody), response.status);
+  }
+
+  return (await response.json()) as T;
+}

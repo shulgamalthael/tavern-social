@@ -19,3 +19,7 @@ npm-debug.log*
 
 # generated
 prisma/generated
+
+# user uploads (local disk storage — see common/lib/upload.ts)
+/uploads/*
+!/uploads/.gitkeep

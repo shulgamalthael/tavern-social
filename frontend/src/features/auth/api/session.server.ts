@@ -10,6 +10,11 @@ interface MeProfileResponse {
   name: string;
   tagline: string;
   accent: string | null;
+  about: string | null;
+  city: string | null;
+  tags: string[];
+  avatarUrl: string | null;
+  coverUrl: string | null;
 }
 
 function toCurrentUser(profile: MeProfileResponse): CurrentUser {
@@ -19,6 +24,11 @@ function toCurrentUser(profile: MeProfileResponse): CurrentUser {
     initials: getInitials(profile.name),
     tagline: profile.tagline,
     accent: profile.accent ?? undefined,
+    about: profile.about,
+    city: profile.city,
+    tags: profile.tags,
+    avatarUrl: profile.avatarUrl,
+    coverUrl: profile.coverUrl,
   };
 }
 

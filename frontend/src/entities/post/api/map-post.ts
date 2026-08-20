@@ -10,34 +10,42 @@ export interface PostAuthorResponse {
 export interface PostSummaryResponse {
   id: string;
   author: PostAuthorResponse;
+  wallOwnerId: string;
+  wallOwnerName: string;
   text: string;
   createdAt: string;
   likesCount: number;
+  dislikesCount: number;
   commentsCount: number;
   repostsCount: number;
   isLikedByMe: boolean;
+  isDislikedByMe: boolean;
   isRepostedByMe: boolean;
 }
 
 export interface PostResponse {
   id: string;
   author: PostAuthorResponse;
+  wallOwnerId: string;
+  wallOwnerName: string;
   kind: FeedKind;
   text: string;
   likesCount: number;
+  dislikesCount: number;
   commentsCount: number;
   viewsCount: number;
   repostsCount: number;
   isLikedByMe: boolean;
+  isDislikedByMe: boolean;
   isRepostedByMe: boolean;
   createdAt: string;
   repostOf: PostSummaryResponse | null;
 }
 
 /**
- * Лайк/ответ/повторный репост на карточке репоста всегда применяются к
- * оригиналу — это единственное место, где решается, «чей» id и статистика
- * идут в интерактив карточки (см. AGENTS.md, раздел про репосты).
+ * Лайк/дизлайк/ответ/повторный репост на карточке репоста всегда
+ * применяются к оригиналу — это единственное место, где решается, «чей» id
+ * и статистика идут в интерактив карточки (см. AGENTS.md, раздел про репосты).
  */
 export function resolveInteractionTarget(post: PostResponse): PostSummaryResponse | PostResponse {
   return post.repostOf ?? post;
@@ -52,9 +60,12 @@ export function mapPost(post: PostResponse): Post {
     author: post.author.name,
     initials: getInitials(post.author.name),
     meta: formatRelativeTime(post.createdAt),
+    wallOwnerId: post.wallOwnerId,
+    wallOwnerName: post.wallOwnerName,
     kind: post.kind,
     text: post.text,
     likes: target.likesCount,
+    dislikes: target.dislikesCount,
     comments: target.commentsCount,
     reposts: target.repostsCount,
     views: String(post.viewsCount),

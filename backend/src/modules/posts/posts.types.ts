@@ -11,26 +11,35 @@ import type { PublicProfile } from '@/modules/users/users.types';
 export interface PostSummaryDto {
   id: string;
   author: PublicProfile;
+  /// Чья это стена — см. PostDto.wallOwnerId.
+  wallOwnerId: string;
+  wallOwnerName: string;
   text: string;
   createdAt: string;
   likesCount: number;
+  dislikesCount: number;
   commentsCount: number;
   repostsCount: number;
   isLikedByMe: boolean;
-  isRepostedByMe: boolean;
+  isDislikedByMe: boolean;
 }
 
 export interface PostDto {
   id: string;
   author: PublicProfile;
+  /** Чья это стена — обычно совпадает с author.id, но может отличаться,
+   * если пост написан на чужой стене (см. PostsService.create). */
+  wallOwnerId: string;
+  wallOwnerName: string;
   kind: PostKind;
   text: string;
   likesCount: number;
+  dislikesCount: number;
   commentsCount: number;
   viewsCount: number;
   repostsCount: number;
   isLikedByMe: boolean;
-  isRepostedByMe: boolean;
+  isDislikedByMe: boolean;
   createdAt: string;
   repostOf: PostSummaryDto | null;
 }
@@ -38,6 +47,9 @@ export interface PostDto {
 export interface CommentDto {
   id: string;
   postId: string;
+  /** null — комментарий верхнего уровня; иначе — id комментария верхнего
+   * уровня, на который отвечают (один уровень вложенности, см. AGENTS.md). */
+  parentId: string | null;
   author: PublicProfile;
   text: string;
   createdAt: string;

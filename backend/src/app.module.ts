@@ -11,6 +11,7 @@ import { RealtimeModule } from './infrastructure/websocket/realtime.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
 import { FriendsModule } from './modules/friends/friends.module';
+import { GalleryModule } from './modules/gallery/gallery.module';
 import { GroupsModule } from './modules/groups/groups.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PostsModule } from './modules/posts/posts.module';
@@ -39,6 +40,7 @@ import { UsersModule } from './modules/users/users.module';
     FriendsModule,
     CommunitiesModule,
     GroupsModule,
+    GalleryModule,
     SearchModule,
   ],
   controllers: [AppController],

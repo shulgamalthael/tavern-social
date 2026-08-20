@@ -1,6 +1,18 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
+import { assertUploadedFile, createImageMulterOptions, uploadedFileUrl } from '@/common/lib/upload';
 import type { RequestUser } from '@/common/types/authenticated-request';
 import { FriendsService } from '@/modules/friends/friends.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -28,6 +40,36 @@ export class UsersController {
     @Body() dto: UpdateProfileDto,
   ): Promise<MeProfile> {
     const user = await this.usersService.updateProfile(currentUser.id, dto);
+    return this.usersService.toMeProfile(user);
+  }
+
+  // Оба маршрута — только `me`, без `:id` — владение структурно гарантировано
+  // самим маршрутом, как и у PATCH /users/me выше.
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('file', createImageMulterOptions('avatars')))
+  async uploadAvatar(
+    @CurrentUser() currentUser: RequestUser,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<MeProfile> {
+    assertUploadedFile(file);
+    const user = await this.usersService.setAvatar(
+      currentUser.id,
+      uploadedFileUrl('avatars', file.filename),
+    );
+    return this.usersService.toMeProfile(user);
+  }
+
+  @Post('me/cover')
+  @UseInterceptors(FileInterceptor('file', createImageMulterOptions('covers')))
+  async uploadCover(
+    @CurrentUser() currentUser: RequestUser,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ): Promise<MeProfile> {
+    assertUploadedFile(file);
+    const user = await this.usersService.setCover(
+      currentUser.id,
+      uploadedFileUrl('covers', file.filename),
+    );
     return this.usersService.toMeProfile(user);
   }
 
