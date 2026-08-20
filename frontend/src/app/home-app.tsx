@@ -21,7 +21,6 @@ import { FriendsWidget } from '@/widgets/friends';
 import { GroupsWidget } from '@/widgets/groups';
 import { Header } from '@/widgets/header';
 import { MessengerWidget } from '@/widgets/messenger';
-import { MobileNavigation } from '@/widgets/navigation-mobile';
 import { NavigationDock } from '@/widgets/navigation-dock';
 import { NotificationToaster } from '@/widgets/notification-toaster';
 import { NotificationsWidget } from '@/widgets/notifications';
@@ -239,7 +238,6 @@ export function HomeApp() {
       <Header />
       <ActiveSection />
       <NavigationDock />
-      <MobileNavigation />
       <NotificationToaster />
     </div>
   );

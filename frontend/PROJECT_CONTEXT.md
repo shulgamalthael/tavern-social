@@ -54,7 +54,7 @@ Redis, `../backend`, порт 4000 по умолчанию): посты (лен�
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/`      | `page.tsx` (Server Component: проверяет сессию, редиректит на `/auth`, рендерит `home-app.tsx`), `home-app.tsx` (клиентская оболочка: композиция активного раздела, грузит посты/диалоги при старте), `auth/page.tsx` (публичная страница входа), `layout.tsx` (шрифты, metadata), `globals.css` (тема, сбросы) |
 | `src/proxy.ts`  | Edge-проверка сессии (redirect `/` ↔ `/auth`) — первый рубеж защиты маршрутов                                                                                                                                                                                                                                   |
-| `src/widgets/`  | `header`, `navigation-dock`, `navigation-mobile`, `feed`, `messenger`, `friends`, `communities`, `groups`, `profile`, `settings`                                                                                                                                                                                |
+| `src/widgets/`  | `header`, `navigation-dock`, `feed`, `messenger`, `friends`, `communities`, `groups`, `profile`, `settings`                                                                                                                                                                                                     |
 | `src/features/` | `section-navigation`, `publish-post`, `send-message`, `auth`, `global-search`                                                                                                                                                                                                                                   |
 | `src/entities/` | `user`, `post` (посты + лайки + репосты + комментарии), `thread`, `friend`, `community`, `group`                                                                                                                                                                                                                |
 | `src/shared/`   | `ui/` (кит примитивов, включая `Loader`/`EmptyState`/`ErrorState`), `lib/` (`cn`, `get-initials`, `async-status`, `use-async-data`, `use-debounced-value`), `styles/` (`_mixins.scss`), `config/` (`fonts.ts`, `session.ts`)                                                                                    |
@@ -94,11 +94,22 @@ Redis, без JWT.
 
 ### Навигация — `features/section-navigation`
 
-Хранит текущий раздел (`SectionId`) и состояние мобильного листа «Ещё».
-Используется одновременно четырьмя виджетами: `header`, `navigation-dock`,
-`navigation-mobile`, и корневой `app/home-app.tsx` (решает, какой
-widget-раздел рендерить). Конфиг пунктов меню и маппинг раздел → иконка —
-там же (`config/nav-items.ts`, `config/section-icons.tsx`).
+Хранит текущий раздел (`SectionId`). Используется `header`, `navigation-dock`
+и корневым `app/home-app.tsx` (решает, какой widget-раздел рендерить). Конфиг
+пунктов меню и маппинг раздел → иконка — там же (`config/nav-items.ts`,
+`config/section-icons.tsx`); `NavItem.short` — компактная подпись для дока
+(см. `widgets/navigation-dock` ниже), `label` — полное название для попапа
+«Ещё» и заголовков страниц.
+
+Единственный виджет навигации — `navigation-dock`: один и тот же плавающий
+док внизу экрана на мобилке, планшете и десктопе (раньше был отдельный
+Instagram-style таб-бар для мобилки — убран в пользу единого стиля).
+`PRIMARY_NAV_COUNT` пунктов показываются прямо в доке (иконка + `short`),
+остальные — под пунктом «Ещё» в анкорном попапе (тот же паттерн
+outside-click-закрытия, что у дропдаунов `header`), без переноса на второй
+ряд (`flex-wrap: nowrap`) — лишние пункты всегда уходят в попап, а не ломают
+раскладку. На узких экранах у дока просто уменьшается размер (шрифт/иконки/
+отступы через `@include mobile`), набор пунктов и сам механизм — одинаковые.
 
 ### Поиск — `features/global-search`
 
@@ -288,10 +299,9 @@ actorCount, isNew, post: {id, text}, commentText? }`. См. «Уведомлен
      store, а не `useAsyncData`, потому что бейдж в шапке должен жить, даже
      когда страница уведомлений не смонтирована.
    - Страница `widgets/notifications` — свой `SectionId: 'notifications'`,
-     достижима через колокольчик в шапке (не через нижнюю панель — она
-     только что переоформлена под Instagram-style с ровно 5 основными
-     иконками, добавлять шестую не стали) и через «Ещё»/десктопный док
-     (`NAV_ITEMS`, в самом конце списка). Клиентская группировка по дню
+     достижима через колокольчик в шапке и через попап «Ещё» единого
+     навигационного дока (`NAV_ITEMS`, в самом конце списка). Клиентская
+     группировка по дню
      («Сегодня»/«Вчера»/дата), infinite scroll через `IntersectionObserver`
      на сентинел-див.
    - Колокольчик в `widgets/header` — бейдж непрочитанных + дропдаун с
@@ -354,17 +364,17 @@ actorCount, isNew, post: {id, text}, commentText? }`. См. «Уведомлен
 
 ## Управление состоянием
 
-| Store/Context                                                                 | Файл                                                    | Хранит                                                      | Кто использует                                                                                                         |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `useNavigationStore` (Zustand)                                                | `features/section-navigation/model/navigation-store.ts` | Текущий раздел, открыт ли лист «Ещё»                        | `header`, `navigation-dock`, `navigation-mobile`, `app/home-app.tsx`, `widgets/friends`, `widgets/profile`             |
-| `usePostStore` (Zustand)                                                      | `entities/post/model/post-store.ts`                     | Посты + `status`/`error`, `likedPostIds`, `repostedPostIds` | `widgets/feed`, `widgets/profile`, `features/publish-post`                                                             |
-| `useCommentStore` (Zustand)                                                   | `entities/post/model/comment-store.ts`                  | Комментарии по `postId` + `status`/`error` по каждому       | `entities/post/ui/CommentList`, `CommentComposer`                                                                      |
-| `useThreadStore` (Zustand)                                                    | `entities/thread/model/thread-store.ts`                 | Диалоги + `status`/`error`                                  | `widgets/messenger`, `widgets/header`, `widgets/navigation-dock`, `widgets/navigation-mobile`, `features/send-message` |
-| `useNotificationStore` (Zustand)                                              | `entities/notification/model/notification-store.ts`     | Лента уведомлений + пагинация + `unreadCount`               | `widgets/header`, `widgets/notifications`, `widgets/notification-toaster`, `app/home-app.tsx`                          |
-| `useToastStore` (Zustand)                                                     | `entities/notification/model/toast-store.ts`            | Видимые/в очереди toast-попапы                              | `widgets/notification-toaster`, `app/home-app.tsx`                                                                     |
-| `CurrentUserProvider` (React Context)                                         | `entities/user/model/current-user-context.tsx`          | Текущий пользователь (id/имя/инициалы/подпись)              | `header`, `feed`, `profile`, `settings`, `publish-post`                                                                |
-| `useAsyncData(getFriends/getCommunities/getGroups)` (локальный хук, не store) | `shared/lib/use-async-data.ts`                          | Список + `status`/`error`/`refetch`                         | по одному виджету каждый: `friends`, `communities`, `groups`                                                           |
-| `useGlobalSearch` (локальный хук, не store)                                   | `features/global-search/model/use-global-search.ts`     | Результаты поиска + `status`/`error`, debounced             | `widgets/header` (через `SearchDropdown`)                                                                              |
+| Store/Context                                                                 | Файл                                                    | Хранит                                                                   | Кто использует                                                                                |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `useNavigationStore` (Zustand)                                                | `features/section-navigation/model/navigation-store.ts` | Текущий раздел (открыт ли попап «Ещё» — локальное состояние самого дока) | `header`, `navigation-dock`, `app/home-app.tsx`, `widgets/friends`, `widgets/profile`         |
+| `usePostStore` (Zustand)                                                      | `entities/post/model/post-store.ts`                     | Посты + `status`/`error`, `likedPostIds`, `repostedPostIds`              | `widgets/feed`, `widgets/profile`, `features/publish-post`                                    |
+| `useCommentStore` (Zustand)                                                   | `entities/post/model/comment-store.ts`                  | Комментарии по `postId` + `status`/`error` по каждому                    | `entities/post/ui/CommentList`, `CommentComposer`                                             |
+| `useThreadStore` (Zustand)                                                    | `entities/thread/model/thread-store.ts`                 | Диалоги + `status`/`error`                                               | `widgets/messenger`, `widgets/header`, `widgets/navigation-dock`, `features/send-message`     |
+| `useNotificationStore` (Zustand)                                              | `entities/notification/model/notification-store.ts`     | Лента уведомлений + пагинация + `unreadCount`                            | `widgets/header`, `widgets/notifications`, `widgets/notification-toaster`, `app/home-app.tsx` |
+| `useToastStore` (Zustand)                                                     | `entities/notification/model/toast-store.ts`            | Видимые/в очереди toast-попапы                                           | `widgets/notification-toaster`, `app/home-app.tsx`                                            |
+| `CurrentUserProvider` (React Context)                                         | `entities/user/model/current-user-context.tsx`          | Текущий пользователь (id/имя/инициалы/подпись)                           | `header`, `feed`, `profile`, `settings`, `publish-post`                                       |
+| `useAsyncData(getFriends/getCommunities/getGroups)` (локальный хук, не store) | `shared/lib/use-async-data.ts`                          | Список + `status`/`error`/`refetch`                                      | по одному виджету каждый: `friends`, `communities`, `groups`                                  |
+| `useGlobalSearch` (локальный хук, не store)                                   | `features/global-search/model/use-global-search.ts`     | Результаты поиска + `status`/`error`, debounced                          | `widgets/header` (через `SearchDropdown`)                                                     |
 
 Правила заведения новых store — `AGENTS.md`, раздел 4.
 
