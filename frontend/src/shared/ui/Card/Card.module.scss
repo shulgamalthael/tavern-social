@@ -1,0 +1,6 @@
+@use '@/shared/styles/mixins' as *;
+
+.card {
+  @include card;
+  padding: clamp(14px, 3vw, 18px);
+}

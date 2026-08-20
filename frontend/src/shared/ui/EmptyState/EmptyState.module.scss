@@ -1,0 +1,26 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 22px 4px;
+  color: var(--tavern-muted);
+}
+
+.empty-state__title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 15px;
+  color: var(--tavern-ink);
+}
+
+.empty-state__description {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  max-width: 44ch;
+}
+
+.empty-state__action {
+  margin-top: 6px;
+}

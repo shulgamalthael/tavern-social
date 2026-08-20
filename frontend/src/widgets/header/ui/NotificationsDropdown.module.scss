@@ -1,0 +1,30 @@
+@use '@/shared/styles/mixins' as *;
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(70vh, 480px);
+  @include card;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 22%);
+}
+
+.dropdown__viewport {
+  padding: 8px;
+}
+
+.dropdown__state {
+  padding: 12px 8px;
+}
+
+.dropdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown__all {
+  margin-top: 4px;
+}

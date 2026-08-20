@@ -1,0 +1,97 @@
+@use '@/shared/styles/mixins' as *;
+
+.settings__card-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.settings__form {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+
+  input {
+    @include control;
+    background: var(--tavern-sunk);
+    outline: none;
+  }
+}
+
+.settings__field-label {
+  font-size: 13px;
+  color: var(--tavern-muted);
+}
+
+.settings__error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--tavern-danger);
+}
+
+.settings__submit {
+  align-self: flex-start;
+  margin-top: 14px;
+}
+
+.settings__toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--tavern-line);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+  }
+}
+
+.settings__hint {
+  font-size: 13px;
+  color: var(--tavern-muted);
+}
+
+.settings__switch {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 24px;
+  padding: 3px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--tavern-soft);
+  cursor: pointer;
+}
+
+.settings__switch--on {
+  justify-content: flex-end;
+  background: var(--tavern-accent);
+
+  .settings__switch-knob {
+    background: var(--tavern-accent-ink);
+  }
+}
+
+.settings__switch-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--tavern-surface);
+}

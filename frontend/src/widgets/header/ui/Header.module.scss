@@ -1,0 +1,165 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  // Полупрозрачная плашка вместо сплошной заливки — иначе при скролле
+  // липкая шапка выглядит как непрозрачный вырез поверх нового атмосферного
+  // фона (`globals.css`, `body::before`). `backdrop-filter` размывает то,
+  // что под ней, так что тёплое свечо остаётся видно и под шапкой.
+  background: color-mix(in srgb, var(--tavern-bg) 78%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.header__inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  max-width: 1140px;
+  min-height: 64px;
+  margin: 0 auto;
+  padding: 9px clamp(14px, 3vw, 24px);
+}
+
+.header__logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.header__logo-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  box-shadow: 0 0 0 4px var(--tavern-soft);
+}
+
+.header__logo-text {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.header__search {
+  position: relative;
+  flex: 1 1 220px;
+  min-width: 170px;
+  max-width: 420px;
+}
+
+.header__search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 8px 0 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 14px;
+    outline: none;
+
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  kbd {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border: 1px solid var(--tavern-line);
+    border-radius: 5px;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--tavern-muted);
+  }
+}
+
+.header__search-icon {
+  flex-shrink: 0;
+  color: var(--tavern-muted);
+}
+
+.header__search-clear {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.header__avatar-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.header__notifications {
+  position: relative;
+}
+
+.header__bell-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--tavern-line);
+  border-radius: 50%;
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.header__bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  line-height: 16px;
+  text-align: center;
+}

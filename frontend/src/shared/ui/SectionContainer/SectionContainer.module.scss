@@ -1,0 +1,14 @@
+.section-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: clamp(18px, 3vw, 30px) clamp(14px, 3vw, 24px) 0;
+}
+
+.section-container--narrow {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

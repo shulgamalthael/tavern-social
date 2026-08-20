@@ -1,0 +1,76 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button--primary {
+  background: var(--tavern-ink);
+  color: var(--tavern-bg);
+
+  &:hover {
+    background: var(--tavern-accent);
+    color: var(--tavern-accent-ink);
+  }
+}
+
+.button--outline {
+  border: 1px solid var(--tavern-line);
+  background: none;
+  color: var(--tavern-ink);
+
+  &:hover {
+    border-color: var(--tavern-accent);
+    color: var(--tavern-accent);
+  }
+}
+
+.button--soft {
+  background: var(--tavern-soft);
+  color: var(--tavern-ink);
+
+  &:hover {
+    background: var(--tavern-accent);
+    color: var(--tavern-accent-ink);
+  }
+}
+
+.button--ghost {
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.button--chip {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 8px;
+  background: none;
+  color: var(--tavern-muted);
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.button--full-width {
+  width: 100%;
+}

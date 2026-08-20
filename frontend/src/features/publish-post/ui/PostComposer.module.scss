@@ -1,0 +1,55 @@
+.composer__top {
+  display: flex;
+  gap: 12px;
+}
+
+.composer__textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+  color: inherit;
+  outline: none;
+  resize: none;
+}
+
+.composer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tavern-line);
+}
+
+.composer__submit {
+  margin-left: auto;
+}
+
+.composer--wall {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.composer__input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14.5px;
+  color: inherit;
+  outline: none;
+}
+
+.composer__error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--tavern-danger);
+}

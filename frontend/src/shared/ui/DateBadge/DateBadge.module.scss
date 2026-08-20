@@ -1,0 +1,26 @@
+.date-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 46px;
+  flex-shrink: 0;
+}
+
+.date-badge__day {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.date-badge__day--sm {
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.date-badge__month {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--tavern-muted);
+  text-transform: uppercase;
+}

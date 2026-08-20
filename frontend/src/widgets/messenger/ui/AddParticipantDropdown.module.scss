@@ -1,0 +1,112 @@
+@use '@/shared/styles/mixins' as *;
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(70vh, 420px);
+  @include card;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 22%);
+}
+
+.dropdown__hint {
+  flex-shrink: 0;
+  margin: 8px 8px 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--tavern-soft);
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--tavern-muted);
+}
+
+.dropdown__input {
+  @include control;
+  flex-shrink: 0;
+  width: calc(100% - 16px);
+  margin: 8px 8px 0;
+  background: var(--tavern-sunk);
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.dropdown__error {
+  flex-shrink: 0;
+  margin: 6px 8px 0;
+  font-size: 12.5px;
+  color: var(--tavern-danger);
+}
+
+.dropdown__results {
+  flex: 1;
+  min-height: 0;
+}
+
+.dropdown__viewport {
+  padding: 8px;
+}
+
+.dropdown__state {
+  padding: 12px 8px;
+}
+
+.dropdown__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dropdown__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.dropdown__row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dropdown__row-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown__row-subtitle {
+  font-size: 12px;
+  color: var(--tavern-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

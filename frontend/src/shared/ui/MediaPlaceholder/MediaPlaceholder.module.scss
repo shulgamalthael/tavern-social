@@ -1,0 +1,28 @@
+.media-placeholder {
+  display: flex;
+  align-items: flex-end;
+  padding: 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background-color: var(--tavern-sunk);
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tavern-muted) 13%, transparent) 0 8px,
+    transparent 8px 16px
+  );
+}
+
+.media-placeholder--flush {
+  border: 0;
+  border-radius: 0;
+}
+
+.media-placeholder__label {
+  padding: 4px 8px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 6px;
+  background: var(--tavern-surface);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--tavern-muted);
+}

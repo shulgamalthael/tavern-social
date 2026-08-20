@@ -1,0 +1,282 @@
+// Схема данных Tavern Backend.
+//
+// Сессии, socket-тикеты и presence НЕ хранятся здесь — это эфемерные данные
+// с TTL, они целиком живут в Redis (см. src/infrastructure/redis и
+// AGENTS.md backend, раздел про Redis).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgTrgm(map: "pg_trgm")]
+}
+
+enum PostKind {
+  friends
+  communities
+  events
+}
+
+enum NotificationType {
+  friend_request
+  friend_accepted
+  post_like
+  post_comment
+  post_repost
+}
+
+model User {
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  passwordHash          String
+  name                  String
+  tagline               String   @default("")
+  accent                String?
+  city                  String?
+  about                 String?
+  tags                  String[] @default([])
+  quietHours            Boolean  @default(true)
+  showPresence          Boolean  @default(true)
+  allowStrangerInvites  Boolean  @default(false)
+  morningDigest         Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  posts                 Post[]
+  postLikes             PostLike[]
+  comments              Comment[]
+  sentMessages          Message[]
+  threadParticipants    ThreadParticipant[]
+  communityMemberships  CommunityMembership[]
+  groupMemberships      GroupMembership[]
+
+  friendshipsAsUserA    Friendship[] @relation("FriendshipUserA")
+  friendshipsAsUserB    Friendship[] @relation("FriendshipUserB")
+
+  sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsActedIn  Notification[] @relation("NotificationActor")
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("users")
+}
+
+model Post {
+  id             String   @id @default(uuid())
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  kind           PostKind @default(friends)
+  text           String
+  likesCount     Int      @default(0)
+  commentsCount  Int      @default(0)
+  viewsCount     Int      @default(0)
+  repostsCount   Int      @default(0)
+  communityId    String?
+  community      Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  likes          PostLike[]
+  comments       Comment[]
+  notifications  Notification[]
+
+  /// Репост — отдельная запись Post, ссылающаяся на оригинал через
+  /// repostOfId, а не копия его содержимого (см. AGENTS.md backend,
+  /// раздел про репосты). Лайки/комментарии/повторный репост всегда
+  /// применяются к оригиналу, а не к этой обёрточной записи.
+  repostOfId     String?
+  repostOf       Post?    @relation("PostRepost", fields: [repostOfId], references: [id], onDelete: Cascade)
+  reposts        Post[]   @relation("PostRepost")
+
+  @@unique([authorId, repostOfId])
+  @@index([authorId, createdAt])
+  @@map("posts")
+}
+
+model PostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@map("post_likes")
+}
+
+/// Диалог. Сейчас всегда 1:1 (см. ThreadsService.getOrCreateDirectThread),
+/// но participants — join-таблица, а не пара колонок, чтобы не потребовалась
+/// миграция схемы, если понадобятся групповые диалоги.
+model Thread {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  participants ThreadParticipant[]
+  messages     Message[]
+
+  @@map("threads")
+}
+
+model ThreadParticipant {
+  id         String    @id @default(uuid())
+  threadId   String
+  thread     Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Момент последнего прочтения — основа для расчёта unread-счётчика.
+  lastReadAt DateTime  @default(now())
+  joinedAt   DateTime  @default(now())
+
+  @@unique([threadId, userId])
+  @@map("thread_participants")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  threadId  String
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("messages")
+}
+
+/// Симметричная связь дружбы — итог принятой FriendRequest (см. ниже).
+/// userAId всегда < userBId (по строковому сравнению uuid), чтобы избежать
+/// дублей в двух направлениях.
+model Friendship {
+  id        String   @id @default(uuid())
+  userAId   String
+  userA     User     @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId   String
+  userB     User     @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userAId, userBId])
+  @@map("friendships")
+}
+
+/// Заявка в друзья — пока не принята/отклонена/отменена, строка просто
+/// удаляется (истории заявок не храним). Если получатель уже отправил
+/// заявку отправителю (встречная заявка), сервис не создаёт вторую, а сразу
+/// принимает существующую — см. FriendsService.sendRequest.
+model FriendRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId])
+  @@map("friend_requests")
+}
+
+model Community {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  about        String
+  cover        String
+  membersCount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  memberships  CommunityMembership[]
+  posts        Post[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("communities")
+}
+
+model CommunityMembership {
+  id          String    @id @default(uuid())
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt    DateTime  @default(now())
+
+  @@unique([communityId, userId])
+  @@map("community_memberships")
+}
+
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  meta      String
+  mark      String
+  createdAt DateTime @default(now())
+
+  memberships GroupMembership[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("groups")
+}
+
+model Comment {
+  id            String         @id @default(uuid())
+  postId        String
+  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  text          String
+  createdAt     DateTime       @default(now())
+
+  notifications Notification[]
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}
+
+/// Уведомление о взаимодействии с контентом или дружбой. `post_like`/
+/// `post_repost` группируются: пока непрочитано, новое взаимодействие того
+/// же типа с тем же постом обновляет существующую строку (actorCount++,
+/// recentActorIds — до 3 последних), а не создаёт новую — иначе быстрая
+/// серия лайков превратилась бы в такую же серию toast'ов. `post_comment`
+/// и заявки в друзья не группируются: у каждого свой уникальный текст/смысл.
+/// Текст комментария не дублируется сюда — берём его из `comment.text` по
+/// `commentId` (см. AGENTS.md backend, раздел про уведомления).
+model Notification {
+  id             String           @id @default(uuid())
+  recipientId    String
+  recipient      User             @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  actorId        String
+  actor          User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  actorCount     Int              @default(1)
+  recentActorIds String[]         @default([])
+  postId         String?
+  post           Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId      String?
+  comment        Comment?         @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  isRead         Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([recipientId, isRead, createdAt])
+  @@map("notifications")
+}
+
+model GroupMembership {
+  id       String   @id @default(uuid())
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     String
+  joinedAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+  @@map("group_memberships")
+}

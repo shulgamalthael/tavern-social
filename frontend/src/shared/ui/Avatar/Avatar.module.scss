@@ -1,0 +1,49 @@
+.avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--tavern-soft);
+  font-weight: 600;
+}
+
+.avatar--sm {
+  width: 30px;
+  height: 30px;
+  font-size: 11px;
+}
+
+.avatar--md {
+  width: 38px;
+  height: 38px;
+  font-size: 13px;
+}
+
+.avatar--lg {
+  width: 62px;
+  height: 62px;
+  font-size: 18px;
+}
+
+.avatar--xl {
+  width: clamp(76px, 13vw, 104px);
+  aspect-ratio: 1;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 30px;
+}
+
+.avatar--bordered {
+  border: 4px solid var(--tavern-surface);
+}
+
+.avatar__presence-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--tavern-surface);
+  border-radius: 50%;
+  background: var(--tavern-accent);
+}

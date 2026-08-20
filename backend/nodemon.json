@@ -1,0 +1,7 @@
+{
+  "watch": ["dist"],
+  "ext": "js",
+  "legacyWatch": true,
+  "delay": "300",
+  "exec": "node --enable-source-maps dist/main.js"
+}

@@ -1,0 +1,50 @@
+@use '@/shared/styles/mixins' as *;
+
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  transform: translateX(-50%);
+  border: 1px solid var(--tavern-line);
+  border-radius: 999px;
+  background: var(--tavern-surface);
+  box-shadow: var(--tavern-shadow-card);
+
+  @include mobile {
+    display: none;
+  }
+}
+
+.dock__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 clamp(11px, 2.2vw, 16px);
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.dock__item--active {
+  background: var(--tavern-ink);
+  color: var(--tavern-bg);
+  font-weight: 500;
+}

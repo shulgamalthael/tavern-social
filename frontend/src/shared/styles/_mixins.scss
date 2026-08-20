@@ -1,0 +1,30 @@
+$bp-mobile: 760px;
+$bp-desktop: 1180px;
+
+@mixin mobile {
+  @media (max-width: #{$bp-mobile - 1px}) {
+    @content;
+  }
+}
+
+@mixin desktop {
+  @media (min-width: $bp-mobile) {
+    @content;
+  }
+}
+
+@mixin card {
+  background: var(--tavern-surface);
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-card);
+}
+
+@mixin control {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+}

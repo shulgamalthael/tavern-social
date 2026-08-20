@@ -1,0 +1,10 @@
+# build output
+dist
+build
+
+# dependencies
+node_modules
+
+# generated
+package-lock.json
+src/infrastructure/database/generated

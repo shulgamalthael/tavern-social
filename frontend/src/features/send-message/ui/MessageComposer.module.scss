@@ -1,0 +1,18 @@
+@use '@/shared/styles/mixins' as *;
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--tavern-line);
+}
+
+.composer__input {
+  @include control;
+  flex: 1;
+  min-width: 0;
+  background: var(--tavern-sunk);
+  font-size: 14.5px;
+  outline: none;
+}

@@ -1,0 +1,61 @@
+.item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 30px 10px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+
+  &[data-unread] {
+    background: var(--tavern-soft);
+  }
+
+  &[data-unread]:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.item__text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  font-size: 13.5px;
+}
+
+.item__actor {
+  font-weight: 600;
+}
+
+.item__time {
+  font-size: 12px;
+  color: var(--tavern-muted);
+}
+
+.item__dot {
+  position: absolute;
+  top: 14px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tavern-accent);
+}

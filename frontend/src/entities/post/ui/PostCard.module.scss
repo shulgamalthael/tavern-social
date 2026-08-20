@@ -1,0 +1,143 @@
+.post__head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.post__head_body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.post__author {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.post__meta {
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}
+
+.post__more-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.post__text {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.post__image {
+  margin-top: 12px;
+}
+
+.post__repost {
+  margin-top: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-sunk);
+}
+
+.post__repost-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.post__repost-text {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.post__comments {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tavern-line);
+}
+
+.post__event {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 14px;
+  margin-top: 12px;
+  padding: 13px 15px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-sunk);
+}
+
+.post__event_body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.post__event-title {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.post__event-action {
+  margin-left: auto;
+}
+
+.post__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 1px solid var(--tavern-line);
+}
+
+.post__reaction {
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 13px;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.post__reaction--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+  font-weight: 500;
+}
+
+.post__views {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}

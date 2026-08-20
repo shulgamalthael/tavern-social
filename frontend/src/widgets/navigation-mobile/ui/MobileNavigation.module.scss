@@ -1,0 +1,112 @@
+@use '@/shared/styles/mixins' as *;
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 46;
+  display: none;
+  align-items: stretch;
+  padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+
+  @include mobile {
+    display: flex;
+  }
+}
+
+// Иконки без подписей — как таб-бар Instagram: активный раздел отличается
+// только весом/цветом иконки (см. `strokeWidth` в TSX), без фона-«пилюли».
+.tab-bar__item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 13px 2px;
+  border: 0;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  svg {
+    width: 25px;
+    height: 25px;
+  }
+}
+
+.tab-bar__item--active {
+  color: var(--tavern-ink);
+}
+
+.tab-bar__avatar--active {
+  outline: 2px solid var(--tavern-accent);
+  outline-offset: 2px;
+}
+
+.tab-bar__badge {
+  position: absolute;
+  top: 4px;
+  right: 50%;
+  margin-right: -19px;
+  min-width: 16px;
+  height: 16px;
+  font-size: 10px;
+}
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  // Затемняющий скрим модалки — нейтральный тёмно-синий, а не тон текущей
+  // палитры: должен одинаково темнить контент под собой независимо от того,
+  // какой сейчас `--tavern-*` набор токенов.
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.sheet {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: 82px;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 18px;
+  background: var(--tavern-surface);
+  box-shadow: var(--tavern-shadow-card);
+}
+
+.sheet__handle {
+  align-self: center;
+  width: 36px;
+  height: 4px;
+  margin: 2px 0 6px;
+  border-radius: 2px;
+  background: var(--tavern-line);
+}
+
+.sheet__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}

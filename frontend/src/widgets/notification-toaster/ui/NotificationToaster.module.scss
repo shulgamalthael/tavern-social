@@ -1,0 +1,19 @@
+@use '@/shared/styles/mixins' as *;
+
+.toaster {
+  position: fixed;
+  top: 76px;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+  transform: translateX(-50%);
+
+  @include desktop {
+    left: auto;
+    right: clamp(14px, 3vw, 24px);
+    transform: none;
+  }
+}

@@ -1,0 +1,56 @@
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comment-list__item {
+  display: flex;
+  gap: 10px;
+}
+
+.comment-list__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: var(--tavern-sunk);
+}
+
+.comment-list__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.comment-list__author {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.comment-list__meta {
+  font-size: 11.5px;
+  color: var(--tavern-muted);
+}
+
+.comment-list__text {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.comment-list__empty {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--tavern-muted);
+}
+
+.comment-list__loader {
+  margin-top: 10px;
+}

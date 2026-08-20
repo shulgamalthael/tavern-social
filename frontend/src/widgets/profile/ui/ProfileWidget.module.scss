@@ -1,0 +1,95 @@
+@use '@/shared/styles/mixins' as *;
+
+.profile__card {
+  @include card;
+  overflow: hidden;
+}
+
+.profile__cover {
+  justify-content: flex-end;
+}
+
+.profile__top {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px 20px;
+  margin-top: -42px;
+  padding: 0 clamp(14px, 3vw, 22px) 22px;
+}
+
+.profile__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.profile__name {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(20px, 4vw, 25px);
+  font-weight: 500;
+}
+
+.profile__subtitle {
+  font-size: 14px;
+  color: var(--tavern-muted);
+}
+
+.profile__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+  margin-top: 18px;
+}
+
+.profile__side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 300px;
+  min-width: 280px;
+  max-width: 340px;
+}
+
+.profile__wall {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 2 1 400px;
+  min-width: 0;
+}
+
+.profile__card-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.profile__about {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+}
+
+.profile__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}

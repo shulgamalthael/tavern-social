@@ -1,0 +1,60 @@
+@use '@/shared/styles/mixins' as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.form__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--tavern-sunk);
+}
+
+.form__tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &--active {
+    background: var(--tavern-surface);
+    color: var(--tavern-ink);
+  }
+}
+
+.form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  input {
+    @include control;
+    background: var(--tavern-sunk);
+    outline: none;
+
+    &:focus-visible {
+      border-color: var(--tavern-accent);
+    }
+  }
+}
+
+.form__field-label {
+  font-size: 13px;
+  color: var(--tavern-muted);
+}
+
+.form__error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tavern-danger);
+}

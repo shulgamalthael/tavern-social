@@ -1,0 +1,14 @@
+# build output
+.next
+out
+build
+
+# dependencies
+node_modules
+
+# generated files
+next-env.d.ts
+package-lock.json
+
+# scratch folder for pulling in components — not part of the project, see AGENTS.md
+temp

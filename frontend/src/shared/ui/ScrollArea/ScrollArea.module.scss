@@ -1,0 +1,55 @@
+.scroll-area {
+  position: relative;
+  min-height: 0;
+}
+
+.scroll-area__viewport {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Нативный scrollbar скрыт — вместо него `.scroll-area__thumb`, но сама
+   * прокрутка (колесо/тачпад/тач) остаётся штатной, ничего не переизобретаем. */
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.scroll-area__track {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  bottom: 0;
+  width: 6px;
+  pointer-events: none;
+}
+
+.scroll-area__thumb {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  border-radius: 999px;
+  background: var(--tavern-muted);
+  opacity: 0;
+  pointer-events: none;
+  cursor: grab;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+
+  &:hover {
+    background: var(--tavern-accent);
+  }
+}
+
+.scroll-area__thumb--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scroll-area__thumb--dragging {
+  background: var(--tavern-accent);
+  cursor: grabbing;
+}

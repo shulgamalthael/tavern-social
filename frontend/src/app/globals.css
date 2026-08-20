@@ -1,0 +1,140 @@
+@import 'tailwindcss';
+
+:root {
+  --tavern-bg: #eef2f8;
+  --tavern-surface: #ffffff;
+  --tavern-sunk: #e4ecf7;
+  --tavern-line: #d6e0ee;
+  --tavern-ink: #16233d;
+  --tavern-muted: #5c6b87;
+  --tavern-soft: #dde9fb;
+  --tavern-accent: #2563eb;
+  --tavern-accent-ink: #ffffff;
+  /* Отдельный от --tavern-accent тон — ошибки/невалидные поля раньше сидели
+   * на акцентном (амбер), который читался как «предупреждение» сам по себе;
+   * синий акцент так не читается, поэтому у error-текста свой семантический
+   * токен, не завязанный на бренд-цвет. */
+  --tavern-danger: #dc2626;
+
+  --tavern-radius-card: 13px;
+  --tavern-radius-control: 10px;
+  --tavern-shadow-card: 0 10px 30px rgba(16, 30, 54, 0.1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  /* Дублирует viewport meta (layout.tsx) на уровне жестов — запрещает
+   * pinch/double-tap zoom, а не только зум через meta-тег. */
+  touch-action: manipulation;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--tavern-bg);
+  color: var(--tavern-ink);
+  font-family:
+    var(--font-ui),
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+
+/**
+ * Атмосферный фон зала таверны — на тёмной палитре здесь были тёплые пятна
+ * света с виньеткой к тёмным углам; для бело-синей палитры тёмная виньетка
+ * выглядела бы как грязь по краям экрана, а не уют, поэтому вместо неё —
+ * едва заметные холодные пятна света (сверху и по нижним углам) поверх
+ * ровного светлого фона, без затемнения к краям. `position: fixed` на
+ * псевдоэлементе, а не `background-attachment: fixed` на самом `body` — так
+ * поведение одинаковое во всех браузерах при скролле (включая мобильный
+ * Safari, где `fixed`-фон исторически ведёт себя нестабильно). Отрицательный
+ * `z-index` красит его поверх собственного фона `body`, но под всем обычным
+ * контентом (см. `SectionContainer`, у которого уже стоит `z-index: 1` под
+ * этот слой). Один и тот же слой работает и для мобилки, и для десктопа:
+ * проценты в radial-gradient считаются от размеров вьюпорта, поэтому
+ * пропорции сцены сохраняются на любом соотношении сторон без отдельных
+ * медиа-правил.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0) 55%),
+    radial-gradient(ellipse at 12% 100%, rgba(37, 99, 235, 0.07) 0%, rgba(37, 99, 235, 0) 60%),
+    radial-gradient(ellipse at 88% 100%, rgba(37, 99, 235, 0.07) 0%, rgba(37, 99, 235, 0) 60%);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+textarea {
+  resize: none;
+}
+
+::placeholder {
+  color: var(--tavern-muted);
+}
+
+/**
+ * Кастомный скролл в цветах Таверны — глобально, для любого прокручиваемого
+ * узла в приложении (не только сейчас существующих, но и будущих фич: это
+ * стиль на уровне `globals.css`, никакой отдельной настройки в новом
+ * компоненте не нужно). В покое скролл прозрачный и не отвлекает —
+ * проявляется только при наведении/фокусе того же узла, который скроллится
+ * (`:hover`/`:focus-within` на самом элементе, а не глобально).
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover,
+*:focus-within {
+  scrollbar-color: var(--tavern-muted) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  transition: background-color 0.15s ease;
+}
+
+*:hover::-webkit-scrollbar-thumb,
+*:focus-within::-webkit-scrollbar-thumb {
+  background-color: var(--tavern-muted);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--tavern-accent);
+}

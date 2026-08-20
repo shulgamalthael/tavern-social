@@ -1,0 +1,39 @@
+.auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.auth__card {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.auth__logo-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  box-shadow: 0 0 0 4px var(--tavern-soft);
+}
+
+.auth__title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.auth__subtitle {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--tavern-muted);
+}
