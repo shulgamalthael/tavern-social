@@ -1,0 +1,61 @@
+# Production-профиль: `docker compose -f docker-compose.prod.yml up -d --build`.
+# В отличие от docker-compose.yml (dev): собирает stage `production`
+# (Dockerfile) — только dist/ и runtime-зависимости, без bind mount исходников
+# и без dev-инструментов. Секреты передавайте через окружение хоста/оркестратора,
+# не через committed .env — здесь только `env_file` со ссылкой на путь,
+# который разворачивающий обязан подготовить сам (см. backend/.env.example).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: tavern
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: tavern
+    volumes:
+      - tavern_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tavern -d tavern']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - tavern_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      target: production
+    # См. комментарий в docker-compose.yml — tini как PID 1 для корректного
+    # завершения процесса по SIGTERM при остановке/обновлении контейнера.
+    init: true
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'docker/healthcheck.js']
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  tavern_postgres_data:
+  tavern_redis_data:

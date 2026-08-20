@@ -1,0 +1,76 @@
+# Dev-окружение: `docker compose up` из корня репозитория поднимает backend +
+# PostgreSQL + Redis. Frontend НЕ контейнеризован — запускается локально
+# (`npm run dev` в frontend/), см. README.md.
+#
+# Backend работает в watch mode (nest start --watch): исходники backend/src
+# подключены bind mount'ом, node_modules — отдельный named volume (см.
+# AGENTS.md backend, раздел «Docker», про то, зачем это нужно на Windows/mac).
+# Пересборка образа (`docker compose build`) нужна только при изменении
+# package.json/Dockerfile — не при обычной правке TypeScript-кода.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tavern
+      POSTGRES_PASSWORD: tavern
+      POSTGRES_DB: tavern
+    ports:
+      - '5432:5432'
+    volumes:
+      - tavern_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tavern -d tavern']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - tavern_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    # Без init-процесса на PID 1 сигналы, которыми `nest start --watch`
+    # перезапускает дочерний node-процесс при изменении файла, не доходят
+    # надёжно — старый процесс не освобождает порт 4000 до старта нового
+    # (симптом: EADDRINUSE при каждой перекомпиляции). `init: true` поднимает
+    # tini как PID 1 контейнера, который корректно форвардит/пожинает сигналы.
+    init: true
+    env_file:
+      - ./backend/.env
+    ports:
+      - '4000:4000'
+      # Node inspector — `npm run start:debug` внутри контейнера.
+      - '9229:9229'
+    volumes:
+      - ./backend:/app
+      - tavern_backend_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', 'docker/healthcheck.js']
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+
+volumes:
+  tavern_postgres_data:
+  tavern_redis_data:
+  tavern_backend_node_modules:
