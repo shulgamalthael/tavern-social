@@ -4,6 +4,7 @@ export interface FriendDto {
   id: string;
   name: string;
   tagline: string;
+  avatarUrl: string | null;
   city: string | null;
   about: string | null;
   tags: string[];

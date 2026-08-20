@@ -58,6 +58,7 @@ export class FriendsService {
           id: friend.id,
           name: friend.name,
           tagline: friend.tagline,
+          avatarUrl: friend.avatarUrl,
           city: friend.city,
           about: friend.about,
           tags: friend.tags,
