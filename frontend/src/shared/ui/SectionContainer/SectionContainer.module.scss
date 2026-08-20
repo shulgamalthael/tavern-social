@@ -1,6 +1,13 @@
 .section-container {
   position: relative;
   z-index: 1;
+  // `width: 100%` обязателен: `.app` — flex-колонка (см. `page.module.scss`,
+  // это нужно `widgets/messenger`, чтобы занимать весь остаток высоты под
+  // шапкой), а у flex-элемента `margin: 0 auto` на поперечной оси отключает
+  // растягивание по умолчанию (`align-items: stretch`) и откатывает ширину
+  // к content-fit — без явного `width: 100%` этот `<main>` сжимался бы до
+  // ширины самого узкого ряда контента вместо честных 1140px с центровкой.
+  width: 100%;
   max-width: 1140px;
   margin: 0 auto;
   padding: clamp(18px, 3vw, 30px) clamp(14px, 3vw, 24px) 0;

@@ -1,3 +1,5 @@
+@use '@/shared/styles/mixins' as *;
+
 .header {
   position: sticky;
   top: 0;
@@ -55,6 +57,12 @@
   flex: 1 1 220px;
   min-width: 170px;
   max-width: 420px;
+
+  @include mobile {
+    // Ниже, чем на десктопе — иначе на узких экранах инпут упирается в
+    // соседние элементы и заголовку/иконкам некуда сжиматься.
+    min-width: 120px;
+  }
 }
 
 .header__search-field {
@@ -89,6 +97,13 @@
     font-family: var(--font-mono), ui-monospace, monospace;
     font-size: 11px;
     color: var(--tavern-muted);
+
+    // Подсказка про хоткей бесполезна на тач-экране и просто крадёт место у
+    // плейсхолдера — без неё "Найти человека, сообщество, сбор" читается
+    // полностью на куда более узких экранах.
+    @include mobile {
+      display: none;
+    }
   }
 }
 

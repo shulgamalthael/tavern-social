@@ -74,8 +74,11 @@
 }
 
 .messenger__thread-name {
+  overflow: hidden;
   font-size: 14px;
   font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .messenger__thread-preview {

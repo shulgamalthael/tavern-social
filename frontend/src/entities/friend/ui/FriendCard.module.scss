@@ -25,7 +25,10 @@
 }
 
 .friend__status {
-  margin-left: auto;
+  // Без margin-left: auto — на узких экранах `.friend__top` переносит
+  // статус на новый ряд, и там он «прижимался» бы в правый угол пустой
+  // строки одиноким островком. В обычном потоке он просто идёт следующим
+  // элементом сразу за именем/подписью, как и остальные.
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 11px;
   color: var(--tavern-muted);
