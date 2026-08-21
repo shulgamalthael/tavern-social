@@ -3,5 +3,5 @@
   "ext": "js",
   "legacyWatch": true,
   "delay": "300",
-  "exec": "node --enable-source-maps dist/main.js"
+  "exec": "tsc-alias -p tsconfig.build.json && node --enable-source-maps dist/main.js"
 }

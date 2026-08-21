@@ -6,9 +6,8 @@
   "scripts": {
     "build": "nest build && tsc-alias -p tsconfig.build.json",
     "start": "node dist/main.js",
-    "dev": "npm run build && concurrently -k -n build,alias,run -c blue,magenta,green \"npm:dev:build\" \"npm:dev:alias\" \"npm:dev:run\"",
+    "dev": "npm run build && concurrently -k -n build,run -c blue,green \"npm:dev:build\" \"npm:dev:run\"",
     "dev:build": "tsc -w -p tsconfig.build.json --preserveWatchOutput",
-    "dev:alias": "tsc-alias -w -p tsconfig.build.json",
     "dev:run": "nodemon",
     "start:debug": "nodemon --exec \"node --enable-source-maps --inspect=0.0.0.0:9229 dist/main.js\"",
     "lint": "eslint \"src/**/*.ts\" \"prisma/**/*.ts\" \"*.config.ts\"",
