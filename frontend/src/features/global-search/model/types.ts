@@ -2,6 +2,7 @@ export interface SearchUserResult {
   id: string;
   name: string;
   initials: string;
+  avatarUrl: string | null;
   tagline: string;
   city: string | null;
 }
@@ -9,8 +10,11 @@ export interface SearchUserResult {
 export interface SearchGroupResult {
   id: string;
   name: string;
-  meta: string;
-  mark: string;
+  description: string;
+  type: 'open' | 'private';
+  avatarUrl: string | null;
+  membersCount: number;
+  isMember: boolean;
 }
 
 export interface SearchCommunityResult {

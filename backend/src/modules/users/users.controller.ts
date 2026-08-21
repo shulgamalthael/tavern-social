@@ -11,9 +11,11 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { MAX_PAGINATION_LIMIT } from '@/common/dto/pagination-query.dto';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import { assertUploadedFile, createImageMulterOptions, uploadedFileUrl } from '@/common/lib/upload';
 import type { RequestUser } from '@/common/types/authenticated-request';
+import type { FriendDto } from '@/modules/friends/friends.types';
 import { FriendsService } from '@/modules/friends/friends.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
@@ -92,5 +94,24 @@ export class UsersController {
     const user = await this.usersService.findByIdOrThrow(id);
     const friendship = await this.friendsService.getStatus(currentUser.id, id);
     return { ...this.usersService.toPublicProfile(user), friendship };
+  }
+
+  // Список друзей ЧУЖОГО профиля — тот же публичный доступ, что у
+  // GET /users/:id и GET /users/:id/gallery (любой залогиненный, не только
+  // друзья/сам пользователь). `FriendsService.list` уже принимает
+  // произвольный userId — раньше просто не вызывался ни с чьим, кроме своего.
+  //
+  // Не курсорная пагинация, а один запрос с максимальным лимитом: этот список
+  // питает виджет профиля (9 плиток + модалка с клиентским поиском по уже
+  // загруженному списку, см. `widgets/profile/ProfileFriendsCard`/
+  // `FriendsListModal`) — поиск по частично догруженному списку молча не
+  // находил бы часть друзей, а полноценный серверный поиск здесь избыточен
+  // для масштаба этого приложения. Бесконечный скролл — только на отдельной
+  // полноценной странице «Друзья» (`GET /friends`, свой список).
+  @Get(':id/friends')
+  async getFriends(@Param('id') id: string): Promise<FriendDto[]> {
+    await this.usersService.findByIdOrThrow(id);
+    const { items } = await this.friendsService.list(id, undefined, MAX_PAGINATION_LIMIT);
+    return items;
   }
 }

@@ -4,14 +4,29 @@
   position: sticky;
   top: 0;
   z-index: 30;
-  // Полупрозрачная плашка вместо сплошной заливки — иначе при скролле
-  // липкая шапка выглядит как непрозрачный вырез поверх нового атмосферного
-  // фона (`globals.css`, `body::before`). `backdrop-filter` размывает то,
-  // что под ней, так что тёплое свечо остаётся видно и под шапкой.
+  // Спокойное состояние по умолчанию — прозрачная шапка без подложки/рамки,
+  // как в исходном варианте до появления скролл-эффекта. Как только `.app`
+  // (реальный скроллящийся контейнер, не `window` — см. Header.tsx) уходит
+  // дальше `SCROLL_THRESHOLD`, добавляется `.header--scrolled` (ниже) —
+  // полупрозрачная плашка вместо сплошной заливки, иначе непрозрачный вырез
+  // поверх атмосферного фона (`globals.css`, `body::before`) выглядел бы
+  // грубо; `backdrop-filter` размывает то, что под ней, так что тёплое
+  // свечение остаётся видно и под шапкой.
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    backdrop-filter 0.25s ease;
+}
+
+.header--scrolled {
   background: color-mix(in srgb, var(--tavern-bg) 78%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--tavern-line);
+  border-bottom-color: var(--tavern-line);
 }
 
 .header__inner {
@@ -133,6 +148,14 @@
 }
 
 .header__actions {
+  // Позиционирующий контекст для выпадашки уведомлений — не
+  // `.header__notifications`: тот всего 36px шириной (сам колокольчик), и
+  // `right: 0` относительно него на узких экранах (< 400px) утаскивает
+  // выпадашку далеко за левый край viewport, поскольку аватар справа от
+  // колокольчика ещё отъедает место. `.header__actions` доходит до
+  // фактического правого края шапки (как аватар), так что тот же `right: 0`
+  // у дропдауна остаётся в пределах экрана уже от 360px.
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -147,7 +170,10 @@
 }
 
 .header__notifications {
-  position: relative;
+  // Без собственного position: relative — иначе именно он, а не
+  // `.header__actions`, стал бы ближайшим позиционирующим предком для
+  // выпадашки уведомлений (у него самого ширина только с колокольчик).
+  display: flex;
 }
 
 .header__bell-button {

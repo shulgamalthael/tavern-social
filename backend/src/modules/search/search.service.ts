@@ -31,29 +31,34 @@ export class SearchService {
     return users.map((user) => this.usersService.toPublicProfile(user));
   }
 
-  /**
-   * Группы закрытые, «только по приглашению» — вступления/публичного каталога
-   * нет (см. GroupsService). Поэтому поиск ищет только среди групп, в которых
-   * текущий пользователь уже состоит, а не по всем группам системы — иначе
-   * он находил бы группы, вступить в которые всё равно невозможно.
-   */
+  /** Каталог групп публичен (см. SearchGroupDto) — тот же паттерн, что и у
+   * `searchCommunities` ниже, группы просто дополнительно ищутся по
+   * описанию, не только по имени. */
   private async searchGroups(
     currentUserId: string,
     q: string,
     limit: number,
   ): Promise<SearchGroupDto[]> {
-    const memberships = await this.prisma.groupMembership.findMany({
-      where: { userId: currentUserId, group: { name: { contains: q, mode: 'insensitive' } } },
-      include: { group: true },
-      orderBy: { group: { name: 'asc' } },
+    const groups = await this.prisma.group.findMany({
+      where: {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      include: { memberships: { where: { userId: currentUserId } } },
+      orderBy: { name: 'asc' },
       take: limit,
     });
 
-    return memberships.map((membership) => ({
-      id: membership.group.id,
-      name: membership.group.name,
-      meta: membership.group.meta,
-      mark: membership.group.mark,
+    return groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      type: group.type,
+      avatarUrl: group.avatarUrl,
+      membersCount: group.membersCount,
+      isMember: group.memberships.length > 0,
     }));
   }
 

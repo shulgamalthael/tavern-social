@@ -1,29 +1,42 @@
 'use client';
 
 import { useEffect } from 'react';
-import { FriendCard, FriendRequestCard, useFriendStore } from '@/entities/friend';
+import {
+  FriendCard,
+  FriendCardSkeleton,
+  FriendRequestCard,
+  useFriendStore,
+} from '@/entities/friend';
 import { useThreadStore } from '@/entities/thread';
 import { useNavigationStore } from '@/features/section-navigation';
+import { useInfiniteScroll } from '@/shared/lib/use-infinite-scroll';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { Loader } from '@/shared/ui/Loader';
 import { PageHead } from '@/shared/ui/PageHead';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
 import styles from './FriendsWidget.module.scss';
 
+const FRIENDS_SKELETON_COUNT = 5;
+
 export function FriendsWidget() {
   const goToSection = useNavigationStore((state) => state.goToSection);
+  const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
   const openDirectThreadWith = useThreadStore((state) => state.openDirectThreadWith);
 
   const friends = useFriendStore((state) => state.friends);
   const status = useFriendStore((state) => state.status);
   const error = useFriendStore((state) => state.error);
   const loadFriends = useFriendStore((state) => state.loadFriends);
+  const nextCursor = useFriendStore((state) => state.nextCursor);
+  const loadMoreStatus = useFriendStore((state) => state.loadMoreStatus);
+  const loadMoreFriends = useFriendStore((state) => state.loadMoreFriends);
   const incoming = useFriendStore((state) => state.incoming);
   const outgoing = useFriendStore((state) => state.outgoing);
   const loadRequests = useFriendStore((state) => state.loadRequests);
   const acceptRequest = useFriendStore((state) => state.acceptRequest);
   const removeRequest = useFriendStore((state) => state.removeRequest);
+  const removeFriend = useFriendStore((state) => state.removeFriend);
+  const sentinelRef = useInfiniteScroll(nextCursor, () => void loadMoreFriends());
 
   useEffect(() => {
     void loadFriends();
@@ -55,6 +68,7 @@ export function FriendsWidget() {
                 variant="incoming"
                 onAccept={() => void acceptRequest(request.id)}
                 onRemove={() => void removeRequest(request.id)}
+                onAuthorClick={goToUserProfile}
               />
             ))}
             {outgoing.map((request) => (
@@ -63,13 +77,20 @@ export function FriendsWidget() {
                 request={request}
                 variant="outgoing"
                 onRemove={() => void removeRequest(request.id)}
+                onAuthorClick={goToUserProfile}
               />
             ))}
           </div>
         </div>
       )}
 
-      {status === 'loading' && <Loader label="Загружаем друзей…" />}
+      {status === 'loading' && (
+        <div className={styles['friends__list']}>
+          {Array.from({ length: FRIENDS_SKELETON_COUNT }, (_, index) => (
+            <FriendCardSkeleton key={index} />
+          ))}
+        </div>
+      )}
       {status === 'error' && <ErrorState message={error} onRetry={loadFriends} />}
 
       {status === 'success' && friends.length === 0 && (
@@ -82,10 +103,18 @@ export function FriendsWidget() {
       {status === 'success' && friends.length > 0 && (
         <div className={styles['friends__list']}>
           {friends.map((friend) => (
-            <FriendCard key={friend.id} friend={friend} onMessage={() => onMessage(friend.id)} />
+            <FriendCard
+              key={friend.id}
+              friend={friend}
+              onMessage={() => onMessage(friend.id)}
+              onAuthorClick={goToUserProfile}
+              onRemove={() => void removeFriend(friend.id)}
+            />
           ))}
+          {loadMoreStatus === 'loading' && <FriendCardSkeleton />}
         </div>
       )}
+      {status === 'success' && friends.length > 0 && <div ref={sentinelRef} aria-hidden="true" />}
     </SectionContainer>
   );
 }

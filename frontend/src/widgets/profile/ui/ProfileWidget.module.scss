@@ -100,3 +100,18 @@
   flex-wrap: wrap;
   gap: 7px;
 }
+
+// Заглушка сетки «Фотографии» в `ProfilePageSkeleton` — та же сетка, что и
+// в `GalleryGrid.module.scss` (`.gallery__grid`/`.gallery__tile`), но
+// отдельным классом: сама `GalleryGrid` грузится независимо от остальной
+// страницы (свой `useAsyncData`), так что её реальную скелетон-версию сюда
+// не подключить напрямую без завязки на чужой стор.
+.profile__gallery-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+
+  > * {
+    aspect-ratio: 1;
+  }
+}

@@ -9,6 +9,7 @@ import type { SearchResult } from '../model/types';
 interface SearchUserResponse {
   id: string;
   name: string;
+  avatarUrl: string | null;
   tagline: string;
   city: string | null;
 }
@@ -16,8 +17,11 @@ interface SearchUserResponse {
 interface SearchGroupResponse {
   id: string;
   name: string;
-  meta: string;
-  mark: string;
+  description: string;
+  type: 'open' | 'private';
+  avatarUrl: string | null;
+  membersCount: number;
+  isMember: boolean;
 }
 
 interface SearchCommunityResponse {
@@ -48,14 +52,18 @@ export async function search(query: string): Promise<SearchResult> {
       id: user.id,
       name: user.name,
       initials: getInitials(user.name),
+      avatarUrl: user.avatarUrl,
       tagline: user.tagline,
       city: user.city,
     })),
     groups: result.groups.map((group) => ({
       id: group.id,
       name: group.name,
-      meta: group.meta,
-      mark: group.mark,
+      description: group.description,
+      type: group.type,
+      avatarUrl: group.avatarUrl,
+      membersCount: group.membersCount,
+      isMember: group.isMember,
     })),
     communities: result.communities.map((community) => ({
       id: community.id,

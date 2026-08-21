@@ -28,3 +28,103 @@ $bp-desktop: 1180px;
   color: var(--tavern-ink);
   font: inherit;
 }
+
+// Стили тегов, которые приходят как санитизированный HTML контента поста
+// (`entities/post/ui/PostCard.tsx`, `dangerouslySetInnerHTML`) или из
+// Tiptap-редактора (`features/publish-post/ui/PostEditor.tsx`) — в обоих
+// случаях это чужая (не React-рендеренная) разметка без собственных классов,
+// поэтому единственный способ её стилизовать — селекторы по тегу. Общий
+// миксин вместо копирования одних и тех же правил в оба модуля — превью в
+// редакторе выглядит так же, как опубликованный пост.
+@mixin rich-content {
+  p {
+    margin: 0 0 0.6em;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0.8em 0 0.4em;
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 500;
+    line-height: 1.3;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  h1 {
+    font-size: 1.45em;
+  }
+
+  h2 {
+    font-size: 1.25em;
+  }
+
+  h3 {
+    font-size: 1.1em;
+  }
+
+  hr {
+    margin: 0.8em 0;
+    border: none;
+    border-top: 1px solid var(--tavern-line);
+  }
+
+  // Контейнер стилизованной карточки (см. HTML-режим редактора,
+  // `features/publish-post/lib/rich-html-extensions.ts`) — свой inline
+  // `style` (цвета/градиенты/рамки/отступы) уже разрешён санитайзером на
+  // backend, здесь только защита вёрстки: карточка не должна раздвигать
+  // пост шире собственного контейнера, даже если автор задал `width` больше
+  // родителя.
+  div {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  ul,
+  ol {
+    margin: 0 0 0.6em;
+    padding-left: 1.4em;
+  }
+
+  li {
+    margin: 0.15em 0;
+  }
+
+  strong {
+    font-weight: 700;
+  }
+
+  em {
+    font-style: italic;
+  }
+
+  u {
+    text-decoration: underline;
+  }
+
+  a {
+    color: var(--tavern-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    max-height: 480px;
+    margin: 0.6em 0;
+    border-radius: 10px;
+    object-fit: contain;
+    background: var(--tavern-sunk);
+    // Инлайн-картинки кликабельны — открывают `ImageLightbox` (см.
+    // `PostCard.tsx`, делегирование клика на контейнере).
+    cursor: pointer;
+  }
+}

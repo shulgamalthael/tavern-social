@@ -114,19 +114,20 @@ async function main() {
     create: {
       id: 'seed-group-book-table',
       name: 'Стол книжных вечеров',
-      meta: 'закрытый стол · по четвергам',
-      mark: '📖',
+      description: 'закрытый стол · по четвергам',
+      type: 'private',
+      membersCount: 2,
     },
   });
   await prisma.groupMembership.upsert({
     where: { groupId_userId: { groupId: group.id, userId: demo.id } },
     update: {},
-    create: { groupId: group.id, userId: demo.id, role: 'Хранитель стола' },
+    create: { groupId: group.id, userId: demo.id, role: 'owner' },
   });
   await prisma.groupMembership.upsert({
     where: { groupId_userId: { groupId: group.id, userId: dina.id } },
     update: {},
-    create: { groupId: group.id, userId: dina.id, role: 'Участник' },
+    create: { groupId: group.id, userId: dina.id, role: 'member' },
   });
 
   const trailsGroup = await prisma.group.upsert({
@@ -135,14 +136,15 @@ async function main() {
     create: {
       id: 'seed-group-trail-drafts',
       name: 'Черновики троп',
-      meta: 'закрытая группа · планирование походов',
-      mark: '🥾',
+      description: 'закрытая группа · планирование походов',
+      type: 'private',
+      membersCount: 1,
     },
   });
   await prisma.groupMembership.upsert({
     where: { groupId_userId: { groupId: trailsGroup.id, userId: mark.id } },
     update: {},
-    create: { groupId: trailsGroup.id, userId: mark.id, role: 'Проводник' },
+    create: { groupId: trailsGroup.id, userId: mark.id, role: 'owner' },
   });
 
   await prisma.post.createMany({

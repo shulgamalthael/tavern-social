@@ -1,7 +1,19 @@
-import { Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { PaginationQueryDto } from '@/common/dto/pagination-query.dto';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import type { RequestUser } from '@/common/types/authenticated-request';
+import type { PaginatedDto } from '@/common/types/paginated';
 import { RealtimeGateway } from '@/infrastructure/websocket/realtime.gateway';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import type { FriendDto, FriendRequestsListDto, FriendshipStatusDto } from './friends.types';
@@ -17,8 +29,11 @@ export class FriendsController {
   ) {}
 
   @Get()
-  async list(@CurrentUser() currentUser: RequestUser): Promise<FriendDto[]> {
-    return this.friendsService.list(currentUser.id);
+  async list(
+    @CurrentUser() currentUser: RequestUser,
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedDto<FriendDto>> {
+    return this.friendsService.list(currentUser.id, query.cursor, query.limit);
   }
 
   @Get('requests')
@@ -53,6 +68,19 @@ export class FriendsController {
     }
 
     return status;
+  }
+
+  // Разрыв уже подтверждённой дружбы — отдельный маршрут от `requests/:userId`
+  // (отмена/отклонение ещё не подтверждённой заявки), не конфликтует с ним:
+  // разная форма пути под одним и тем же DELETE.
+  @Delete(':userId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeFriend(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('userId') userId: string,
+  ): Promise<void> {
+    await this.friendsService.removeFriend(currentUser.id, userId);
+    this.realtimeGateway.emitToUser(userId, 'friend:removed', { userId: currentUser.id });
   }
 
   @Delete('requests/:userId')

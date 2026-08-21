@@ -1,15 +1,55 @@
 .scroll-area {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
 .scroll-area__viewport {
-  height: 100%;
+  // `flex: 1` вместо `height: 100%` — `height: 100%` резолвится только когда
+  // у родителя есть явная высота; у большинства мест использования (попапы/
+  // модалки) на обёртке задан только `max-height` (см. `SearchDropdown`,
+  // `AddParticipantDropdown`), а `max-height` без `height` не даёт проценту
+  // разрешиться — viewport рос по контенту без реального скролла, и
+  // содержимое вылезало за границы карточки. `.scroll-area` теперь сам
+  // flex-контейнер (см. выше), поэтому `flex: 1` корректно ограничивает
+  // высоту viewport'а его собственной высотой (уже стеснённой `max-height`
+  // обёртки) в обоих случаях — и когда обёртка сама flex-item с `flex: 1`
+  // (см. `MessengerWidget`), и когда высота задаётся только `max-height`.
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Без этого прокрутка на границе списка (верх/низ) «пробивает» его и
+   * раскачивает всю страницу целиком (`.app`, см. page.module.scss) — на
+   * мобильном это особенно заметно там, где список ровно по высоте контейнера
+   * и почти всегда «на границе» (например, список диалогов/сообщений). */
+  overscroll-behavior: contain;
   /* Нативный scrollbar скрыт — вместо него `.scroll-area__thumb`, но сама
    * прокрутка (колесо/тачпад/тач) остаётся штатной, ничего не переизобретаем. */
   scrollbar-width: none;
+
+  // Затухание сверху/снизу — подсказка «здесь есть что проскроллить».
+  // Высота каждой стороны приходит из JS (`ScrollArea.tsx`, `recompute`) и
+  // равна 0, когда с этой стороны скроллить уже некуда — тогда соответствующий
+  // сегмент градиента схлопывается, и контент остаётся полностью непрозрачным
+  // до самого края.
+  --scroll-fade-top: 0px;
+  --scroll-fade-bottom: 0px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--scroll-fade-top),
+    black calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--scroll-fade-top),
+    black calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
 
   &::-webkit-scrollbar {
     display: none;

@@ -14,11 +14,28 @@ import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { AddPersonIcon, BackIcon } from '@/shared/ui/icons';
-import { Loader } from '@/shared/ui/Loader';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
+import { Skeleton } from '@/shared/ui/Skeleton';
 import { AddParticipantDropdown } from './AddParticipantDropdown';
 import { MessageBubble } from './MessageBubble';
 import styles from './MessengerWidget.module.scss';
+
+const THREADS_SKELETON_COUNT = 7;
+
+/** Заглушка строки диалога на время загрузки списка — только для этого
+ * виджета, строка диалога сама по себе не вынесена в отдельный компонент
+ * (см. реальную разметку ниже, в `.messenger__thread-item`). */
+function ThreadItemSkeleton() {
+  return (
+    <div className={styles['messenger__thread-item']}>
+      <Skeleton width={30} height={30} radius="50%" />
+      <span className={styles['messenger__thread-body']}>
+        <Skeleton width="55%" height={14} />
+        <Skeleton width="80%" height={12.5} />
+      </span>
+    </div>
+  );
+}
 
 type ChatRow =
   | { kind: 'day'; key: string; label: string }
@@ -65,6 +82,7 @@ export function MessengerWidget() {
   const setActiveThread = useThreadStore((state) => state.setActiveThread);
   const addParticipant = useThreadStore((state) => state.addParticipant);
   const goToSection = useNavigationStore((state) => state.goToSection);
+  const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
   const { currentUser } = useCurrentUser();
   const [isChatOpen, setChatOpen] = useState(false);
   const [isAddParticipantOpen, setAddParticipantOpen] = useState(false);
@@ -81,7 +99,22 @@ export function MessengerWidget() {
     // помечать новые сообщения прочитанными, даже когда мессенджер не
     // смонтирован вообще (счётчик непрочитанных не растёт, хотя пользователь
     // ничего не видел).
-    return () => setActiveThread(null);
+    return () => {
+      // Проверка раздела, а не безусловный сброс: в дев-режиме (React
+      // Strict Mode) React намеренно вызывает этот cleanup один раз сразу
+      // после первого монтирования, чтобы проверить его идемпотентность —
+      // в этот момент раздел ещё остаётся «messages» (реальной навигации
+      // не было). Активный тред при этом мог быть выставлен снаружи ещё ДО
+      // монтирования виджета (кнопка «Написать» на карточке друга,
+      // `openDirectThreadWith`) — безусловный сброс стирал бы его на
+      // спровоцированном React'ом холостом цикле. При настоящем уходе из
+      // раздела к моменту вызова cleanup `section` уже другой (именно
+      // смена раздела и вызвала размонтирование), так что сброс тут
+      // происходит только когда мессенджер правда покинули.
+      if (useNavigationStore.getState().section !== 'messages') {
+        setActiveThread(null);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -135,8 +168,15 @@ export function MessengerWidget() {
   return (
     <main className={styles['messenger-page']}>
       {status === 'loading' && (
-        <div className={styles['messenger-page__status']}>
-          <Loader label="Загружаем диалоги…" />
+        <div className={styles.messenger}>
+          <div className={styles['messenger__thread-list']}>
+            <div className={styles['messenger__thread-list-viewport']}>
+              {Array.from({ length: THREADS_SKELETON_COUNT }, (_, index) => (
+                <ThreadItemSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+          <div className={styles['messenger__chat']} />
         </div>
       )}
 
@@ -178,7 +218,7 @@ export function MessengerWidget() {
                   )}
                   onClick={() => openThread(thread.id)}
                 >
-                  <Avatar initials={thread.initials} size="sm" />
+                  <Avatar initials={thread.initials} src={thread.avatarUrl} size="sm" />
                   <span className={styles['messenger__thread-body']}>
                     <span className={styles['messenger__thread-name']}>{thread.name}</span>
                     <span className={styles['messenger__thread-preview']}>{lastMessage?.text}</span>
@@ -208,11 +248,50 @@ export function MessengerWidget() {
                   >
                     <BackIcon />
                   </button>
-                  <Avatar initials={activeThread.initials} size="sm" />
-                  <span className={styles['messenger__chat-head-body']}>
-                    <span className={styles['messenger__thread-name']}>{activeThread.name}</span>
-                    <span className={styles['messenger__status']}>{activeThread.status}</span>
-                  </span>
+                  {activeThread.isGroup ? (
+                    <>
+                      <Avatar
+                        initials={activeThread.initials}
+                        src={activeThread.avatarUrl}
+                        size="sm"
+                      />
+                      <span className={styles['messenger__chat-head-body']}>
+                        <span className={styles['messenger__thread-name']}>
+                          {activeThread.name}
+                        </span>
+                        <span className={styles['messenger__status']}>{activeThread.status}</span>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className={styles['messenger__chat-head-trigger']}
+                        onClick={() => goToUserProfile(activeThread.participants[0].id)}
+                      >
+                        <Avatar
+                          initials={activeThread.initials}
+                          src={activeThread.avatarUrl}
+                          size="sm"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(
+                          styles['messenger__chat-head-trigger'],
+                          styles['messenger__chat-head-name-trigger'],
+                        )}
+                        onClick={() => goToUserProfile(activeThread.participants[0].id)}
+                      >
+                        <span className={styles['messenger__chat-head-body']}>
+                          <span className={styles['messenger__thread-name']}>
+                            {activeThread.name}
+                          </span>
+                          <span className={styles['messenger__status']}>{activeThread.status}</span>
+                        </span>
+                      </button>
+                    </>
+                  )}
                   <div
                     className={styles['messenger__add-participant']}
                     ref={addParticipantContainerRef}

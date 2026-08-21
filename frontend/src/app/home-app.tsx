@@ -1,6 +1,6 @@
 'use client';
 
-import { type ComponentType, useEffect } from 'react';
+import { type ComponentType, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useFriendStore } from '@/entities/friend';
 import {
@@ -15,6 +15,7 @@ import { getSocketTicket } from '@/features/auth';
 import { type SectionId, useNavigationStore } from '@/features/section-navigation';
 import { BACKEND_WS_URL } from '@/shared/config/realtime';
 import { getInitials } from '@/shared/lib/get-initials';
+import { usePersistedScroll } from '@/shared/lib/use-persisted-scroll';
 import { CommunitiesWidget } from '@/widgets/communities';
 import { FeedWidget } from '@/widgets/feed';
 import { FriendsWidget } from '@/widgets/friends';
@@ -50,11 +51,18 @@ interface IncomingMessage {
 interface IncomingActor {
   id: string;
   name: string;
+  avatarUrl: string | null;
 }
 
 interface IncomingFriendEvent {
   notificationId: string;
   actor: IncomingActor;
+}
+
+interface IncomingGroupJoinEvent {
+  notificationId: string;
+  actor: IncomingActor;
+  group: { id: string; name: string };
 }
 
 interface IncomingParticipantAdded {
@@ -68,7 +76,7 @@ interface IncomingNotification {
   actor: IncomingActor;
   actorCount: number;
   isNew: boolean;
-  post: { id: string; text: string };
+  post: { id: string; text: string; hasImage: boolean };
   commentText?: string;
 }
 
@@ -84,6 +92,8 @@ export function HomeApp() {
   const loadThreads = useThreadStore((state) => state.loadThreads);
   const loadUnreadCount = useNotificationStore((state) => state.loadUnreadCount);
   const { currentUser } = useCurrentUser();
+  const appRef = useRef<HTMLDivElement>(null);
+  usePersistedScroll(appRef);
 
   useEffect(() => {
     loadPosts();
@@ -154,8 +164,10 @@ export function HomeApp() {
           key: `message:${thread.id}`,
           kind: 'message',
           threadId: thread.id,
+          senderId: message.senderId,
           senderName: thread.name,
           senderInitials: thread.initials,
+          senderAvatarUrl: thread.avatarUrl,
           preview: message.text,
         });
       }
@@ -170,6 +182,7 @@ export function HomeApp() {
         senderId: payload.actor.id,
         senderName: payload.actor.name,
         senderInitials: getInitials(payload.actor.name),
+        senderAvatarUrl: payload.actor.avatarUrl,
       });
     });
 
@@ -179,12 +192,43 @@ export function HomeApp() {
       useToastStore.getState().enqueue({
         key: `friend-accepted:${payload.actor.id}`,
         kind: 'friend-accepted',
+        actorId: payload.actor.id,
         name: payload.actor.name,
         initials: getInitials(payload.actor.name),
+        avatarUrl: payload.actor.avatarUrl,
       });
     });
 
     socket.on('friend-request:removed', () => useFriendStore.getState().receiveRemoved());
+    socket.on('friend:removed', () => useFriendStore.getState().receiveFriendRemoved());
+
+    socket.on('group-join-request:new', (payload: IncomingGroupJoinEvent) => {
+      useNotificationStore.getState().receiveRealtimeUnread();
+      useToastStore.getState().enqueue({
+        key: `group-join-request:${payload.group.id}:${payload.actor.id}`,
+        kind: 'group-join-request',
+        actorId: payload.actor.id,
+        actorName: payload.actor.name,
+        actorInitials: getInitials(payload.actor.name),
+        actorAvatarUrl: payload.actor.avatarUrl,
+        groupId: payload.group.id,
+        groupName: payload.group.name,
+      });
+    });
+
+    socket.on('group-join-request:accepted', (payload: IncomingGroupJoinEvent) => {
+      useNotificationStore.getState().receiveRealtimeUnread();
+      useToastStore.getState().enqueue({
+        key: `group-join-accepted:${payload.group.id}`,
+        kind: 'group-join-accepted',
+        actorId: payload.actor.id,
+        actorName: payload.actor.name,
+        actorInitials: getInitials(payload.actor.name),
+        actorAvatarUrl: payload.actor.avatarUrl,
+        groupId: payload.group.id,
+        groupName: payload.group.name,
+      });
+    });
 
     socket.on('thread:participant-added', (payload: IncomingParticipantAdded) => {
       useThreadStore.getState().receiveParticipantAdded(payload.threadId, payload.participant);
@@ -210,17 +254,22 @@ export function HomeApp() {
               key: `notification:${payload.notificationId}`,
               kind: 'post-comment',
               notificationId: payload.notificationId,
+              actorId: payload.actor.id,
               actorName: payload.actor.name,
               actorInitials,
+              actorAvatarUrl: payload.actor.avatarUrl,
               commentText: payload.commentText ?? '',
             }
           : {
               key: `notification:${payload.notificationId}`,
               kind: payload.type === 'post_repost' ? 'post-repost' : 'post-like',
               notificationId: payload.notificationId,
+              actorId: payload.actor.id,
               actorName: payload.actor.name,
               actorInitials,
+              actorAvatarUrl: payload.actor.avatarUrl,
               actorCount: payload.actorCount,
+              hasImage: payload.post.hasImage,
             },
       );
     });
@@ -234,7 +283,7 @@ export function HomeApp() {
   }, [currentUser.id, loadThreads]);
 
   return (
-    <div className={styles.app}>
+    <div className={styles.app} ref={appRef}>
       <Header />
       <ActiveSection />
       <NavigationDock />

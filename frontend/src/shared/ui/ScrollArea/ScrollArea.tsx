@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type CSSProperties,
   type HTMLAttributes,
   type Ref,
   useCallback,
@@ -30,6 +31,21 @@ interface ThumbGeometry {
 
 const HIDE_DELAY_MS = 800;
 const MIN_THUMB_SIZE = 24;
+/** Высота затухания на краю — достаточно заметная, чтобы читаться как
+ * подсказка «здесь можно проскроллить», но не настолько большая, чтобы
+ * съедать заметную часть короткого списка. */
+const FADE_SIZE_PX = 28;
+/** Не показываем затухание, пока до самого края осталось меньше этого —
+ * иначе на границе скролла оно моргало бы туда-обратно от долей пикселя
+ * инерционной прокрутки тачпадом. */
+const FADE_EDGE_THRESHOLD_PX = 2;
+
+interface FadeState {
+  top: boolean;
+  bottom: boolean;
+}
+
+const NO_FADE: FadeState = { top: false, bottom: false };
 
 /**
  * Полностью кастомный скролл — не полагается на `scrollbar-width`/
@@ -56,6 +72,7 @@ export function ScrollArea({
   // lint) — `useImperativeHandle` сам умеет и в функцию, и в RefObject.
   useImperativeHandle(externalViewportRef ?? null, () => viewportRef.current as HTMLDivElement);
   const [thumb, setThumb] = useState<ThumbGeometry | null>(null);
+  const [fade, setFade] = useState<FadeState>(NO_FADE);
   const [isHovering, setHovering] = useState(false);
   const [isScrolling, setScrolling] = useState(false);
   const [isDragging, setDragging] = useState(false);
@@ -67,12 +84,19 @@ export function ScrollArea({
     const { scrollHeight, clientHeight, scrollTop } = viewport;
     if (scrollHeight <= clientHeight + 1) {
       setThumb(null);
+      setFade(NO_FADE);
       return;
     }
     const size = Math.max((clientHeight / scrollHeight) * clientHeight, MIN_THUMB_SIZE);
     const maxOffset = clientHeight - size;
     const offset = maxOffset <= 0 ? 0 : (scrollTop / (scrollHeight - clientHeight)) * maxOffset;
     setThumb({ size, offset });
+    // Затухание с той стороны, где есть что ещё прокрутить — сигнал
+    // «здесь не всё видно», а не декоративная рамка вокруг любого списка.
+    setFade({
+      top: scrollTop > FADE_EDGE_THRESHOLD_PX,
+      bottom: scrollTop < scrollHeight - clientHeight - FADE_EDGE_THRESHOLD_PX,
+    });
   }, []);
 
   useEffect(() => {
@@ -144,7 +168,16 @@ export function ScrollArea({
         rest.onMouseLeave?.(event);
       }}
     >
-      <div className={cn(styles['scroll-area__viewport'], viewportClassName)} ref={viewportRef}>
+      <div
+        className={cn(styles['scroll-area__viewport'], viewportClassName)}
+        ref={viewportRef}
+        style={
+          {
+            '--scroll-fade-top': fade.top ? `${FADE_SIZE_PX}px` : '0px',
+            '--scroll-fade-bottom': fade.bottom ? `${FADE_SIZE_PX}px` : '0px',
+          } as CSSProperties
+        }
+      >
         {children}
       </div>
       {thumb && (

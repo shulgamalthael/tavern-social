@@ -1,0 +1,140 @@
+@use '@/shared/styles/mixins' as *;
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.editor__tool {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font-size: 13px;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.editor__tool--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+}
+
+.editor__divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--tavern-line);
+}
+
+.editor__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+  border: 0;
+}
+
+.editor__link-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-sunk);
+}
+
+.editor__link-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+
+  input {
+    @include control;
+    height: 34px;
+  }
+}
+
+.editor__link-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.editor__content {
+  min-height: 0;
+}
+
+// Скрыт (не unmount) пока открыт режим HTML-кода — Tiptap теряет
+// выделение/фокус при полном размонтировании `EditorContent`, `display:
+// none` этого не делает.
+.editor__content--hidden {
+  display: none;
+}
+
+.editor__html-source {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-sunk);
+}
+
+.editor__html-textarea {
+  @include control;
+  height: auto;
+  padding: 8px 10px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.editor__prose {
+  min-height: 64px;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-x: auto;
+  @include rich-content;
+}
+
+.editor__error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--tavern-danger);
+}
+
+.editor__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--tavern-line);
+}

@@ -1,6 +1,10 @@
 'use client';
 
-import { NotificationItem, useNotificationStore } from '@/entities/notification';
+import {
+  NotificationItem,
+  openNotificationTarget,
+  useNotificationStore,
+} from '@/entities/notification';
 import { useNavigationStore } from '@/features/section-navigation';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -13,7 +17,7 @@ const PREVIEW_COUNT = 5;
 
 export interface NotificationsDropdownProps {
   /** Закрыть дропдаун без перехода на страницу уведомлений (клик по строке —
-   * там переход сразу на свой профиль, как в toast'ах). */
+   * переход туда, куда указывает тип уведомления, см. `resolveNotificationSection`). */
   onClose: () => void;
   /** «Посмотреть все» — переход на полную страницу уведомлений. */
   onViewAll: () => void;
@@ -27,6 +31,8 @@ export function NotificationsDropdown({ onClose, onViewAll }: NotificationsDropd
   const error = useNotificationStore((state) => state.error);
   const markRead = useNotificationStore((state) => state.markRead);
   const goToSection = useNavigationStore((state) => state.goToSection);
+  const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
+  const goToGroup = useNavigationStore((state) => state.goToGroup);
 
   const preview = items.slice(0, PREVIEW_COUNT);
 
@@ -53,7 +59,11 @@ export function NotificationsDropdown({ onClose, onViewAll }: NotificationsDropd
               onClick={() => {
                 if (!notification.isRead) void markRead(notification.id);
                 onClose();
-                goToSection('profile');
+                openNotificationTarget(notification, { goToSection, goToGroup });
+              }}
+              onAuthorClick={(actorId) => {
+                onClose();
+                goToUserProfile(actorId);
               }}
             />
           ))}

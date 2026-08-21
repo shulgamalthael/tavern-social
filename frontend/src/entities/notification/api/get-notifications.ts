@@ -13,6 +13,7 @@ import type {
 interface PublicProfileResponse {
   id: string;
   name: string;
+  avatarUrl: string | null;
 }
 
 interface NotificationResponse {
@@ -21,7 +22,8 @@ interface NotificationResponse {
   actor: PublicProfileResponse;
   actorCount: number;
   recentActors: PublicProfileResponse[];
-  post: { id: string; text: string } | null;
+  post: { id: string; text: string; hasImage: boolean } | null;
+  group: { id: string; name: string } | null;
   commentText: string | null;
   isRead: boolean;
   createdAt: string;
@@ -33,7 +35,12 @@ interface NotificationsListResponse {
 }
 
 function mapActor(actor: PublicProfileResponse): NotificationActor {
-  return { id: actor.id, name: actor.name, initials: getInitials(actor.name) };
+  return {
+    id: actor.id,
+    name: actor.name,
+    initials: getInitials(actor.name),
+    avatarUrl: actor.avatarUrl,
+  };
 }
 
 function mapNotification(notification: NotificationResponse): Notification {
@@ -44,6 +51,7 @@ function mapNotification(notification: NotificationResponse): Notification {
     actorCount: notification.actorCount,
     recentActors: notification.recentActors.map(mapActor),
     post: notification.post,
+    group: notification.group,
     commentText: notification.commentText,
     isRead: notification.isRead,
     createdAt: notification.createdAt,

@@ -12,8 +12,10 @@ export type ToastItem =
       key: string;
       kind: 'message';
       threadId: string;
+      senderId: string;
       senderName: string;
       senderInitials: string;
+      senderAvatarUrl: string | null;
       preview: string;
     }
   | {
@@ -23,31 +25,62 @@ export type ToastItem =
       senderId: string;
       senderName: string;
       senderInitials: string;
+      senderAvatarUrl: string | null;
     }
   | {
       id: string;
       key: string;
       kind: 'friend-accepted';
+      actorId: string;
       name: string;
       initials: string;
+      avatarUrl: string | null;
     }
   | {
       id: string;
       key: string;
       kind: 'post-like' | 'post-repost';
       notificationId: string;
+      actorId: string;
       actorName: string;
       actorInitials: string;
+      actorAvatarUrl: string | null;
       actorCount: number;
+      /** Реакция на фото галереи — влияет только на текст («фотографию» вместо «запись»). */
+      hasImage: boolean;
     }
   | {
       id: string;
       key: string;
       kind: 'post-comment';
       notificationId: string;
+      actorId: string;
       actorName: string;
       actorInitials: string;
+      actorAvatarUrl: string | null;
       commentText: string;
+    }
+  | {
+      id: string;
+      key: string;
+      kind: 'group-join-request';
+      actorId: string;
+      actorName: string;
+      actorInitials: string;
+      actorAvatarUrl: string | null;
+      groupId: string;
+      groupName: string;
+    }
+  | {
+      id: string;
+      key: string;
+      kind: 'group-join-accepted';
+      actorId: string;
+      actorName: string;
+      actorInitials: string;
+      actorAvatarUrl: string | null;
+      groupId: string;
+      groupName: string;
     };
 
 /** `Omit` над union теряет специфичные для варианта поля (`keyof` объединения

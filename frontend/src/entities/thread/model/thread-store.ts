@@ -35,7 +35,10 @@ interface ThreadActions {
   /** Кто-то добавил участника в диалог, который уже есть в сторе — если
    * диалога ещё нет (это я — новый участник), честно перечитываем список
    * через REST, а не пытаемся собрать диалог из одного сигнала. */
-  receiveParticipantAdded: (threadId: string, participant: { id: string; name: string }) => void;
+  receiveParticipantAdded: (
+    threadId: string,
+    participant: { id: string; name: string; avatarUrl: string | null },
+  ) => void;
 }
 
 export type ThreadStore = ThreadState & ThreadActions;
@@ -128,10 +131,23 @@ export const useThreadStore = create<ThreadStore>((set, get) => ({
         if (thread.participants.some((existing) => existing.id === participant.id)) return thread;
         const participants = [
           ...thread.participants,
-          { id: participant.id, name: participant.name, initials: getInitials(participant.name) },
+          {
+            id: participant.id,
+            name: participant.name,
+            initials: getInitials(participant.name),
+            avatarUrl: participant.avatarUrl,
+          },
         ];
         const name = displayNameFor(participants);
-        return { ...thread, participants, isGroup: true, name, initials: getInitials(name) };
+        return {
+          ...thread,
+          participants,
+          isGroup: true,
+          name,
+          initials: getInitials(name),
+          // Стало групповым (2+ участника) — единого аватара больше нет.
+          avatarUrl: null,
+        };
       }),
     }));
   },

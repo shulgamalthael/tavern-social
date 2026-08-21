@@ -1,0 +1,174 @@
+@use '@/shared/styles/mixins' as *;
+
+// Тот же портал/оверлей, что у `ImageLightbox` (`shared/ui`) — но своя
+// светлая карточка, а не полноэкранный тёмный просмотр: тут список текста
+// для чтения, а не одно фото на весь экран.
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 14, 22, 0.55);
+}
+
+.modal__card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, 100%);
+  max-height: min(70vh, 560px);
+  padding: 16px;
+  @include card;
+  box-shadow: var(--tavern-shadow-card);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal__title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.modal__close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.modal__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 14px;
+    outline: none;
+  }
+}
+
+.modal__search-icon {
+  flex-shrink: 0;
+  color: var(--tavern-muted);
+}
+
+.modal__list {
+  flex: 1;
+  min-height: 0;
+}
+
+.modal__list-viewport {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal__empty {
+  margin: 0;
+  padding: 12px 8px;
+  font-size: 13.5px;
+  color: var(--tavern-muted);
+}
+
+// Обёртка нужна только когда есть кнопка удаления рядом со строкой — сама
+// строка при этом остаётся отдельной кнопкой (кнопка в кнопке — невалидный
+// HTML), тот же приём, что и у `.friends__tile-wrap` в ProfileFriendsCard.
+.modal__row-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.modal__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.modal__row-delete {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-danger);
+  }
+}
+
+.modal__row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.modal__row-title {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal__row-subtitle {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--tavern-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

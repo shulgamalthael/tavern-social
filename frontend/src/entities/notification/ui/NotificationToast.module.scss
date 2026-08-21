@@ -23,6 +23,35 @@
   cursor: pointer;
 }
 
+// Аватар и имя — отдельные кликабельные `button`, ведущие на профиль автора
+// действия (см. `onAuthorClick` в NotificationToast.tsx), поверх строки-`div`,
+// которая сама тоже кликабельна (переход по тосту).
+.toast__avatar-trigger {
+  display: block;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.toast__title-trigger {
+  display: block;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
+}
+
 .toast__body {
   display: flex;
   flex-direction: column;

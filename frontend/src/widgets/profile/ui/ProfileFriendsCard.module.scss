@@ -1,0 +1,91 @@
+.friends__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 10px 8px;
+}
+
+// Обёртка нужна только когда есть кнопка удаления рядом с плиткой —
+// `position: relative` для `.friends__delete`, сама плитка при этом
+// остаётся отдельной кнопкой (кнопка в кнопке — невалидный HTML).
+.friends__tile-wrap {
+  position: relative;
+}
+
+.friends__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  // `<button>` не тянется на всю ширину родителя сам по себе, в отличие от
+  // обычного блочного `<div>`, даже с `display: flex` — без явного `width`
+  // кнопка сжималась по своему контенту (по самому длинному имени) и
+  // вылезала поверх соседних плиток сетки вместо обрезки эллипсисом (см.
+  // `.friends__name`). Тот же приём, что и у `.gallery__tile-trigger` в
+  // GalleryGrid.
+  width: 100%;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+// Тот же приём, что и `.gallery__delete` в GalleryGrid — полупрозрачный
+// кружок поверх аватара, только сверху, а не поверх всей плитки.
+.friends__delete {
+  position: absolute;
+  top: -4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.6);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(15, 23, 42, 0.8);
+  }
+}
+
+.friends__name {
+  // `width` не действует на строчные элементы — без `display: block` текст
+  // не обрезался эллипсисом, а просто вылезал поверх соседних плиток сетки
+  // (что и выглядело «хаотично»).
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--tavern-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Тот же приём, что и «+N» в GalleryGrid (`.gallery__more`) — чёрная
+// полупрозрачная плашка, только круглая, под размер аватара `size="lg"`.
+.friends__more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.7);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.friends__skeleton-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}

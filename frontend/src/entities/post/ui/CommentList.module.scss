@@ -18,6 +18,32 @@
   gap: 10px;
 }
 
+// Аватар и имя автора комментария — отдельные кликабельные `button`, ведущие
+// на его профиль (см. `onAuthorClick` в CommentList.tsx) — тот же приём, что
+// и у автора поста в PostCard.
+.comment-list__avatar-trigger {
+  display: block;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.comment-list__author-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
+}
+
 .comment-list__replies {
   display: flex;
   flex-direction: column;
@@ -27,9 +53,14 @@
   list-style: none;
 }
 
+.comment-list__row-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+
 .comment-list__reply-button {
   align-self: flex-start;
-  margin-top: 2px;
   padding: 0;
   border: 0;
   background: none;
@@ -40,6 +71,21 @@
 
   &:hover {
     color: var(--tavern-accent);
+  }
+}
+
+.comment-list__delete-button {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-danger);
   }
 }
 
@@ -84,4 +130,26 @@
 
 .comment-list__loader {
   margin-top: 10px;
+}
+
+.comment-list__more {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tavern-accent);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    color: var(--tavern-muted);
+    cursor: default;
+    text-decoration: none;
+  }
 }

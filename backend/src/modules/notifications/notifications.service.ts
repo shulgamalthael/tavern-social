@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Notification, NotificationType, User } from '@prisma/client';
+import { extractImageUrls } from '@/common/lib/post-image-placeholders';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import { toPublicProfile } from '@/modules/users/users.mapper';
 import type { PublicProfile } from '@/modules/users/users.types';
@@ -22,12 +23,14 @@ type NotificationWithRelations = Notification & {
   actor: User;
   post: { id: string; text: string } | null;
   comment: { text: string } | null;
+  group: { id: string; name: string } | null;
 };
 
 const LIST_INCLUDE = {
   actor: true,
   post: { select: { id: true, text: true } },
   comment: { select: { text: true } },
+  group: { select: { id: true, name: true } },
 } as const;
 
 export interface NotifyPostInteractionParams {
@@ -65,6 +68,42 @@ export class NotificationsService {
   ): Promise<{ id: string; actor: PublicProfile }> {
     const notification = await this.prisma.notification.create({
       data: { recipientId, actorId, type: 'friend_accepted', recentActorIds: [actorId] },
+      select: { id: true, actor: true },
+    });
+    return { id: notification.id, actor: toPublicProfile(notification.actor) };
+  }
+
+  async notifyGroupJoinRequest(
+    recipientId: string,
+    actorId: string,
+    groupId: string,
+  ): Promise<{ id: string; actor: PublicProfile }> {
+    const notification = await this.prisma.notification.create({
+      data: {
+        recipientId,
+        actorId,
+        type: 'group_join_request',
+        groupId,
+        recentActorIds: [actorId],
+      },
+      select: { id: true, actor: true },
+    });
+    return { id: notification.id, actor: toPublicProfile(notification.actor) };
+  }
+
+  async notifyGroupJoinAccepted(
+    recipientId: string,
+    actorId: string,
+    groupId: string,
+  ): Promise<{ id: string; actor: PublicProfile }> {
+    const notification = await this.prisma.notification.create({
+      data: {
+        recipientId,
+        actorId,
+        type: 'group_join_accepted',
+        groupId,
+        recentActorIds: [actorId],
+      },
       select: { id: true, actor: true },
     });
     return { id: notification.id, actor: toPublicProfile(notification.actor) };
@@ -223,8 +262,15 @@ export class NotificationsService {
       recentActors: notification.recentActorIds
         .map((id) => actorProfiles.get(id))
         .filter((profile): profile is PublicProfile => Boolean(profile)),
-      post: notification.post,
+      post: notification.post
+        ? {
+            id: notification.post.id,
+            text: notification.post.text,
+            hasImage: extractImageUrls(notification.post.text).length > 0,
+          }
+        : null,
       commentText: notification.comment?.text ?? null,
+      group: notification.group,
       isRead: notification.isRead,
       createdAt: notification.createdAt.toISOString(),
     };

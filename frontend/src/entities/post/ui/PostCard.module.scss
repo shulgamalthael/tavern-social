@@ -1,3 +1,5 @@
+@use '@/shared/styles/mixins' as *;
+
 .post__head {
   display: flex;
   align-items: center;
@@ -9,6 +11,33 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+}
+
+// Аватар и имя автора — отдельные кликабельные `button`, а не текстовые
+// узлы: клик по любому из них ведёт на профиль автора (см. `onAuthorClick`
+// в `PostCard.tsx`). Сброс до вида обычного текста/картинки — не должны
+// выглядеть как обычная кнопка интерфейса.
+.post__author-trigger {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.post__author-name-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
 }
 
 .post__author {
@@ -26,12 +55,28 @@
   font-weight: 500;
 }
 
+.post__wall-owner-trigger {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+// Обёртка вместо `margin-left: auto` прямо на кнопке — самой кнопке нужен
+// `position: relative` для попапа, а сдвиг вправо в `.post__head` остаётся на
+// обёртке.
+.post__menu {
+  position: relative;
+  margin-left: auto;
+}
+
 .post__more-button {
   display: grid;
   place-items: center;
   width: 30px;
   height: 30px;
-  margin-left: auto;
   border: 0;
   border-radius: 8px;
   background: none;
@@ -44,14 +89,61 @@
   }
 }
 
+.post__menu-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  min-width: 140px;
+  padding: 4px;
+  @include card;
+  box-shadow: var(--tavern-shadow-card);
+}
+
+.post__menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-ink);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.post__menu-item--danger {
+  color: var(--tavern-danger);
+}
+
+// Контент — санитизированный на backend HTML (см. PostCard.tsx), не
+// React-рендеренная разметка, поэтому теги внутри стилизуются общим
+// миксином по тегу, а не собственными BEM-классами (см. комментарий у
+// `rich-content` в `shared/styles/_mixins.scss`).
 .post__text {
   margin: 12px 0 0;
   font-size: 15px;
   line-height: 1.6;
   text-wrap: pretty;
+  // Стилизованная карточка (див с явным `width`/`max-width`, см.
+  // rich-content) может оказаться шире мобильного экрана — та же защита
+  // «широкий контент скроллится в своём контейнере», что и у таблиц/кода
+  // (см. AGENTS.md), а не раздвигает всю карточку поста.
+  overflow-x: auto;
+  @include rich-content;
 }
 
-.post__image {
+// Заглушка текста поста на время загрузки (`PostCardSkeleton`) — та же
+// позиция, что у `.post__text`, но несколько строк-полосок вместо абзаца.
+.post__text-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 12px;
 }
 
@@ -74,6 +166,8 @@
   font-size: 14px;
   line-height: 1.55;
   text-wrap: pretty;
+  overflow-x: auto;
+  @include rich-content;
 }
 
 .post__comments {
@@ -147,10 +241,4 @@
   background: var(--tavern-soft);
   color: var(--tavern-danger);
   font-weight: 500;
-}
-
-.post__views {
-  margin-left: auto;
-  font-size: 12.5px;
-  color: var(--tavern-muted);
 }

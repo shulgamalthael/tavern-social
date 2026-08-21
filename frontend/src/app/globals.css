@@ -45,6 +45,12 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation;
+  /* Второй рубеж поверх overscroll-behavior на `.app`/`ScrollArea` — гасит
+   * системный bounce/pull-to-refresh на уровне документа, чтобы жест внутри
+   * `.app` не «пробивал» его на мобильных браузерах. Не мешает обычному
+   * скроллу страниц вне `.app` (например, /auth) — только убирает эффект
+   * упругого оттягивания за границу. */
+  overscroll-behavior: none;
 }
 
 /**

@@ -5,10 +5,21 @@ import { getSessionToken } from '@/shared/lib/session-token.server';
 import type { Community } from '../model/types';
 import { mapCommunity, type CommunityResponse } from './map-community';
 
-export async function getCommunities(): Promise<Community[]> {
+interface CommunitiesPageResponse {
+  items: CommunityResponse[];
+  nextCursor: string | null;
+}
+
+export async function getCommunities(
+  cursor?: string | null,
+): Promise<{ communities: Community[]; nextCursor: string | null }> {
   const token = await getSessionToken();
   if (!token) throw new Error('Сессия истекла — обновите страницу');
 
-  const communities = await backendFetch<CommunityResponse[]>('/communities', { token });
-  return communities.map(mapCommunity);
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+  const { items, nextCursor } = await backendFetch<CommunitiesPageResponse>(
+    `/communities${query}`,
+    { token },
+  );
+  return { communities: items.map(mapCommunity), nextCursor };
 }

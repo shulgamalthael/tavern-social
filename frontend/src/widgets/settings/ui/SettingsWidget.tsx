@@ -9,14 +9,16 @@ import {
   updateSettings,
   type UpdateProfileState,
 } from '@/features/auth';
+import { useNavigationStore } from '@/features/section-navigation';
 import { cn } from '@/shared/lib/cn';
 import { useAsyncData } from '@/shared/lib/use-async-data';
+import { clearPersistedScroll } from '@/shared/lib/use-persisted-scroll';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { Loader } from '@/shared/ui/Loader';
 import { PageHead } from '@/shared/ui/PageHead';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
+import { Skeleton } from '@/shared/ui/Skeleton';
 import { SETTINGS_TOGGLES } from '../config/settings-toggles';
 import styles from './SettingsWidget.module.scss';
 
@@ -24,6 +26,7 @@ const INITIAL_STATE: UpdateProfileState = {};
 
 export function SettingsWidget() {
   const { currentUser, applyProfileUpdate } = useCurrentUser();
+  const goToSection = useNavigationStore((state) => state.goToSection);
   const [state, formAction, isPending] = useActionState(updateProfile, INITIAL_STATE);
   const { status, data: settings, error, refetch } = useAsyncData(getMySettings);
   // Локальные правки поверх загруженных настроек — так переключение тумблера
@@ -79,7 +82,16 @@ export function SettingsWidget() {
 
       <Card>
         <h2 className={styles['settings__card-title']}>Тишина и приватность</h2>
-        {status === 'loading' && <Loader label="Загружаем настройки…" />}
+        {status === 'loading' &&
+          SETTINGS_TOGGLES.map((item) => (
+            <div key={item.id} className={styles['settings__toggle-row']}>
+              <div>
+                <Skeleton width="55%" height={14} />
+                <Skeleton width="80%" height={13} />
+              </div>
+              <Skeleton width={42} height={24} radius={12} />
+            </div>
+          ))}
         {status === 'error' && <ErrorState message={error} onRetry={refetch} />}
         {status === 'success' &&
           toggles &&
@@ -107,7 +119,18 @@ export function SettingsWidget() {
 
       <Card>
         <h2 className={styles['settings__card-title']}>Аккаунт</h2>
-        <form action={endSession}>
+        <form
+          action={endSession}
+          onSubmit={() => {
+            // Раздел и позиция скролла сохраняются в sessionStorage на всю
+            // вкладку (см. `useNavigationStore`/`usePersistedScroll`) — без
+            // сброса при выходе следующий вход в этой же вкладке (тем же
+            // или другим пользователем) открывался бы там же, где вышел
+            // предыдущий, вместо честной ленты по умолчанию.
+            goToSection('feed');
+            clearPersistedScroll();
+          }}
+        >
           <Button type="submit" variant="outline">
             Выйти из зала
           </Button>

@@ -7,16 +7,21 @@
 }
 
 .auth__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  // Единый ритм между всеми блоками карточки (точка-лого, тайтл, подпись,
+  // табы, форма) — вместо разрозненных margin на каждом элементе, из-за
+  // которых где-то отступа не было вообще, а где-то он был заметно больше.
+  gap: 18px;
   width: 100%;
   max-width: 380px;
   text-align: center;
 }
 
 .auth__logo-dot {
-  display: inline-block;
   width: 10px;
   height: 10px;
-  margin-bottom: 14px;
   border-radius: 50%;
   background: var(--tavern-accent);
   box-shadow: 0 0 0 4px var(--tavern-soft);
@@ -32,7 +37,7 @@
 }
 
 .auth__subtitle {
-  margin: 10px 0 0;
+  margin: 0;
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--tavern-muted);

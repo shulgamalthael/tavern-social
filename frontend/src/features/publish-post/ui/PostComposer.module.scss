@@ -3,7 +3,17 @@
   gap: 12px;
 }
 
-.composer__textarea {
+.composer__editor {
+  flex: 1;
+  min-width: 0;
+  padding-top: 4px;
+}
+
+// Свёрнутый вид (по умолчанию) — сам инпут выступает тогглом разворачивания
+// редактора, поэтому это `<button>`, стилизованная под плейсхолдер
+// многострочного textarea, а не настоящее поле ввода (текст печатается уже
+// в развёрнутом `PostEditor`, см. PostComposer.tsx).
+.composer__textarea-toggle {
   flex: 1;
   min-width: 0;
   padding: 8px 0 0;
@@ -12,9 +22,9 @@
   font: inherit;
   font-size: 15px;
   line-height: 1.55;
-  color: inherit;
-  outline: none;
-  resize: none;
+  color: var(--tavern-muted);
+  text-align: left;
+  cursor: pointer;
 }
 
 .composer__actions {
@@ -36,20 +46,18 @@
   gap: 12px;
 }
 
-.composer__input {
+// Тот же приём, что и у `.composer__textarea-toggle` — однострочный вид
+// вместо реального `<input>`, клик разворачивает `PostEditor`.
+.composer__input-toggle {
   flex: 1;
   min-width: 0;
   height: 38px;
+  padding: 0;
   border: 0;
   background: none;
   font: inherit;
   font-size: 14.5px;
-  color: inherit;
-  outline: none;
-}
-
-.composer__error {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--tavern-danger);
+  color: var(--tavern-muted);
+  text-align: left;
+  cursor: pointer;
 }

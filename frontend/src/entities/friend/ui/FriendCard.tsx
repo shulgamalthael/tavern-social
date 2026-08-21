@@ -8,15 +8,33 @@ import styles from './FriendCard.module.scss';
 export interface FriendCardProps {
   friend: Friend;
   onMessage?: () => void;
+  /** Клик по аватару/имени — переход на страницу друга, отдельно от
+   * остальных действий карточки (см. AGENTS.md, клики по автору). */
+  onAuthorClick?: (friendId: string) => void;
+  /** Разрыв дружбы — показывается только там, где вызывающий явно передал
+   * колбэк (см. `widgets/friends/ui/FriendsWidget`). */
+  onRemove?: () => void;
 }
 
-export function FriendCard({ friend, onMessage }: FriendCardProps) {
+export function FriendCard({ friend, onMessage, onAuthorClick, onRemove }: FriendCardProps) {
   return (
     <Card as="article" className={styles.friend}>
-      <Avatar initials={friend.initials} size="lg" online={friend.here} />
+      <button
+        type="button"
+        className={styles['friend__avatar-trigger']}
+        onClick={() => onAuthorClick?.(friend.id)}
+      >
+        <Avatar initials={friend.initials} src={friend.avatarUrl} size="lg" online={friend.here} />
+      </button>
       <div className={styles.friend__body}>
         <div className={styles.friend__top}>
-          <span className={styles.friend__name}>{friend.name}</span>
+          <button
+            type="button"
+            className={styles['friend__name-trigger']}
+            onClick={() => onAuthorClick?.(friend.id)}
+          >
+            <span className={styles.friend__name}>{friend.name}</span>
+          </button>
           <span className={styles['friend__meta']}>{friend.note}</span>
           <span className={styles.friend__status}>{friend.status}</span>
         </div>
@@ -35,7 +53,11 @@ export function FriendCard({ friend, onMessage }: FriendCardProps) {
           <Button variant="soft" onClick={onMessage}>
             Написать
           </Button>
-          <Button variant="outline">Позвать за стол</Button>
+          {onRemove && (
+            <Button variant="outline" onClick={onRemove}>
+              Удалить из друзей
+            </Button>
+          )}
         </div>
       </div>
     </Card>

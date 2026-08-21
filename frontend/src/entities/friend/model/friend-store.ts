@@ -3,6 +3,7 @@ import type { AsyncStatus } from '@/shared/lib/async-status';
 import { acceptFriendRequest } from '../api/accept-friend-request';
 import { getFriendRequests } from '../api/get-friend-requests';
 import { getFriends } from '../api/get-friends';
+import { removeFriend as removeFriendAction } from '../api/remove-friend';
 import { respondToFriendRequest } from '../api/respond-to-friend-request';
 import { sendFriendRequest } from '../api/send-friend-request';
 import type { Friend, FriendRequestPreview } from './types';
@@ -11,6 +12,10 @@ interface FriendState {
   friends: Friend[];
   status: AsyncStatus;
   error: string | null;
+  /** Курсор следующей страницы списка друзей — `null` значит «дальше нет»
+   * (см. `loadMoreFriends`, `shared/lib/use-infinite-scroll`). */
+  nextCursor: string | null;
+  loadMoreStatus: AsyncStatus;
   incoming: FriendRequestPreview[];
   outgoing: FriendRequestPreview[];
   requestsStatus: AsyncStatus;
@@ -19,16 +24,27 @@ interface FriendState {
 
 interface FriendActions {
   loadFriends: () => Promise<void>;
+  loadMoreFriends: () => Promise<void>;
   loadRequests: () => Promise<void>;
   sendRequest: (userId: string) => Promise<void>;
   acceptRequest: (senderId: string) => Promise<void>;
   removeRequest: (userId: string) => Promise<void>;
+  /** Разрыв уже подтверждённой дружбы — не путать с `removeRequest` (отмена/
+   * отклонение ещё не подтверждённой заявки). Убирает из `friends` локально,
+   * не через `loadFriends`: полная перезагрузка сбросила бы уже пролистанные
+   * страницы курсорной пагинации обратно к первой. */
+  removeFriend: (friendId: string) => Promise<void>;
   /** Приходит из Socket.IO (`app/home-app.tsx`) — просто сигнал «что-то
    * изменилось», данные всегда перечитываются из REST, а не патчатся из
    * payload'а события (см. AGENTS.md, раздел про real-time). */
   receiveNewRequest: () => void;
   receiveAccepted: () => void;
   receiveRemoved: () => void;
+  /** Разорвали дружбу с моей стороны — в отличие от `receiveRemoved`
+   * (отменённая/отклонённая заявка), это пассивное фоновое событие у
+   * получателя, полная перезагрузка списка здесь не проблема (см. AGENTS.md,
+   * раздел про real-time). */
+  receiveFriendRemoved: () => void;
 }
 
 export type FriendStore = FriendState & FriendActions;
@@ -46,6 +62,8 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
   friends: [],
   status: 'idle',
   error: null,
+  nextCursor: null,
+  loadMoreStatus: 'idle',
   incoming: [],
   outgoing: [],
   requestsStatus: 'idle',
@@ -53,13 +71,29 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
   loadFriends: async () => {
     set({ status: 'loading', error: null });
     try {
-      const friends = await getFriends();
-      set({ friends, status: 'success' });
+      const { friends, nextCursor } = await getFriends();
+      set({ friends, nextCursor, status: 'success', loadMoreStatus: 'idle' });
     } catch (error) {
       set({
         status: 'error',
         error: error instanceof Error ? error.message : 'Не удалось загрузить друзей',
       });
+    }
+  },
+  loadMoreFriends: async () => {
+    const { nextCursor, loadMoreStatus, status } = get();
+    if (!nextCursor || loadMoreStatus === 'loading' || status !== 'success') return;
+
+    set({ loadMoreStatus: 'loading' });
+    try {
+      const { friends, nextCursor: newCursor } = await getFriends(nextCursor);
+      set((state) => ({
+        friends: [...state.friends, ...friends],
+        nextCursor: newCursor,
+        loadMoreStatus: 'success',
+      }));
+    } catch {
+      set({ loadMoreStatus: 'error' });
     }
   },
   loadRequests: async () => {
@@ -86,10 +120,15 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
     await respondToFriendRequest(userId);
     await get().loadRequests();
   },
+  removeFriend: async (friendId) => {
+    await removeFriendAction(friendId);
+    set((state) => ({ friends: state.friends.filter((friend) => friend.id !== friendId) }));
+  },
   receiveNewRequest: () => void get().loadRequests(),
   receiveAccepted: () => {
     void get().loadRequests();
     void get().loadFriends();
   },
   receiveRemoved: () => void get().loadRequests(),
+  receiveFriendRemoved: () => void get().loadFriends(),
 }));

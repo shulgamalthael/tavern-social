@@ -4,6 +4,7 @@ import type { ChatMessage, Thread, ThreadParticipant } from '../model/types';
 export interface ThreadParticipantResponse {
   id: string;
   name: string;
+  avatarUrl: string | null;
 }
 
 export interface MessageResponse {
@@ -37,6 +38,7 @@ export function mapParticipant(participant: ThreadParticipantResponse): ThreadPa
     id: participant.id,
     name: participant.name,
     initials: getInitials(participant.name),
+    avatarUrl: participant.avatarUrl,
   };
 }
 
@@ -57,6 +59,9 @@ export function mapThread(thread: ThreadResponse, currentUserId: string): Thread
     isGroup: thread.isGroup,
     name,
     initials: getInitials(name),
+    // Единый аватар есть только у 1:1-диалога — у группового его нет
+    // (аналогично `initials`, синтезируемым из объединённого имени).
+    avatarUrl: participants.length === 1 ? participants[0].avatarUrl : null,
     status: thread.status,
     unread: thread.unreadCount || undefined,
     messages: thread.messages.map((message) => mapMessage(message, currentUserId)),

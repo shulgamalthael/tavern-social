@@ -1,0 +1,87 @@
+@use '@/shared/styles/mixins' as *;
+
+.group-page__card {
+  @include card;
+  overflow: hidden;
+}
+
+.group-page__cover {
+  justify-content: flex-end;
+}
+
+.group-page__top {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px 20px;
+  margin-top: -42px;
+  padding: 0 clamp(14px, 3vw, 22px) 22px;
+}
+
+.group-page__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.group-page__name {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(20px, 4vw, 25px);
+  font-weight: 500;
+}
+
+.group-page__subtitle {
+  font-size: 14px;
+  color: var(--tavern-muted);
+}
+
+.group-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-page__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+  margin-top: 18px;
+}
+
+.group-page__side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 300px;
+  min-width: 280px;
+
+  @include desktop {
+    max-width: 340px;
+  }
+}
+
+.group-page__feed {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 2 1 400px;
+  min-width: 0;
+}
+
+.group-page__card-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.group-page__about {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}

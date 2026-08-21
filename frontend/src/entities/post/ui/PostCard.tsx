@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Card } from '@/shared/ui/Card';
+import { ImageLightbox } from '@/shared/ui/ImageLightbox';
 import type { Post } from '../model/types';
-import { CommentComposer } from './CommentComposer';
+import { CommentComposer, type CommentComposerHandle } from './CommentComposer';
 import { CommentList } from './CommentList';
+import { LinkPreviewCard } from './LinkPreviewCard';
 import styles from './PostCard.module.scss';
 
 export interface ReplyTarget {
@@ -12,43 +14,143 @@ export interface ReplyTarget {
   author: string;
 }
 
+interface LightboxTarget {
+  images: string[];
+  index: number;
+}
+
 export interface PostCardProps {
   post: Post;
-  /** `feed` — полная карточка с реакциями, `wall` — сжатая версия для стены профиля. */
-  variant?: 'feed' | 'wall';
   isLiked?: boolean;
   isDisliked?: boolean;
   isReposted?: boolean;
   onToggleLike?: () => void;
   onToggleDislike?: () => void;
   onToggleRepost?: () => void;
+  /** Клик по аватару/имени автора — переход на его профиль. Вызывается и
+   * для автора самого поста, и (отдельно) для автора репостнутого поста —
+   * это разные люди. */
+  onAuthorClick?: (authorId: string) => void;
+  /** Клик по названию группы в шапке поста (см. `post.groupId`) — переход на
+   * страницу группы, тем же принципом, что и `onAuthorClick`. */
+  onGroupClick?: (groupId: string) => void;
+  /** Удаление записи — кнопка «···» показывается только когда вызывающий
+   * явно передал колбэк (своя запись, не фото галереи и не репост — см.
+   * `widgets/feed`/`widgets/profile`, где решается, у кого он есть). */
+  onDelete?: () => void;
+  /** Редактирование записи — тот же принцип видимости, что и у `onDelete`
+   * (только собственная запись, не карточка репоста). Сама модалка
+   * редактирования — feature-уровня (`features/publish-post/ui/
+   * EditPostModal`), не рендерится отсюда: `entities/post` не может
+   * импортировать `features/*` (направление зависимостей FSD), поэтому
+   * вызывающий widget сам решает, что открыть по этому колбэку. */
+  onEdit?: () => void;
+}
+
+/** Клик по инлайн-картинке внутри уже отрендеренного HTML-контента (см.
+ * `dangerouslySetInnerHTML` ниже) открывает лайтбокс с полным списком
+ * картинок этого блока — `src` сравнивается как атрибут (относительный
+ * путь `/uploads/posts/...`), а не `element.src` (резолвится в абсолютный
+ * URL текущего origin и не совпал бы напрямую). */
+function findClickedImageIndex(event: React.MouseEvent<HTMLDivElement>, images: string[]): number {
+  const target = event.target;
+  if (!(target instanceof HTMLImageElement)) return -1;
+  return images.indexOf(target.getAttribute('src') ?? '');
 }
 
 export function PostCard({
   post,
-  variant = 'feed',
   isLiked = false,
   isDisliked = false,
   isReposted = false,
   onToggleLike,
   onToggleDislike,
   onToggleRepost,
+  onAuthorClick,
+  onGroupClick,
+  onDelete,
+  onEdit,
 }: PostCardProps) {
   const [isCommentsOpen, setCommentsOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [lightbox, setLightbox] = useState<LightboxTarget | null>(null);
+  const [isMenuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<CommentComposerHandle>(null);
+  // Счётчик, а не boolean — гарантирует, что эффект ниже сработает на КАЖДЫЙ
+  // клик «Ответить» (в т. ч. повторный, когда `isCommentsOpen` уже `true` и
+  // сам по себе не меняется, см. `focusComposer`).
+  const [focusSignal, setFocusSignal] = useState(0);
+  // Если у поста уже есть ответы — видно сразу минимум `DEFAULT_COMMENTS_LIMIT`
+  // (см. backend `PostsService.listComments`), без клика на «Ответить»; сам
+  // клик по «Ответить» ниже только фокусирует инпут, а не разворачивает.
+  const showComments = isCommentsOpen || post.comments > 0;
   // Лайк/дизлайк/ответ/репост на карточке репоста всегда применяются к оригиналу.
   const interactionPostId = post.repostOf?.id ?? post.id;
-  const isOnAnothersWall = post.wallOwnerId !== post.authorId;
+  // `wallOwnerId` пуст для постов группы (взаимоисключающе с `groupId`,
+  // см. entities/post/model/types.ts) — без этой проверки `null !== authorId`
+  // ошибочно читался бы как «на чужой стене».
+  const isOnAnothersWall = Boolean(post.wallOwnerId) && post.wallOwnerId !== post.authorId;
+  const { repostOf, groupId } = post;
+  const repostGroupId = repostOf?.groupId ?? null;
+
+  useEffect(() => {
+    if (!isMenuOpen) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [isMenuOpen]);
+
+  // Фокусирует инпут ответа уже ПОСЛЕ того, как секция комментариев
+  // гарантированно смонтирована (если она открывалась этим же кликом) —
+  // `setCommentsOpen`/`setFocusSignal` batch'атся в один рендер, эффект
+  // срабатывает по его коммиту.
+  useEffect(() => {
+    if (focusSignal > 0) composerRef.current?.focus();
+  }, [focusSignal]);
+
+  const focusComposer = () => {
+    setCommentsOpen(true);
+    setFocusSignal((n) => n + 1);
+  };
 
   return (
     <Card as="article" className={styles.post}>
       <div className={styles.post__head}>
-        <Avatar initials={post.initials} />
+        <button
+          type="button"
+          className={styles['post__author-trigger']}
+          onClick={() => onAuthorClick?.(post.authorId)}
+        >
+          <Avatar initials={post.initials} src={post.authorAvatarUrl} />
+        </button>
         <div className={styles.post__head_body}>
-          <span className={styles.post__author}>{post.author}</span>
+          <button
+            type="button"
+            className={styles['post__author-name-trigger']}
+            onClick={() => onAuthorClick?.(post.authorId)}
+          >
+            <span className={styles.post__author}>{post.author}</span>
+          </button>
           <span className={styles.post__meta}>
             {post.meta}
-            {isOnAnothersWall && (
+            {groupId && (
+              <>
+                {' · в группе '}
+                <button
+                  type="button"
+                  className={styles['post__wall-owner-trigger']}
+                  onClick={() => onGroupClick?.(groupId)}
+                >
+                  <span className={styles['post__wall-owner']}>{post.groupName}</span>
+                </button>
+              </>
+            )}
+            {!groupId && isOnAnothersWall && (
               <>
                 {' · на стене '}
                 <span className={styles['post__wall-owner']}>{post.wallOwnerName}</span>
@@ -56,75 +158,172 @@ export function PostCard({
             )}
           </span>
         </div>
-        {variant === 'feed' && (
-          <button type="button" className={styles['post__more-button']} aria-label="Ещё">
-            ···
-          </button>
+        {(onEdit || onDelete) && (
+          <div className={styles['post__menu']} ref={menuRef}>
+            <button
+              type="button"
+              className={styles['post__more-button']}
+              aria-label="Ещё"
+              aria-expanded={isMenuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              ···
+            </button>
+            {isMenuOpen && (
+              <div className={styles['post__menu-popover']}>
+                {onEdit && (
+                  <button
+                    type="button"
+                    className={styles['post__menu-item']}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onEdit();
+                    }}
+                  >
+                    Редактировать
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    className={cn(styles['post__menu-item'], styles['post__menu-item--danger'])}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onDelete();
+                    }}
+                  >
+                    Удалить
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {post.text && <p className={styles.post__text}>{post.text}</p>}
+      {post.text && (
+        <div
+          className={styles.post__text}
+          onClick={(event) => {
+            const index = findClickedImageIndex(event, post.images);
+            if (index >= 0) setLightbox({ images: post.images, index });
+          }}
+          // Безопасно: `post.text` уже прошёл санитизацию на backend
+          // (`common/lib/sanitize-post-content.ts`) перед сохранением — это
+          // не сырой пользовательский ввод, отображаемый как есть.
+          dangerouslySetInnerHTML={{ __html: post.text }}
+        />
+      )}
 
-      {post.repostOf && (
+      {post.linkPreviews.map((preview) => (
+        <LinkPreviewCard key={preview.url} preview={preview} />
+      ))}
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images.map((url, index) => ({ id: `${post.id}-${index}`, url }))}
+          index={lightbox.index}
+          onIndexChange={(index) => setLightbox((state) => (state ? { ...state, index } : state))}
+          onClose={() => setLightbox(null)}
+        />
+      )}
+
+      {repostOf && (
         <div className={styles['post__repost']}>
           <div className={styles['post__repost-head']}>
-            <Avatar initials={post.repostOf.initials} size="sm" />
-            <span className={styles['post__author']}>{post.repostOf.author}</span>
-            <span className={styles['post__meta']}>{post.repostOf.meta}</span>
+            <button
+              type="button"
+              className={styles['post__author-trigger']}
+              onClick={() => onAuthorClick?.(repostOf.authorId)}
+            >
+              <Avatar initials={repostOf.initials} src={repostOf.authorAvatarUrl} size="sm" />
+            </button>
+            <button
+              type="button"
+              className={styles['post__author-name-trigger']}
+              onClick={() => onAuthorClick?.(repostOf.authorId)}
+            >
+              <span className={styles['post__author']}>{repostOf.author}</span>
+            </button>
+            <span className={styles['post__meta']}>
+              {repostOf.meta}
+              {repostGroupId && (
+                <>
+                  {' · в группе '}
+                  <button
+                    type="button"
+                    className={styles['post__wall-owner-trigger']}
+                    onClick={() => onGroupClick?.(repostGroupId)}
+                  >
+                    <span className={styles['post__wall-owner']}>{repostOf.groupName}</span>
+                  </button>
+                </>
+              )}
+            </span>
           </div>
-          <p className={styles['post__repost-text']}>{post.repostOf.text}</p>
+          {repostOf.text && (
+            <div
+              className={styles['post__repost-text']}
+              onClick={(event) => {
+                const index = findClickedImageIndex(event, repostOf.images);
+                if (index >= 0) setLightbox({ images: repostOf.images, index });
+              }}
+              dangerouslySetInnerHTML={{ __html: repostOf.text }}
+            />
+          )}
+          {repostOf.linkPreviews.map((preview) => (
+            <LinkPreviewCard key={preview.url} preview={preview} />
+          ))}
         </div>
       )}
 
       <footer className={styles.post__footer}>
-        {variant === 'feed' ? (
-          <>
-            <button
-              type="button"
-              className={cn(styles.post__reaction, isLiked && styles['post__reaction--active'])}
-              onClick={onToggleLike}
-            >
-              {isLiked ? 'Кружка поднята' : 'Поднять кружку'} · {post.likes}
-            </button>
-            <button
-              type="button"
-              className={cn(
-                styles.post__reaction,
-                isDisliked && styles['post__reaction--active-negative'],
-              )}
-              onClick={onToggleDislike}
-            >
-              {isDisliked ? 'Кружка отставлена' : 'Отставить кружку'} · {post.dislikes}
-            </button>
-            <button
-              type="button"
-              className={styles.post__reaction}
-              aria-expanded={isCommentsOpen}
-              onClick={() => setCommentsOpen((open) => !open)}
-            >
-              Ответить · {post.comments}
-            </button>
-            <button
-              type="button"
-              className={cn(styles.post__reaction, isReposted && styles['post__reaction--active'])}
-              onClick={onToggleRepost}
-            >
-              {isReposted ? 'Передано дальше' : 'Передать дальше'} · {post.reposts}
-            </button>
-            <span className={styles['post__views']}>{post.views}</span>
-          </>
-        ) : (
-          <>
-            <span className={styles['post__meta']}>Кружек: {post.likes}</span>
-            <span className={styles['post__meta']}>Ответов: {post.comments}</span>
-          </>
-        )}
+        <button
+          type="button"
+          className={cn(styles.post__reaction, isLiked && styles['post__reaction--active'])}
+          onClick={onToggleLike}
+        >
+          {isLiked ? 'Кружка поднята' : 'Поднять кружку'} · {post.likes}
+        </button>
+        <button
+          type="button"
+          className={cn(
+            styles.post__reaction,
+            isDisliked && styles['post__reaction--active-negative'],
+          )}
+          onClick={onToggleDislike}
+        >
+          {isDisliked ? 'Кружка отставлена' : 'Отставить кружку'} · {post.dislikes}
+        </button>
+        <button
+          type="button"
+          className={styles.post__reaction}
+          aria-expanded={showComments}
+          onClick={focusComposer}
+        >
+          Ответить · {post.comments}
+        </button>
+        <button
+          type="button"
+          className={cn(styles.post__reaction, isReposted && styles['post__reaction--active'])}
+          onClick={onToggleRepost}
+        >
+          {isReposted ? 'Передано дальше' : 'Передать дальше'} · {post.reposts}
+        </button>
       </footer>
 
-      {variant === 'feed' && isCommentsOpen && (
+      {showComments && (
         <div className={styles['post__comments']}>
-          <CommentList postId={interactionPostId} onReply={setReplyTarget} />
+          <CommentList
+            postId={interactionPostId}
+            onReply={(target) => {
+              setReplyTarget(target);
+              setFocusSignal((n) => n + 1);
+            }}
+            onAuthorClick={onAuthorClick}
+          />
           <CommentComposer
+            ref={composerRef}
             postId={interactionPostId}
             replyTarget={replyTarget}
             onCancelReply={() => setReplyTarget(null)}

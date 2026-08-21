@@ -2,48 +2,61 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { acceptFriendRequest, respondToFriendRequest, sendFriendRequest } from '@/entities/friend';
-import { PostCard, usePostStore } from '@/entities/post';
+import { canDeletePost, PostCard, PostCardSkeleton, usePostStore } from '@/entities/post';
 import { useThreadStore } from '@/entities/thread';
-import { getUserProfile, type UserProfile } from '@/entities/user';
+import { getUserProfile, useCurrentUser, type UserProfile } from '@/entities/user';
 import { PostComposer } from '@/features/publish-post';
 import { useNavigationStore } from '@/features/section-navigation';
 import { useAsyncData } from '@/shared/lib/use-async-data';
+import { useInfiniteScroll } from '@/shared/lib/use-infinite-scroll';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { Loader } from '@/shared/ui/Loader';
 import { MediaPlaceholder } from '@/shared/ui/MediaPlaceholder';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
 import { Tag } from '@/shared/ui/Tag';
 import { GalleryGrid } from './GalleryGrid';
+import { ProfileFriendsCard } from './ProfileFriendsCard';
+import { ProfilePageSkeleton } from './ProfilePageSkeleton';
 import styles from './ProfileWidget.module.scss';
 
 export interface UserProfileViewProps {
   userId: string;
 }
 
+const WALL_SKELETON_COUNT = 3;
+
 type FriendshipFlags = Pick<UserProfile, 'isFriend' | 'hasOutgoingRequest' | 'hasIncomingRequest'>;
 
 export function UserProfileView({ userId }: UserProfileViewProps) {
   const goToSection = useNavigationStore((state) => state.goToSection);
+  const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
   const openDirectThreadWith = useThreadStore((state) => state.openDirectThreadWith);
   const wallPosts = usePostStore((state) => state.wallPostsByUserId[userId]) ?? [];
   const wallStatus = usePostStore((state) => state.wallStatusByUserId[userId] ?? 'idle');
   const wallError = usePostStore((state) => state.wallErrorByUserId[userId] ?? null);
   const loadWallPosts = usePostStore((state) => state.loadWallPosts);
+  const wallNextCursor = usePostStore((state) => state.wallNextCursorByUserId[userId] ?? null);
+  const wallLoadMoreStatus = usePostStore(
+    (state) => state.wallLoadMoreStatusByUserId[userId] ?? 'idle',
+  );
+  const loadMoreWallPosts = usePostStore((state) => state.loadMoreWallPosts);
   const likedPostIds = usePostStore((state) => state.likedPostIds);
   const dislikedPostIds = usePostStore((state) => state.dislikedPostIds);
   const repostedPostIds = usePostStore((state) => state.repostedPostIds);
   const toggleLike = usePostStore((state) => state.toggleLike);
   const toggleDislike = usePostStore((state) => state.toggleDislike);
   const toggleRepost = usePostStore((state) => state.toggleRepost);
+  const removePost = usePostStore((state) => state.removePost);
+  const { currentUser } = useCurrentUser();
   const fetcher = useCallback(() => getUserProfile(userId), [userId]);
   const { status, data: profile, error, refetch } = useAsyncData(fetcher);
   // Локальный оверрайд статуса дружбы после действия — тот же паттерн, что
   // «Вступил в сообщество» в CommunitiesWidget (см. AGENTS.md, раздел 4).
   const [statusOverride, setStatusOverride] = useState<FriendshipFlags | null>(null);
+  const wallSentinelRef = useInfiniteScroll(wallNextCursor, () => void loadMoreWallPosts(userId));
 
   useEffect(() => {
     void loadWallPosts(userId);
@@ -51,11 +64,7 @@ export function UserProfileView({ userId }: UserProfileViewProps) {
   }, [userId]);
 
   if (status === 'loading' || status === 'idle') {
-    return (
-      <SectionContainer>
-        <Loader label="Загружаем страницу…" />
-      </SectionContainer>
-    );
+    return <ProfilePageSkeleton />;
   }
 
   if (status === 'error' || !profile) {
@@ -171,12 +180,17 @@ export function UserProfileView({ userId }: UserProfileViewProps) {
             <h2 className={styles['profile__card-title']}>Фотографии</h2>
             <GalleryGrid userId={userId} isOwn={false} />
           </Card>
+
+          <ProfileFriendsCard userId={userId} />
         </div>
 
         <div className={styles['profile__wall']}>
           <PostComposer variant="wall" wallOwnerId={userId} />
 
-          {wallStatus === 'loading' && <Loader label="Загружаем стену…" />}
+          {wallStatus === 'loading' &&
+            Array.from({ length: WALL_SKELETON_COUNT }, (_, index) => (
+              <PostCardSkeleton key={index} />
+            ))}
           {wallStatus === 'error' && (
             <ErrorState message={wallError} onRetry={() => loadWallPosts(userId)} />
           )}
@@ -193,16 +207,28 @@ export function UserProfileView({ userId }: UserProfileViewProps) {
                 <PostCard
                   key={`wall-${post.id}`}
                   post={post}
-                  variant="wall"
                   isLiked={Boolean(likedPostIds[targetId])}
                   isDisliked={Boolean(dislikedPostIds[targetId])}
                   isReposted={Boolean(repostedPostIds[targetId])}
                   onToggleLike={() => toggleLike(targetId)}
                   onToggleDislike={() => toggleDislike(targetId)}
                   onToggleRepost={() => toggleRepost(targetId)}
+                  onAuthorClick={goToUserProfile}
+                  onDelete={
+                    canDeletePost(post, currentUser.id)
+                      ? // Карточка репоста удаляется через `toggleRepost` (см.
+                        // `entities/post/lib/can-delete-post.ts`), не через `removePost`.
+                        () => void (post.repostOf ? toggleRepost(targetId) : removePost(post.id))
+                      : undefined
+                  }
                 />
               );
             })}
+
+          {wallStatus === 'success' && wallPosts.length > 0 && (
+            <div ref={wallSentinelRef} aria-hidden="true" />
+          )}
+          {wallLoadMoreStatus === 'loading' && <PostCardSkeleton />}
         </div>
       </div>
     </SectionContainer>

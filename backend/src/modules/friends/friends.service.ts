@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { User } from '@prisma/client';
+import type { Friendship, User } from '@prisma/client';
+import type { PaginatedDto } from '@/common/types/paginated';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import { PresenceService } from '@/infrastructure/redis/presence.service';
 import { toPublicProfile } from '@/modules/users/users.mapper';
@@ -14,6 +15,11 @@ import type {
 } from './friends.types';
 
 type TransactionClient = Prisma.TransactionClient;
+type FriendshipWithUsers = Friendship & { userA: User; userB: User };
+
+/** Тот же лимит по умолчанию, что и у `NotificationsService`/`PostsService` —
+ * курсорная пагинация списка друзей (см. `list`). */
+const DEFAULT_FRIENDS_LIMIT = 20;
 
 /** Как в `NotificationsService`: read-modify-write без блокировки строки
  * (проверить встречную заявку → создать заявку/дружбу) уязвим к гонке —
@@ -36,21 +42,29 @@ export class FriendsService {
     private readonly presenceService: PresenceService,
   ) {}
 
-  async list(currentUserId: string): Promise<FriendDto[]> {
-    const friendIds = await this.getFriendIds(currentUserId);
-    if (friendIds.length === 0) return [];
-
+  async list(
+    currentUserId: string,
+    cursor?: string,
+    limit = DEFAULT_FRIENDS_LIMIT,
+  ): Promise<PaginatedDto<FriendDto>> {
     const friendships = await this.prisma.friendship.findMany({
-      where: {
-        OR: [{ userAId: currentUserId }, { userBId: currentUserId }],
-      },
+      where: { OR: [{ userAId: currentUserId }, { userBId: currentUserId }] },
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: { userA: true, userB: true },
     });
 
-    const onlineIds = await this.presenceService.filterOnline(friendIds);
+    const hasMore = friendships.length > limit;
+    const page: FriendshipWithUsers[] = hasMore ? friendships.slice(0, limit) : friendships;
 
-    return Promise.all(
-      friendships.map(async (friendship) => {
+    const pageFriendIds = page.map((friendship) =>
+      friendship.userAId === currentUserId ? friendship.userBId : friendship.userAId,
+    );
+    const onlineIds = await this.presenceService.filterOnline(pageFriendIds);
+
+    const items = await Promise.all(
+      page.map(async (friendship) => {
         const friend = friendship.userAId === currentUserId ? friendship.userB : friendship.userA;
         const mutualFriendsCount = await this.countMutualFriends(currentUserId, friend.id);
 
@@ -68,6 +82,8 @@ export class FriendsService {
         } satisfies FriendDto;
       }),
     );
+
+    return { items, nextCursor: hasMore ? page[page.length - 1].id : null };
   }
 
   async sendRequest(senderId: string, receiverId: string): Promise<SendRequestResult> {
@@ -132,6 +148,14 @@ export class FriendsService {
     }
     // Недостижимо: цикл выше либо возвращает результат, либо бросает исключение.
     throw new Error('sendRequest: превышено число попыток при конфликте транзакции');
+  }
+
+  /** Разрыв уже подтверждённой дружбы — не путать с `respondToRequest`
+   * (отмена/отклонение ещё не подтверждённой заявки). Симметрично: не важно,
+   * кто инициатор, дружба у обоих исчезает одинаково. */
+  async removeFriend(userId: string, otherUserId: string): Promise<void> {
+    const [a, b] = [userId, otherUserId].sort();
+    await this.prisma.friendship.deleteMany({ where: { userAId: a, userBId: b } });
   }
 
   /** Отмена своей исходящей заявки или отклонение чужой входящей — одна и та же операция. */

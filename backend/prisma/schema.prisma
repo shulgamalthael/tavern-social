@@ -12,7 +12,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [pgTrgm(map: "pg_trgm")]
+  extensions = [pgTrgm(map: "pg_trgm"), pgcrypto]
 }
 
 enum PostKind {
@@ -27,6 +27,8 @@ enum NotificationType {
   post_like
   post_comment
   post_repost
+  group_join_request
+  group_join_accepted
 }
 
 enum ReactionType {
@@ -34,37 +36,51 @@ enum ReactionType {
   dislike
 }
 
+/// OWNER — ровно один на группу (создатель, не отдельное поле на Group —
+/// см. AGENTS.md/план по группам, единственный источник правды). Передачи
+/// владения нет — владелец не может выйти из своей же группы.
+enum GroupRole {
+  owner
+  member
+}
+
+enum GroupType {
+  open
+  private
+}
+
 model User {
-  id                    String   @id @default(uuid())
-  email                 String   @unique
-  passwordHash          String
-  name                  String
-  tagline               String   @default("")
-  accent                String?
-  city                  String?
-  about                 String?
-  tags                  String[] @default([])
-  avatarUrl             String?
-  coverUrl              String?
-  quietHours            Boolean  @default(true)
-  showPresence          Boolean  @default(true)
-  allowStrangerInvites  Boolean  @default(false)
-  morningDigest         Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  passwordHash         String
+  name                 String
+  tagline              String   @default("")
+  accent               String?
+  city                 String?
+  about                String?
+  tags                 String[] @default([])
+  avatarUrl            String?
+  coverUrl             String?
+  quietHours           Boolean  @default(true)
+  showPresence         Boolean  @default(true)
+  allowStrangerInvites Boolean  @default(false)
+  morningDigest        Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  posts                 Post[]   @relation("PostAuthor")
-  wallPosts             Post[]   @relation("PostWallOwner")
-  postReactions         PostReaction[]
-  comments              Comment[]
-  galleryImages         GalleryImage[]
-  sentMessages          Message[]
-  threadParticipants    ThreadParticipant[]
-  communityMemberships  CommunityMembership[]
-  groupMemberships      GroupMembership[]
+  posts                Post[]                @relation("PostAuthor")
+  wallPosts            Post[]                @relation("PostWallOwner")
+  postReactions        PostReaction[]
+  comments             Comment[]
+  galleryImages        GalleryImage[]
+  sentMessages         Message[]
+  threadParticipants   ThreadParticipant[]
+  communityMemberships CommunityMembership[]
+  groupMemberships     GroupMembership[]
+  groupJoinRequests    GroupJoinRequest[]
 
-  friendshipsAsUserA    Friendship[] @relation("FriendshipUserA")
-  friendshipsAsUserB    Friendship[] @relation("FriendshipUserB")
+  friendshipsAsUserA Friendship[] @relation("FriendshipUserA")
+  friendshipsAsUserB Friendship[] @relation("FriendshipUserB")
 
   sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
   receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
@@ -77,38 +93,54 @@ model User {
 }
 
 model Post {
-  id             String   @id @default(uuid())
-  authorId       String
-  author         User     @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  id            String      @id @default(uuid())
+  authorId      String
+  author        User        @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   /// Чья это стена — обычно совпадает с authorId (свой пост на своей
   /// стене), но может отличаться: User A может написать на стене User B
-  /// (authorId = A, wallOwnerId = B). Обязательное поле — у существующих
-  /// записей бэкфилится из authorId при миграции (см. migration.sql).
-  wallOwnerId    String
-  wallOwner      User     @relation("PostWallOwner", fields: [wallOwnerId], references: [id], onDelete: Cascade)
-  kind           PostKind @default(friends)
-  text           String
-  likesCount     Int      @default(0)
-  dislikesCount  Int      @default(0)
-  commentsCount  Int      @default(0)
-  viewsCount     Int      @default(0)
-  repostsCount   Int      @default(0)
-  communityId    String?
-  community      Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  /// (authorId = A, wallOwnerId = B). `null` — пост опубликован в группе
+  /// (см. `groupId`), а не на чьей-то стене: ровно одно из двух полей
+  /// заполнено, никогда оба сразу (проверяется в PostsService.create).
+  wallOwnerId   String?
+  wallOwner     User?       @relation("PostWallOwner", fields: [wallOwnerId], references: [id], onDelete: Cascade)
+  kind          PostKind    @default(friends)
+  /// Санитизированный HTML (см. common/lib/sanitize-post-content.ts) —
+  /// единственный источник и текста, и позиции картинок: `<img>` внутри
+  /// этого HTML рендерится там, где пользователь его разместил в
+  /// редакторе. `PostImage` ниже — не альтернативное представление
+  /// контента, а только учётный реестр файлов для очистки диска.
+  text          String
+  images        PostImage[]
+  likesCount    Int         @default(0)
+  dislikesCount Int         @default(0)
+  commentsCount Int         @default(0)
+  viewsCount    Int         @default(0)
+  repostsCount  Int         @default(0)
+  communityId   String?
+  community     Community?  @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  /// Пост опубликован в группе — альтернатива `wallOwnerId` (см. коммент
+  /// там же). `SetNull`, не `Cascade`: удаление группы (сейчас не
+  /// реализовано) не должно молча стирать чужой авторский контент — тот же
+  /// выбор, что и у `communityId`.
+  groupId       String?
+  group         Group?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
-  reactions      PostReaction[]
-  comments       Comment[]
-  notifications  Notification[]
+  reactions     PostReaction[]
+  comments      Comment[]
+  notifications Notification[]
 
   /// Репост — отдельная запись Post, ссылающаяся на оригинал через
   /// repostOfId, а не копия его содержимого (см. AGENTS.md backend,
   /// раздел про репосты). Лайки/комментарии/повторный репост всегда
   /// применяются к оригиналу, а не к этой обёрточной записи.
-  repostOfId     String?
-  repostOf       Post?    @relation("PostRepost", fields: [repostOfId], references: [id], onDelete: Cascade)
-  reposts        Post[]   @relation("PostRepost")
+  repostOfId String?
+  repostOf   Post?   @relation("PostRepost", fields: [repostOfId], references: [id], onDelete: Cascade)
+  reposts    Post[]  @relation("PostRepost")
+
+  /// Обратная сторона GalleryImage.postId — see комментарий там же.
+  galleryImage GalleryImage?
 
   @@unique([authorId, repostOfId])
   @@index([authorId, createdAt])
@@ -119,15 +151,61 @@ model Post {
 /// Изображение в личной галерее пользователя. Файл на диске удаляется
 /// сервисом при удалении строки (см. GalleryService.remove) — Prisma
 /// cascade здесь чистит только БД, не файловую систему.
+///
+/// Каждая загрузка одновременно создаёт запись Post (с этим же URL в виде
+/// `<img>` внутри Post.text и учётной строкой PostImage) — так фото сразу
+/// становится новостью на стене/в ленте, а лайки/дизлайки/комментарии к
+/// фото — это буквально лайки/дизлайки/комментарии к этому Post, без
+/// отдельной системы реакций для галереи (см. GalleryService.add/remove).
+/// postId нередко отсутствует только у записей, созданных до этой связи —
+/// на новых загрузках всегда заполнен.
 model GalleryImage {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   url       String
+  postId    String?  @unique
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
   @@map("gallery_images")
+}
+
+/// Учётная строка «этот файл принадлежит этому посту» — НЕ источник
+/// порядка/позиции отображения (та живёт в разметке `<img>` внутри
+/// Post.text, см. комментарий там же). Нужна только для двух вещей:
+/// массового удаления файлов с диска при удалении/редактировании поста и
+/// проверки лимита MAX_POST_IMAGES в PostsService.
+model PostImage {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([postId, order])
+  @@map("post_images")
+}
+
+/// Кэш метаданных внешней ссылки (title/description/preview-картинка) —
+/// по одной строке на уникальный URL, переиспользуется между постами,
+/// которые ссылаются на один и тот же адрес. `status: 'failed'` — сервер
+/// не смог получить метаданные (таймаут/SSRF-отказ/не HTML) — ссылка всё
+/// равно работает как обычная, просто без карточки превью (см.
+/// common/lib/link-preview.ts).
+model LinkPreview {
+  id          String   @id @default(uuid())
+  url         String   @unique
+  title       String?
+  description String?
+  imageUrl    String?
+  domain      String?
+  status      String
+  fetchedAt   DateTime @default(now())
+
+  @@map("link_previews")
 }
 
 /// Единая запись реакции на пост — like/dislike взаимоисключающие: один
@@ -151,9 +229,9 @@ model PostReaction {
 /// но participants — join-таблица, а не пара колонок, чтобы не потребовалась
 /// миграция схемы, если понадобятся групповые диалоги.
 model Thread {
-  id           String   @id @default(uuid())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   participants ThreadParticipant[]
   messages     Message[]
@@ -162,14 +240,14 @@ model Thread {
 }
 
 model ThreadParticipant {
-  id         String    @id @default(uuid())
+  id         String   @id @default(uuid())
   threadId   String
-  thread     Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  thread     Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Момент последнего прочтения — основа для расчёта unread-счётчика.
-  lastReadAt DateTime  @default(now())
-  joinedAt   DateTime  @default(now())
+  lastReadAt DateTime @default(now())
+  joinedAt   DateTime @default(now())
 
   @@unique([threadId, userId])
   @@map("thread_participants")
@@ -228,8 +306,8 @@ model Community {
   membersCount Int      @default(0)
   createdAt    DateTime @default(now())
 
-  memberships  CommunityMembership[]
-  posts        Post[]
+  memberships CommunityMembership[]
+  posts       Post[]
 
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("communities")
@@ -248,33 +326,39 @@ model CommunityMembership {
 }
 
 model Group {
-  id        String   @id @default(uuid())
-  name      String
-  meta      String
-  mark      String
-  createdAt DateTime @default(now())
+  id           String    @id @default(uuid())
+  name         String
+  description  String    @default("")
+  type         GroupType @default(open)
+  avatarUrl    String?
+  coverUrl     String?
+  membersCount Int       @default(0)
+  createdAt    DateTime  @default(now())
 
-  memberships GroupMembership[]
+  memberships   GroupMembership[]
+  joinRequests  GroupJoinRequest[]
+  posts         Post[]
+  notifications Notification[]
 
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("groups")
 }
 
 model Comment {
-  id            String         @id @default(uuid())
-  postId        String
-  post          Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId      String
-  author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  text          String
+  id        String    @id @default(uuid())
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  text      String
   /// Ответ на комментарий — только один уровень вложенности: если parentId
   /// сам является ответом, сервис перепривязывает к его родителю (см.
   /// PostsService.createComment), поэтому здесь всегда либо null, либо id
   /// комментария верхнего уровня.
-  parentId      String?
-  parent        Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies       Comment[]      @relation("CommentReplies")
-  createdAt     DateTime       @default(now())
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  createdAt DateTime  @default(now())
 
   notifications Notification[]
 
@@ -304,6 +388,10 @@ model Notification {
   post           Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
   commentId      String?
   comment        Comment?         @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  /// Заполнено для `group_join_request`/`group_join_accepted` — тот же
+  /// опциональный паттерн, что и `postId`/`commentId` выше.
+  groupId        String?
+  group          Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
   isRead         Boolean          @default(false)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -313,14 +401,31 @@ model Notification {
 }
 
 model GroupMembership {
-  id       String   @id @default(uuid())
+  id       String    @id @default(uuid())
   groupId  String
-  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group    Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
   userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role     String
-  joinedAt DateTime @default(now())
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     GroupRole @default(member)
+  joinedAt DateTime  @default(now())
 
   @@unique([groupId, userId])
   @@map("group_memberships")
+}
+
+/// Заявка на вступление в приватную группу — до одобрения/отклонения,
+/// строка просто удаляется (историю не храним), тот же паттерн, что и
+/// `FriendRequest` → `Friendship`. `@@unique` не даёт отправить вторую
+/// заявку, пока первая не рассмотрена.
+model GroupJoinRequest {
+  id        String   @id @default(uuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@map("group_join_requests")
 }

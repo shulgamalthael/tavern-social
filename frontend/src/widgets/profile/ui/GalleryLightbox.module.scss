@@ -1,0 +1,62 @@
+// Светлая карточка, а не тёмная/полупрозрачная поверх лайтбокса — комментарии
+// переиспользуют `entities/post` `CommentList`/`CommentComposer` как есть
+// (в приложении нет тёмной темы, их текст рассчитан на светлый фон, см.
+// `--tavern-ink`/`--tavern-muted`). Так же за одно получаем ту же палитру
+// реакций, что и `PostCard.module.scss` (`.post__reaction`), — «компактно и
+// консистентно», как просили: тот же вид кнопок, что и у обычного поста.
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 420px;
+  padding: 6px;
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-surface);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 30%);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.reaction {
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 13px;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.reaction--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+  font-weight: 500;
+}
+
+// Дизлайк — свой цвет вместо акцентного, как и в PostCard: активные лайк и
+// дизлайк не должны выглядеть одинаково «одобрительно» рядом друг с другом.
+.reaction--active-negative {
+  background: var(--tavern-soft);
+  color: var(--tavern-danger);
+  font-weight: 500;
+}
+
+.comments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 6px 4px;
+  border-top: 1px solid var(--tavern-line);
+  max-height: 240px;
+  overflow-y: auto;
+}

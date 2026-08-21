@@ -8,13 +8,18 @@ import { cropImageToBlob } from '../lib/crop-image-to-blob';
 import styles from './ImageUploadButton.module.scss';
 
 export interface ImageUploadButtonProps {
-  /** Соотношение сторон кропа — 1 для аватара, 3 для широкой обложки, и т. д. */
-  aspect: number;
+  /** Соотношение сторон кропа — 1 для аватара, 3 для широкой обложки, и т. д.
+   * Не нужен при `crop={false}`. */
+  aspect?: number;
   /** 'round' — маска-кружок в превью (аватар), 'rect' — прямоугольная
-   * (обложка/галерея). Не один и тот же crop для всех типов изображений. */
+   * (обложка). Не один и тот же crop для всех типов изображений. */
   shape?: 'round' | 'rect';
+  /** `false` — без модалки обрезки: файл уходит на загрузку как есть, во
+   * весь оригинальный кадр. Для галереи, где важно сохранить полное фото,
+   * а не подгонять его под квадрат, как аватар. */
+  crop?: boolean;
   /** Реальная загрузка на сервер — своя функция для аватара/обложки/галереи,
-   * получает уже обрезанный Blob. */
+   * получает Blob (обрезанный, если `crop` не выключен, иначе исходный файл). */
   upload: (file: Blob) => Promise<void>;
   children: ReactNode;
   className?: string;
@@ -23,12 +28,13 @@ export interface ImageUploadButtonProps {
 /**
  * Кнопка-триггер + модалка обрезки в одном компоненте — переиспользуется для
  * аватара, обложки и галереи (см. `widgets/profile`), сама решает
- * выбор файла → превью кропа → подтверждение → загрузку с независимым
- * loading/error состоянием.
+ * выбор файла → превью кропа (если включён) → подтверждение → загрузку с
+ * независимым loading/error состоянием.
  */
 export function ImageUploadButton({
-  aspect,
+  aspect = 1,
   shape = 'rect',
+  crop: cropEnabled = true,
   upload,
   children,
   className,
@@ -41,11 +47,30 @@ export function ImageUploadButton({
   const [isPending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const uploadWithoutCrop = async (file: File) => {
+    setPending(true);
+    setError(null);
+    try {
+      await upload(file);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : 'Не удалось загрузить изображение',
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     // Разрешает выбрать тот же файл повторно после отмены/ошибки.
     event.target.value = '';
     if (!file) return;
+
+    if (!cropEnabled) {
+      void uploadWithoutCrop(file);
+      return;
+    }
 
     setImageSrc(URL.createObjectURL(file));
     setCrop({ x: 0, y: 0 });
@@ -83,6 +108,7 @@ export function ImageUploadButton({
         type="button"
         className={cn(styles.trigger, className)}
         onClick={() => inputRef.current?.click()}
+        disabled={!cropEnabled && isPending}
       >
         {children}
       </button>
@@ -93,6 +119,10 @@ export function ImageUploadButton({
         className={styles['visually-hidden']}
         onChange={onFileChange}
       />
+
+      {/* Без модалки обрезки ошибку загрузки больше негде показать — модалка
+          в этом режиме никогда не открывается. */}
+      {!cropEnabled && error && <p className={styles.error}>{error}</p>}
 
       {imageSrc && (
         <div className={styles.overlay} role="dialog" aria-label="Обрезка изображения">

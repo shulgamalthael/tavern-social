@@ -17,7 +17,7 @@ const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-export type ImageUploadSubdir = 'avatars' | 'covers' | 'gallery';
+export type ImageUploadSubdir = 'avatars' | 'covers' | 'gallery' | 'posts' | 'groups';
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });

@@ -1,18 +1,27 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { PostCard, usePostStore } from '@/entities/post';
+import {
+  canDeletePost,
+  PostCard,
+  PostCardSkeleton,
+  usePostStore,
+  type Post,
+} from '@/entities/post';
 import { useCurrentUser } from '@/entities/user';
-import { PostComposer } from '@/features/publish-post';
+import { EditPostModal, PostComposer } from '@/features/publish-post';
+import { useNavigationStore } from '@/features/section-navigation';
 import { cn } from '@/shared/lib/cn';
+import { useInfiniteScroll } from '@/shared/lib/use-infinite-scroll';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { Loader } from '@/shared/ui/Loader';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
 import { FEED_TAB_KIND, FEED_TABS, type FeedTab } from '../config/feed-tabs';
 import styles from './FeedWidget.module.scss';
+
+const FEED_SKELETON_COUNT = 4;
 
 export function FeedWidget() {
   const { currentUser } = useCurrentUser();
@@ -20,13 +29,20 @@ export function FeedWidget() {
   const postsStatus = usePostStore((state) => state.status);
   const postsError = usePostStore((state) => state.error);
   const loadPosts = usePostStore((state) => state.loadPosts);
+  const nextCursor = usePostStore((state) => state.nextCursor);
+  const loadMoreStatus = usePostStore((state) => state.loadMoreStatus);
+  const loadMorePosts = usePostStore((state) => state.loadMorePosts);
   const likedPostIds = usePostStore((state) => state.likedPostIds);
   const dislikedPostIds = usePostStore((state) => state.dislikedPostIds);
   const repostedPostIds = usePostStore((state) => state.repostedPostIds);
   const toggleLike = usePostStore((state) => state.toggleLike);
   const toggleDislike = usePostStore((state) => state.toggleDislike);
   const toggleRepost = usePostStore((state) => state.toggleRepost);
+  const removePost = usePostStore((state) => state.removePost);
+  const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
   const [activeTab, setActiveTab] = useState<FeedTab>(FEED_TABS[0]);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const sentinelRef = useInfiniteScroll(nextCursor, () => void loadMorePosts());
 
   const visiblePosts = useMemo(() => {
     const kind = FEED_TAB_KIND[activeTab];
@@ -65,7 +81,10 @@ export function FeedWidget() {
           )}
         </div>
 
-        {postsStatus === 'loading' && <Loader label="Загружаем ленту…" />}
+        {postsStatus === 'loading' &&
+          Array.from({ length: FEED_SKELETON_COUNT }, (_, index) => (
+            <PostCardSkeleton key={index} />
+          ))}
         {postsStatus === 'error' && <ErrorState message={postsError} onRetry={loadPosts} />}
 
         {postsStatus === 'success' && posts.length === 0 && (
@@ -100,10 +119,34 @@ export function FeedWidget() {
                 onToggleLike={() => toggleLike(targetId)}
                 onToggleDislike={() => toggleDislike(targetId)}
                 onToggleRepost={() => toggleRepost(targetId)}
+                onAuthorClick={goToUserProfile}
+                onDelete={
+                  canDeletePost(post, currentUser.id)
+                    ? // Карточка репоста — это отдельная запись поверх оригинала, у её
+                      // удаления уже есть свой путь («Передать дальше» → `toggleRepost`),
+                      // который корректно декрементирует repostsCount оригинала;
+                      // `removePost` (обычный `DELETE /posts/:id`) для репоста не годится
+                      // — не знает о счётчике оригинала.
+                      () => void (post.repostOf ? toggleRepost(targetId) : removePost(post.id))
+                    : undefined
+                }
+                // Карточка репоста — обёртка без собственного содержимого
+                // (`post.repostOf` задан, `post.text` всегда пустой) —
+                // редактировать в ней нечего, только сам оригинал.
+                onEdit={
+                  canDeletePost(post, currentUser.id) && !post.repostOf
+                    ? () => setEditingPost(post)
+                    : undefined
+                }
               />
             );
           })}
+
+        {postsStatus === 'success' && <div ref={sentinelRef} aria-hidden="true" />}
+        {loadMoreStatus === 'loading' && <PostCardSkeleton />}
       </div>
+
+      {editingPost && <EditPostModal post={editingPost} onClose={() => setEditingPost(null)} />}
 
       <aside className={styles['feed__sidebar']}>
         <Card>

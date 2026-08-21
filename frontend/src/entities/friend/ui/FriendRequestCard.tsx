@@ -10,6 +10,9 @@ export interface FriendRequestCardProps {
   variant: 'incoming' | 'outgoing';
   onAccept?: () => void;
   onRemove?: () => void;
+  /** Клик по аватару/имени — переход на профиль отправителя/получателя
+   * заявки, отдельно от принятия/отклонения (см. AGENTS.md, клики по автору). */
+  onAuthorClick?: (userId: string) => void;
 }
 
 export function FriendRequestCard({
@@ -17,13 +20,26 @@ export function FriendRequestCard({
   variant,
   onAccept,
   onRemove,
+  onAuthorClick,
 }: FriendRequestCardProps) {
   return (
     <Card as="article" className={styles.request}>
-      <Avatar initials={request.initials} />
+      <button
+        type="button"
+        className={styles['request__avatar-trigger']}
+        onClick={() => onAuthorClick?.(request.id)}
+      >
+        <Avatar initials={request.initials} src={request.avatarUrl} />
+      </button>
       <div className={styles.request__body}>
         <div className={styles.request__top}>
-          <span className={styles.request__name}>{request.name}</span>
+          <button
+            type="button"
+            className={styles['request__name-trigger']}
+            onClick={() => onAuthorClick?.(request.id)}
+          >
+            <span className={styles.request__name}>{request.name}</span>
+          </button>
           <span className={styles.request__meta}>{request.tagline}</span>
         </div>
         <span className={styles.request__meta}>

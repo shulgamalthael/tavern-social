@@ -16,6 +16,8 @@ export function NotificationToaster() {
   const visible = useToastStore((state) => state.visible);
   const dismiss = useToastStore((state) => state.dismiss);
   const goToSection = useNavigationStore((state) => state.goToSection);
+  const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
+  const goToGroup = useNavigationStore((state) => state.goToGroup);
   const setActiveThread = useThreadStore((state) => state.setActiveThread);
   const acceptRequest = useFriendStore((state) => state.acceptRequest);
   const removeRequest = useFriendStore((state) => state.removeRequest);
@@ -46,7 +48,15 @@ export function NotificationToaster() {
                 void markNotificationRead(item.notificationId);
                 goToSection('profile');
                 break;
+              case 'group-join-request':
+              case 'group-join-accepted':
+                goToGroup(item.groupId);
+                break;
             }
+            dismiss(item.id);
+          }}
+          onAuthorClick={(authorId) => {
+            goToUserProfile(authorId);
             dismiss(item.id);
           }}
           onAccept={

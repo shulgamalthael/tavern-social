@@ -28,6 +28,7 @@ export function SearchDropdown({ query, onNavigate }: SearchDropdownProps) {
   const { status, data, error } = useGlobalSearch(query);
   const goToSection = useNavigationStore((state) => state.goToSection);
   const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
+  const goToGroup = useNavigationStore((state) => state.goToGroup);
   const [expanded, setExpanded] = useState<ExpandedKey>(null);
 
   if (status === 'idle') return null;
@@ -67,7 +68,7 @@ export function SearchDropdown({ query, onNavigate }: SearchDropdownProps) {
                       onNavigate();
                     }}
                   >
-                    <Avatar initials={user.initials} size="sm" />
+                    <Avatar initials={user.initials} src={user.avatarUrl} size="sm" />
                     <span className={styles['dropdown__row-body']}>
                       <span className={styles['dropdown__row-title']}>{user.name}</span>
                       <span className={styles['dropdown__row-subtitle']}>
@@ -134,14 +135,33 @@ export function SearchDropdown({ query, onNavigate }: SearchDropdownProps) {
                       aria-expanded={expanded === key}
                       onClick={() => toggle(key)}
                     >
-                      <span className={styles['dropdown__row-mark']} aria-hidden="true">
-                        {group.mark}
-                      </span>
+                      <Avatar
+                        initials={group.name.slice(0, 2).toUpperCase()}
+                        src={group.avatarUrl}
+                        size="sm"
+                      />
                       <span className={styles['dropdown__row-body']}>
                         <span className={styles['dropdown__row-title']}>{group.name}</span>
-                        <span className={styles['dropdown__row-subtitle']}>{group.meta}</span>
+                        <span className={styles['dropdown__row-subtitle']}>
+                          {group.type === 'open' ? 'Открытая' : 'Приватная'} · {group.membersCount}
+                          {group.isMember ? ' · вы участник' : ''}
+                        </span>
                       </span>
                     </button>
+                    {expanded === key && (
+                      <div className={styles['dropdown__details']}>
+                        {group.description && <p>{group.description}</p>}
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            goToGroup(group.id);
+                            onNavigate();
+                          }}
+                        >
+                          Перейти к группе
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 );
               })}

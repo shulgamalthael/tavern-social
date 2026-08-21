@@ -5,6 +5,7 @@ import type { Comment } from '../model/comment-types';
 export interface CommentAuthorResponse {
   id: string;
   name: string;
+  avatarUrl: string | null;
 }
 
 export interface CommentResponse {
@@ -21,8 +22,10 @@ export function mapComment(comment: CommentResponse): Comment {
     id: comment.id,
     postId: comment.postId,
     parentId: comment.parentId,
+    authorId: comment.author.id,
     author: comment.author.name,
     initials: getInitials(comment.author.name),
+    avatarUrl: comment.author.avatarUrl,
     meta: formatRelativeTime(comment.createdAt),
     text: comment.text,
   };

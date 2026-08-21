@@ -26,6 +26,32 @@
   }
 }
 
+// Аватар и имя — отдельные кликабельные `button`, ведущие на профиль автора
+// действия (см. `onAuthorClick` в NotificationItem.tsx), поверх строки-`div`,
+// которая сама тоже кликабельна (переход по типу уведомления).
+.item__avatar-trigger {
+  display: block;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.item__actor-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
+}
+
 .item__body {
   display: flex;
   flex-direction: column;

@@ -5,11 +5,16 @@ import { useNotificationStore } from '@/entities/notification';
 import { useCurrentUser } from '@/entities/user';
 import { SearchDropdown } from '@/features/global-search';
 import { useNavigationStore } from '@/features/section-navigation';
+import { cn } from '@/shared/lib/cn';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { BellIcon, SearchIcon } from '@/shared/ui/icons';
 import { NotificationsDropdown } from './NotificationsDropdown';
 import styles from './Header.module.scss';
+
+/** Расстояние прокрутки, после которого спокойная (прозрачная) шапка
+ * сменяется текущей компактной плашкой — см. `useEffect` со скролл-слушателем. */
+const SCROLL_THRESHOLD_PX = 32;
 
 export function Header() {
   const { currentUser } = useCurrentUser();
@@ -20,9 +25,26 @@ export function Header() {
   const [query, setQuery] = useState('');
   const [isSearchOpen, setSearchOpen] = useState(false);
   const [isNotificationsOpen, setNotificationsOpen] = useState(false);
+  const [isScrolled, setScrolled] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const notificationsContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Реальный скроллящийся контейнер приложения — не `window`: `.app`
+    // (`app/home-app.tsx`) сам является `overflow-y: auto`-элементом,
+    // `Header` рендерится его прямым ребёнком (см. `usePersistedScroll`,
+    // тот же контейнер). Слушаем родителя напрямую вместо завязки на имя
+    // CSS-класса (хэшируется модулями) или проброса ref через пропы.
+    const scrollParent = headerRef.current?.parentElement;
+    if (!scrollParent) return undefined;
+
+    const onScroll = () => setScrolled(scrollParent.scrollTop > SCROLL_THRESHOLD_PX);
+    onScroll();
+    scrollParent.addEventListener('scroll', onScroll, { passive: true });
+    return () => scrollParent.removeEventListener('scroll', onScroll);
+  }, []);
 
   const closeSearch = () => setSearchOpen(false);
   const closeNotifications = () => setNotificationsOpen(false);
@@ -65,7 +87,7 @@ export function Header() {
   };
 
   return (
-    <header className={styles.header}>
+    <header ref={headerRef} className={cn(styles.header, isScrolled && styles['header--scrolled'])}>
       <div className={styles['header__inner']}>
         <button
           type="button"
@@ -141,7 +163,7 @@ export function Header() {
             className={styles['header__avatar-button']}
             onClick={() => goToSection('profile')}
           >
-            <Avatar initials={currentUser.initials} />
+            <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} />
           </button>
         </div>
       </div>

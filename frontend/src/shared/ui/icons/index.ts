@@ -2,6 +2,7 @@ export {
   AddPersonIcon,
   BackIcon,
   BellIcon,
+  CloseIcon,
   CommunitiesIcon,
   FeedIcon,
   FriendsIcon,

@@ -103,7 +103,7 @@ export function AddParticipantDropdown({
                 disabled={pendingUserId === user.id}
                 onClick={() => void handleAdd(user.id)}
               >
-                <Avatar initials={user.initials} size="sm" />
+                <Avatar initials={user.initials} src={user.avatarUrl} size="sm" />
                 <span className={styles['dropdown__row-body']}>
                   <span className={styles['dropdown__row-title']}>{user.name}</span>
                   <span className={styles['dropdown__row-subtitle']}>

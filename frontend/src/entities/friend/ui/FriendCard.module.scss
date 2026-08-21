@@ -4,6 +4,32 @@
   gap: 16px;
 }
 
+// Аватар и имя — отдельные кликабельные `button`, ведущие на страницу
+// друга (см. `onAuthorClick` в FriendCard.tsx) — тот же приём, что и у
+// автора поста в PostCard. Сброс до вида обычного изображения/текста.
+.friend__avatar-trigger {
+  display: block;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.friend__name-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
+}
+
 .friend__body {
   display: flex;
   flex-direction: column;

@@ -135,6 +135,15 @@ export function AddPersonIcon(props: IconProps): ReactElement {
   );
 }
 
+export function CloseIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
+    </BaseIcon>
+  );
+}
+
 export function BellIcon(props: IconProps): ReactElement {
   return (
     <BaseIcon {...props}>

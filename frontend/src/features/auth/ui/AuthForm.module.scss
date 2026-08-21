@@ -1,13 +1,17 @@
 @use '@/shared/styles/mixins' as *;
 
 .form {
+  // Тот же вертикальный ритм, что и у `.auth__card` (см. `page.module.scss`)
+  // — поля, ошибка и кнопка отправки визуально на одной «сетке» с табами
+  // и подписью над ними, а не в своём отдельном, более тесном ритме.
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 22px;
+  align-self: stretch;
+  gap: 18px;
 }
 
 .form__tabs {
+  align-self: stretch;
   display: flex;
   gap: 4px;
   padding: 4px;

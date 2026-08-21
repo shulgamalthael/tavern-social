@@ -80,12 +80,12 @@ export async function backendFetch<T>(
  */
 export async function backendUpload<T>(
   path: string,
-  options: { token?: string | null; formData: FormData },
+  options: { method?: 'POST' | 'PATCH'; token?: string | null; formData: FormData },
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${BACKEND_URL}${path}`, {
-      method: 'POST',
+      method: options.method ?? 'POST',
       headers: options.token ? { Authorization: `Bearer ${options.token}` } : undefined,
       body: options.formData,
       cache: 'no-store',

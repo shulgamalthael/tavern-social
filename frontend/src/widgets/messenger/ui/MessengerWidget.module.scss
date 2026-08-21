@@ -130,6 +130,37 @@
   min-width: 0;
 }
 
+// Аватар/имя собеседника в шапке чата — кликабельны только для 1:1 диалога
+// (см. `activeThread.isGroup` в MessengerWidget.tsx, у группового чата нет
+// единого профиля-получателя) — ведут на его страницу, тот же приём, что и
+// автор поста в PostCard.
+.messenger__chat-head-trigger {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
+}
+
+// Кнопка вокруг имени/статуса — в отличие от кнопки вокруг аватара, должна
+// расти на всё оставшееся место (как раньше `.messenger__chat-head-body`
+// напрямую в `.messenger__chat-head`), иначе кнопка «добавить собеседника»
+// прижимается вплотную к имени вместо правого края хедера, а длинное имя не
+// обрезается эллипсисом — именно так и «плыла» вёрстка на мобильном.
+.messenger__chat-head-name-trigger {
+  flex: 1;
+  min-width: 0;
+}
+
 .messenger__back-button {
   display: none;
   place-items: center;
@@ -211,7 +242,31 @@
   justify-content: center;
 }
 
+@include desktop {
+  // Тот же приём, что и в мобильном блоке ниже, только под десктопный
+  // размер дока: `.dock__item` здесь 38px (базовое значение, не
+  // переопределённое `@include mobile`) + паддинг дока 6px×2 + рамка 1px×2
+  // = 52px, плюс его собственный отступ `16px + env(safe-area-inset-bottom)`,
+  // плюс тот же зазор для дыхания 12px — итого 80px «настоящего» места вместо
+  // зарезервированных `.app` 148px.
+  .messenger-page {
+    margin-bottom: calc(env(safe-area-inset-bottom) - 68px);
+  }
+}
+
 @include mobile {
+  // `.app` резервирует фиксированные 148px снизу (см. `page.module.scss`) —
+  // безопасный отступ от плавающего дока, рассчитанный с запасом для обычных
+  // прокручиваемых разделов. Мессенджер же сам заполняет высоту через
+  // `flex: 1`, поэтому этот запас превращается в пустую полосу между чатом и
+  // доком. Отвоёвываем обратно всё, кроме реального места дока на мобилке
+  // (высота пункта 34px + паддинг 4px×2 + рамка 2px = 44px, плюс его
+  // собственный отступ `16px + env(safe-area-inset-bottom)`, плюс небольшой
+  // зазор для дыхания) — см. `NavigationDock.module.scss`, `.dock`/`.dock__item`.
+  .messenger-page {
+    margin-bottom: calc(env(safe-area-inset-bottom) - 76px);
+  }
+
   .messenger__thread-list {
     max-width: none;
     border-right: 0;

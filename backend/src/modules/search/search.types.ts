@@ -1,13 +1,17 @@
+import type { GroupType } from '@prisma/client';
 import type { PublicProfile } from '@/modules/users/users.types';
 
-/** Группа найдена среди групп, в которых текущий пользователь уже состоит —
- * группы закрытые, «только по приглашению» (см. GroupsService), поэтому
- * поиск не обещает то, чего нет: чужие группы не отдаются. */
+/** Каталог групп публичен (включая приватные — по названию/описанию), как и
+ * у сообществ (см. SearchCommunityDto) — вступление в приватную требует
+ * заявки, что видно по `type`, а не скрывается из поиска. */
 export interface SearchGroupDto {
   id: string;
   name: string;
-  meta: string;
-  mark: string;
+  description: string;
+  type: GroupType;
+  avatarUrl: string | null;
+  membersCount: number;
+  isMember: boolean;
 }
 
 export interface SearchCommunityDto {

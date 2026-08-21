@@ -7,60 +7,91 @@ import { cn } from '@/shared/lib/cn';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
+import { PostEditor } from './PostEditor';
 import styles from './PostComposer.module.scss';
 
 export interface PostComposerProps {
-  /** `feed` — полный композер с чипами, `wall` — однострочная запись на стене. */
-  variant?: 'feed' | 'wall';
+  /** `feed` — многострочный композер с чипами, `wall`/`group` — однострочная
+   * запись (на стене или в группе). Все варианты сворачиваются в этот же
+   * лаконичный вид по умолчанию — полноценный редактор (`PostEditor`)
+   * разворачивается только по клику, см. `isExpanded` ниже. Это и есть
+   * переиспользование одного редактора для разных контекстов публикации
+   * (лента/стена/группа) — параметром вызова, без отдельных компонентов
+   * редактора под каждый контекст. */
+  variant?: 'feed' | 'wall' | 'group';
   /** Чья стена — если не задано, публикация идёт на свою собственную (см.
    * `entities/post`, `publishPost`). Задаётся на `UserProfileView`, когда
-   * пишешь на стене другого пользователя. */
+   * пишешь на стене другого пользователя. Взаимоисключающе с `groupId`. */
   wallOwnerId?: string;
+  /** Публикация в группе вместо стены — обязателен при `variant="group"`
+   * (см. `widgets/groups/ui/GroupPageView`). */
+  groupId?: string;
 }
 
 /**
- * Публикация поста нужна и в ленте, и на стене профиля (своей и чужой) —
- * один feature-компонент с двумя визуальными вариантами вместо дублирования
- * логики черновика/сабмита.
+ * Публикация поста нужна и в ленте, и на стене профиля (своей и чужой), и в
+ * группе — один feature-компонент с тремя визуальными вариантами вместо
+ * дублирования логики черновика/сабмита. По умолчанию свёрнут (тот же
+ * лаконичный вид, что был у контрола до появления полноценного редактора) —
+ * сам инпут выступает тогглом: клик по нему (или по любому чипу/кнопке)
+ * разворачивает `PostEditor`. После успешной публикации композер
+ * сворачивается обратно.
  */
-export function PostComposer({ variant = 'feed', wallOwnerId }: PostComposerProps) {
+export function PostComposer({ variant = 'feed', wallOwnerId, groupId }: PostComposerProps) {
   const { currentUser } = useCurrentUser();
   const publishPost = usePostStore((state) => state.publishPost);
-  const [draft, setDraft] = useState('');
-  const [isPending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isExpanded, setExpanded] = useState(false);
+  const isOwnWall = !wallOwnerId || wallOwnerId === currentUser.id;
 
-  const submit = async () => {
-    if (!draft.trim() || isPending) return;
-    setPending(true);
-    setError(null);
-    try {
-      await publishPost({ text: draft, wallOwnerId });
-      setDraft('');
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error ? submitError.message : 'Не удалось опубликовать запись',
-      );
-    } finally {
-      setPending(false);
-    }
+  const submitPost = async ({ text, images }: { text: string; images: File[] }) => {
+    await publishPost({ text, images, wallOwnerId, groupId });
+    setExpanded(false);
   };
 
-  if (variant === 'wall') {
-    const isOwnWall = !wallOwnerId || wallOwnerId === currentUser.id;
+  if (isExpanded) {
+    return (
+      <Card className={styles.composer}>
+        <div className={styles.composer__top}>
+          <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} />
+          <div className={styles['composer__editor']}>
+            <PostEditor
+              mode="create"
+              placeholder={
+                variant === 'group'
+                  ? 'Написать в группе…'
+                  : variant === 'wall'
+                    ? isOwnWall
+                      ? 'Записать на своей стене…'
+                      : 'Написать на этой стене…'
+                    : 'О чём расскажешь залу?'
+              }
+              submitLabel={variant === 'feed' ? 'Рассказать' : 'Записать'}
+              pendingLabel={variant === 'feed' ? 'Публикуем…' : 'Записываем…'}
+              onSubmit={submitPost}
+              onCancel={() => setExpanded(false)}
+            />
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  if (variant === 'wall' || variant === 'group') {
     return (
       <Card className={cn(styles.composer, styles['composer--wall'])}>
         <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} />
-        <input
-          className={styles['composer__input']}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={isOwnWall ? 'Записать на своей стене…' : 'Написать на этой стене…'}
-        />
-        <Button onClick={submit} disabled={isPending}>
-          Записать
-        </Button>
-        {error && <p className={styles['composer__error']}>{error}</p>}
+        <button
+          type="button"
+          className={styles['composer__input-toggle']}
+          onClick={() => setExpanded(true)}
+        >
+          {variant === 'group'
+            ? 'Написать в группе…'
+            : isOwnWall
+              ? 'Записать на своей стене…'
+              : 'Написать на этой стене…'}
+        </button>
+        <Button onClick={() => setExpanded(true)}>Записать</Button>
       </Card>
     );
   }
@@ -69,21 +100,26 @@ export function PostComposer({ variant = 'feed', wallOwnerId }: PostComposerProp
     <Card className={styles.composer}>
       <div className={styles.composer__top}>
         <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} />
-        <textarea
-          className={styles['composer__textarea']}
-          rows={2}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder="О чём расскажешь залу?"
-        />
+        <button
+          type="button"
+          className={styles['composer__textarea-toggle']}
+          onClick={() => setExpanded(true)}
+        >
+          О чём расскажешь залу?
+        </button>
       </div>
-      {error && <p className={styles['composer__error']}>{error}</p>}
       <div className={styles.composer__actions}>
-        <Button variant="chip">Фото</Button>
-        <Button variant="chip">Сбор</Button>
-        <Button variant="chip">Опрос</Button>
-        <Button className={styles['composer__submit']} onClick={submit} disabled={isPending}>
-          {isPending ? 'Публикуем…' : 'Рассказать'}
+        <Button variant="chip" onClick={() => setExpanded(true)}>
+          Фото
+        </Button>
+        <Button variant="chip" onClick={() => setExpanded(true)}>
+          Сбор
+        </Button>
+        <Button variant="chip" onClick={() => setExpanded(true)}>
+          Опрос
+        </Button>
+        <Button className={styles['composer__submit']} onClick={() => setExpanded(true)}>
+          Рассказать
         </Button>
       </div>
     </Card>

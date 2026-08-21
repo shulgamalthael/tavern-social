@@ -10,6 +10,7 @@ interface FriendRequestUserResponse {
   id: string;
   name: string;
   tagline: string;
+  avatarUrl: string | null;
   city: string | null;
 }
 
@@ -27,6 +28,7 @@ function mapRequest(request: FriendRequestResponse): FriendRequestPreview {
   return {
     id: request.user.id,
     initials: getInitials(request.user.name),
+    avatarUrl: request.user.avatarUrl,
     name: request.user.name,
     tagline: request.user.tagline,
     city: request.user.city,

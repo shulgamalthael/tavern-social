@@ -1,6 +1,7 @@
 export interface Friend {
   id: string;
   initials: string;
+  avatarUrl: string | null;
   name: string;
   note: string;
   city: string;
@@ -17,6 +18,7 @@ export interface Friend {
 export interface FriendRequestPreview {
   id: string;
   initials: string;
+  avatarUrl: string | null;
   name: string;
   tagline: string;
   city: string | null;

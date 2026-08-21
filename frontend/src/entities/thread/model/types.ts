@@ -11,6 +11,7 @@ export interface ThreadParticipant {
   id: string;
   name: string;
   initials: string;
+  avatarUrl: string | null;
 }
 
 export interface Thread {
@@ -23,6 +24,9 @@ export interface Thread {
    * нет отдельного поля «название» (см. `map-thread.ts`). */
   name: string;
   initials: string;
+  /** Аватар собеседника — только для 1:1, у группового диалога нет единого
+   * аватара (как и с `initials`, см. `map-thread.ts`). */
+  avatarUrl: string | null;
   status: string;
   unread?: number;
   messages: ChatMessage[];

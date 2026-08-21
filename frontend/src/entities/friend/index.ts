@@ -1,4 +1,6 @@
 export { acceptFriendRequest } from './api/accept-friend-request';
+export { getUserFriends } from './api/get-user-friends';
+export { removeFriend } from './api/remove-friend';
 export { respondToFriendRequest } from './api/respond-to-friend-request';
 export { sendFriendRequest } from './api/send-friend-request';
 export type { FriendshipStatus } from './api/send-friend-request';
@@ -7,5 +9,6 @@ export type { FriendStore } from './model/friend-store';
 export type { Friend, FriendRequestPreview } from './model/types';
 export { FriendCard } from './ui/FriendCard';
 export type { FriendCardProps } from './ui/FriendCard';
+export { FriendCardSkeleton } from './ui/FriendCardSkeleton';
 export { FriendRequestCard } from './ui/FriendRequestCard';
 export type { FriendRequestCardProps } from './ui/FriendRequestCard';

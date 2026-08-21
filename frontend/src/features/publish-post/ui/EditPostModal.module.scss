@@ -1,0 +1,11 @@
+.edit-post-modal {
+  width: min(640px, 100%);
+  max-height: min(85vh, 720px);
+}
+
+.edit-post-modal__title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 500;
+}

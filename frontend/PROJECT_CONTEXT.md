@@ -156,14 +156,44 @@ Backend (`GET /search?q=`) ищет по трём сущностям парал�
 обёрточной записи — так статистика не расходится между «оригиналом» и
 «репостом репоста». `usePostStore.repostedPostIds` — карта «репостнул ли я»,
 параллельная `likedPostIds`, ключ — всегда id того поста, на который смотрит
-интерактив (см. `matchesTarget` в `post-store.ts`).
+интерактив (см. `matchesTarget` в `post-store.ts`). Цитата репоста рендерит
+`repostOf.text` тем же способом, что и обычный пост (санитизированный HTML,
+см. ниже) — картинки/ссылки оригинала показываются автоматически, без
+отдельного кода.
+
+**Реакции.** `toggleLike`/`toggleDislike` (`post-store.ts`) — optimistic
+update → запрос → перезапись состояния из ответа backend (актуальные
+`likesCount`/`dislikesCount`/`isLikedByMe`/`isDislikedByMe`), rollback в
+catch. `pendingReactionByPostId` — лок на пост на время запроса: повторный
+клик (лайк/дизлайк, они делят один лок) во время уже летящего запроса
+просто игнорируется, а не улетает гонкой параллельных запросов.
 
 **Комментарии.** Кнопка «Ответить · N» разворачивает `CommentList` +
 `CommentComposer` (`entities/post/ui/`) прямо под карточкой — локальное
 состояние открытия (`useState` в `PostCard`), сами комментарии — в отдельном
 `useCommentStore` (`entities/post/model/comment-store.ts`), карта по `postId`,
 т.к. один и тот же пост может одновременно быть виден и в ленте, и на стене
-профиля. MVP: только просмотр и добавление, без редактирования/удаления.
+профиля. Курсорная пагинация верхнеуровневых комментариев (лимит 3, кнопка
+«Показать ещё», `nextCursorByPostId`/`loadMoreComments`) — ответы (replies)
+приходят вместе со своим верхнеуровневым комментарием на той же странице.
+Создание и ответы есть, редактирования/удаления отдельного комментария нет
+(не запрошено).
+
+**Создание и редактирование поста.** Один компонент —
+`features/publish-post/ui/PostEditor.tsx` (Tiptap, `mode: 'create' | 'edit'`)
+— используется и в композере ленты (`PostComposer`, вариант `feed`,
+инлайн), и в модалке редактирования (`features/publish-post/ui/
+EditPostModal.tsx`, открывается из «···» на `PostCard`, только для своих
+записей, не для карточек репоста). Поддерживает жирный/курсив/подчёркивание/
+заголовки/списки, ссылки с кастомным текстом (свой попап, не `prompt()`) и
+позиционируемые в тексте картинки (до 10 на пост, лимит `MAX_POST_IMAGES`).
+Контент — санитизированный на backend HTML (`Post.text`), рендерится на
+frontend через `dangerouslySetInnerHTML` — безопасно, потому что источник
+уже прошёл `sanitizePostContent` на сервере, а не потому что frontend его
+дополнительно чистит. Картинки грузятся одним multipart-запросом вместе с
+публикацией/сохранением (не раньше) — orphaned-файлов не возникает. Ссылки,
+для которых backend получил метаданные, показывают карточку превью
+(`LinkPreviewCard`) под текстом.
 
 ### Мессенджер — `widgets/messenger`
 
@@ -311,10 +341,16 @@ actorCount, isNew, post: {id, text}, commentText? }`. См. «Уведомлен
 ### Друзья / Сообщества / Группы
 
 Списочные разделы поверх `entities/friend` / `entities/community` /
-`entities/group`, каждый через `useAsyncData(get*)` — `Loader` во время
-загрузки, `ErrorState` с повтором при ошибке, `EmptyState` при пустом списке.
-«Вступил в сообщество» — локальный `useState` виджета `communities`, по
-умолчанию пусто (раньше был захардкожен один «вступленный» демо-элемент).
+`entities/group` — `Loader` во время загрузки, `ErrorState` с повтором при
+ошибке, `EmptyState` при пустом списке. `friends` — курсорная пагинация
+через `useFriendStore` (см. ниже), `communities` — свой курсорный
+`useState` в `CommunitiesWidget` (потенциально длинный публичный каталог, но
+без real-time-обновлений, поэтому не общий store, см. `AGENTS.md` §4),
+`groups` — обычный `useAsyncData(getGroups)` без пагинации: список
+ограничен собственными членствами пользователя (закрытые группы, не
+публичный каталог), естественно небольшой. «Вступил в сообщество» —
+локальный `useState` виджета `communities`, по умолчанию пусто (раньше был
+захардкожен один «вступленный» демо-элемент).
 
 **Заявки в друзья.** Дружба заводится через заявку/подтверждение — backend
 хранит отдельную `FriendRequest` до принятия/отклонения/отмены, `Friendship`
@@ -364,17 +400,18 @@ actorCount, isNew, post: {id, text}, commentText? }`. См. «Уведомлен
 
 ## Управление состоянием
 
-| Store/Context                                                                 | Файл                                                    | Хранит                                                                   | Кто использует                                                                                |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `useNavigationStore` (Zustand)                                                | `features/section-navigation/model/navigation-store.ts` | Текущий раздел (открыт ли попап «Ещё» — локальное состояние самого дока) | `header`, `navigation-dock`, `app/home-app.tsx`, `widgets/friends`, `widgets/profile`         |
-| `usePostStore` (Zustand)                                                      | `entities/post/model/post-store.ts`                     | Посты + `status`/`error`, `likedPostIds`, `repostedPostIds`              | `widgets/feed`, `widgets/profile`, `features/publish-post`                                    |
-| `useCommentStore` (Zustand)                                                   | `entities/post/model/comment-store.ts`                  | Комментарии по `postId` + `status`/`error` по каждому                    | `entities/post/ui/CommentList`, `CommentComposer`                                             |
-| `useThreadStore` (Zustand)                                                    | `entities/thread/model/thread-store.ts`                 | Диалоги + `status`/`error`                                               | `widgets/messenger`, `widgets/header`, `widgets/navigation-dock`, `features/send-message`     |
-| `useNotificationStore` (Zustand)                                              | `entities/notification/model/notification-store.ts`     | Лента уведомлений + пагинация + `unreadCount`                            | `widgets/header`, `widgets/notifications`, `widgets/notification-toaster`, `app/home-app.tsx` |
-| `useToastStore` (Zustand)                                                     | `entities/notification/model/toast-store.ts`            | Видимые/в очереди toast-попапы                                           | `widgets/notification-toaster`, `app/home-app.tsx`                                            |
-| `CurrentUserProvider` (React Context)                                         | `entities/user/model/current-user-context.tsx`          | Текущий пользователь (id/имя/инициалы/подпись)                           | `header`, `feed`, `profile`, `settings`, `publish-post`                                       |
-| `useAsyncData(getFriends/getCommunities/getGroups)` (локальный хук, не store) | `shared/lib/use-async-data.ts`                          | Список + `status`/`error`/`refetch`                                      | по одному виджету каждый: `friends`, `communities`, `groups`                                  |
-| `useGlobalSearch` (локальный хук, не store)                                   | `features/global-search/model/use-global-search.ts`     | Результаты поиска + `status`/`error`, debounced                          | `widgets/header` (через `SearchDropdown`)                                                     |
+| Store/Context                                       | Файл                                                    | Хранит                                                                                 | Кто использует                                                                                |
+| --------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `useNavigationStore` (Zustand)                      | `features/section-navigation/model/navigation-store.ts` | Текущий раздел (открыт ли попап «Ещё» — локальное состояние самого дока)               | `header`, `navigation-dock`, `app/home-app.tsx`, `widgets/friends`, `widgets/profile`         |
+| `usePostStore` (Zustand)                            | `entities/post/model/post-store.ts`                     | Посты + `status`/`error`, `likedPostIds`, `repostedPostIds`, `pendingReactionByPostId` | `widgets/feed`, `widgets/profile`, `features/publish-post`                                    |
+| `useCommentStore` (Zustand)                         | `entities/post/model/comment-store.ts`                  | Комментарии по `postId` + `status`/`error`/`nextCursor` по каждому                     | `entities/post/ui/CommentList`, `CommentComposer`                                             |
+| `useThreadStore` (Zustand)                          | `entities/thread/model/thread-store.ts`                 | Диалоги + `status`/`error`                                                             | `widgets/messenger`, `widgets/header`, `widgets/navigation-dock`, `features/send-message`     |
+| `useNotificationStore` (Zustand)                    | `entities/notification/model/notification-store.ts`     | Лента уведомлений + пагинация + `unreadCount`                                          | `widgets/header`, `widgets/notifications`, `widgets/notification-toaster`, `app/home-app.tsx` |
+| `useToastStore` (Zustand)                           | `entities/notification/model/toast-store.ts`            | Видимые/в очереди toast-попапы                                                         | `widgets/notification-toaster`, `app/home-app.tsx`                                            |
+| `CurrentUserProvider` (React Context)               | `entities/user/model/current-user-context.tsx`          | Текущий пользователь (id/имя/инициалы/подпись)                                         | `header`, `feed`, `profile`, `settings`, `publish-post`                                       |
+| `useFriendStore` (Zustand)                          | `entities/friend/model/friend-store.ts`                 | Друзья (курсорная пагинация) + заявки в друзья                                         | `widgets/friends`, `app/home-app.tsx` (real-time)                                             |
+| `useAsyncData(getGroups)` (локальный хук, не store) | `shared/lib/use-async-data.ts`                          | Список + `status`/`error`/`refetch`                                                    | `widgets/groups`                                                                              |
+| `useGlobalSearch` (локальный хук, не store)         | `features/global-search/model/use-global-search.ts`     | Результаты поиска + `status`/`error`, debounced                                        | `widgets/header` (через `SearchDropdown`)                                                     |
 
 Правила заведения новых store — `AGENTS.md`, раздел 4.
 
@@ -431,14 +468,15 @@ actorCount, isNew, post: {id, text}, commentText? }`. См. «Уведомлен
 - **Сборы (фандрайзинг/события) как отдельная сущность не существуют** — ни в
   backend (нет модели/эндпоинтов), ни в frontend (нет `entities`/`api`).
   Вкладка «Сборы» в ленте — это просто фильтр существующих постов по
-  `kind: 'events'`; сайдбар «Ближайшие сборы» на `widgets/feed` и чип «Сбор» в
-  `PostComposer` — честные заглушки без источника данных. Поиск (см. выше)
-  поэтому ищет только людей/сообщества/группы, не «сборы» — заявленных в
-  задаче на поиск сборов возвращать нечего, пока эта сущность не появится.
-- **Composer-чипы «Фото» и «Опрос»** (`features/publish-post/ui/PostComposer.tsx`)
-  и кнопка «···» на карточке поста (`entities/post/ui/PostCard.tsx`) —
-  декоративные, без обработчиков. Их назначение не подтверждено ни одной
-  доменной моделью — реализовывать наугад не стали.
+  `kind: 'events'`; сайдбар «Ближайшие сборы» на `widgets/feed` — честный
+  `EmptyState` без источника данных. Поиск (см. выше) поэтому ищет только
+  людей/сообщества/группы, не «сборы» — заявленных в задаче на поиск сборов
+  возвращать нечего, пока эта сущность не появится.
+- **Composer-чип «Опрос»** (`features/publish-post/ui/PostComposer.tsx`) —
+  декоративный, без обработчика: назначение не подтверждено ни одной
+  доменной моделью, реализовывать наугад не стали. Чип «Фото» и кнопка «···»
+  (редактировать/удалить) на карточке поста — уже реальные, не заглушки (см.
+  «Лента» выше).
 - **Удаление из друзей (unfriend) не реализовано** — только заявка →
   принятие. Разорвать существующую `Friendship` пока нельзя ни из UI, ни
   через API — не запрошено. Входящие заявки теперь дают бейдж (через общий

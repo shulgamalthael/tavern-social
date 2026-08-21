@@ -1,20 +1,40 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Community, CommunityMembership } from '@prisma/client';
+import type { PaginatedDto } from '@/common/types/paginated';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import type { CommunityDto } from './communities.types';
 
 type CommunityWithMemberships = Community & { memberships: CommunityMembership[] };
 
+/** Тот же лимит по умолчанию, что и у остальных курсорных списков (см.
+ * `NotificationsService`) — витрина открытых сообществ листается точно так же. */
+const DEFAULT_COMMUNITIES_LIMIT = 20;
+
 @Injectable()
 export class CommunitiesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(currentUserId: string): Promise<CommunityDto[]> {
+  async list(
+    currentUserId: string,
+    cursor?: string,
+    limit = DEFAULT_COMMUNITIES_LIMIT,
+  ): Promise<PaginatedDto<CommunityDto>> {
     const communities = await this.prisma.community.findMany({
-      orderBy: { name: 'asc' },
+      // `id` вторым полем — `name` не уникально, курсор без стабильного
+      // полного порядка мог бы пропускать/дублировать строки на совпадающих
+      // именах при перелистывании.
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: { memberships: { where: { userId: currentUserId } } },
     });
-    return communities.map((community) => this.toDto(community));
+
+    const hasMore = communities.length > limit;
+    const page = hasMore ? communities.slice(0, limit) : communities;
+    return {
+      items: page.map((community) => this.toDto(community)),
+      nextCursor: hasMore ? page[page.length - 1].id : null,
+    };
   }
 
   async join(communityId: string, userId: string): Promise<CommunityDto> {

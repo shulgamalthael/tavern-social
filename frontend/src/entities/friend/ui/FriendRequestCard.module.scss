@@ -5,6 +5,30 @@
   gap: 14px;
 }
 
+// Аватар и имя — отдельные кликабельные `button`, ведущие на профиль (см.
+// `onAuthorClick` в FriendRequestCard.tsx) — тот же приём, что и в FriendCard.
+.request__avatar-trigger {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.request__name-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
+}
+
 .request__body {
   display: flex;
   flex-direction: column;
