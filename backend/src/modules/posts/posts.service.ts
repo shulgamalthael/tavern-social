@@ -546,6 +546,47 @@ export class PostsService {
     }
   }
 
+  /**
+   * Модераторское удаление — без проверки авторства (см. `remove()` выше
+   * для обычного пути). Отдельный метод, а не параметр `skipOwnerCheck` в
+   * `remove()`: тут ещё и другой набор проверок доступа (`assertPostAccessible`
+   * не нужен — админ видит любой пост), и `repostOfId` обрабатывается прямо
+   * здесь, а не через `unrepost()`, у которого своя обязательная проверка
+   * `userId === author`. Если удаляемый пост сам репост — декрементирует
+   * `repostsCount` оригинала (та же бухгалтерия, что и `unrepost()`), иначе
+   * `repostsCount` на оригинале стало бы враньём после чужого удаления.
+   */
+  async removeAsAdmin(postId: string): Promise<void> {
+    const post = await this.prisma.post.findUniqueOrThrow({
+      where: { id: postId },
+      select: {
+        repostOfId: true,
+        galleryImage: { select: { id: true, url: true } },
+        images: { select: { url: true } },
+      },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      if (post.galleryImage) {
+        await tx.galleryImage.delete({ where: { id: post.galleryImage.id } });
+      }
+      if (post.repostOfId) {
+        await tx.post.update({
+          where: { id: post.repostOfId },
+          data: { repostsCount: { decrement: 1 } },
+        });
+      }
+      await tx.post.delete({ where: { id: postId } });
+    });
+
+    if (post.galleryImage) {
+      deleteUploadedFile(post.galleryImage.url);
+    }
+    for (const image of post.images) {
+      deleteUploadedFile(image.url);
+    }
+  }
+
   /** Существование + доступ к посту приватной группы — `NotFoundException`
    * в обоих случаях (не подтверждаем существование чужого id, та же логика,
    * что и в `GalleryService`, см. план по группам §5). Используется всеми

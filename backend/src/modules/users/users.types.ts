@@ -1,3 +1,4 @@
+import type { UserRole } from '@prisma/client';
 import type { FriendshipStatusDto } from '@/modules/friends/friends.types';
 
 /** Публичный профиль — то, что видно другим пользователям (посты, друзья, участники). */
@@ -16,6 +17,10 @@ export interface PublicProfile {
 /** Профиль текущего пользователя — включает приватные поля (email, настройки). */
 export interface MeProfile extends PublicProfile {
   email: string;
+  /** Только для показа пункта «Админка» в навигации (см.
+   * `entities/user/model/types.ts#CurrentUser.role` на frontend) — реальная
+   * авторизация везде на `AdminGuard`, не на этом поле. */
+  role: UserRole;
   settings: {
     quietHours: boolean;
     showPresence: boolean;

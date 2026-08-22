@@ -8,6 +8,7 @@ import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './infrastructure/database/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { RealtimeModule } from './infrastructure/websocket/realtime.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
 import { FriendsModule } from './modules/friends/friends.module';
@@ -42,6 +43,7 @@ import { UsersModule } from './modules/users/users.module';
     GroupsModule,
     GalleryModule,
     SearchModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

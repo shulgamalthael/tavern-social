@@ -49,6 +49,14 @@ enum GroupType {
   private
 }
 
+/// ADMIN — доступ к `/admin/*` (см. `AdminGuard`, `src/modules/admin`).
+/// Выдаётся только вручную (нет self-service повышения роли) — см.
+/// `prisma/promote-admin.ts`.
+enum UserRole {
+  user
+  admin
+}
+
 model User {
   id                   String   @id @default(uuid())
   email                String   @unique
@@ -65,6 +73,15 @@ model User {
   showPresence         Boolean  @default(true)
   allowStrangerInvites Boolean  @default(false)
   morningDigest        Boolean  @default(true)
+  role                 UserRole @default(user)
+  /// Забаненный пользователь не теряет данные (посты и т. п. остаются) —
+  /// `SessionAuthGuard` просто отклоняет его запросы (см. `AdminService.banUser`).
+  /// Отдельное поле, а не удаление сессий: не разлогинивает мгновенно у
+  /// пользователя, который уже открыл вкладку, а честно показывает «вы забанены»
+  /// на следующем запросе, вместо молчаливого «сессия истекла».
+  isBanned             Boolean  @default(false)
+  bannedAt             DateTime?
+  bannedReason         String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

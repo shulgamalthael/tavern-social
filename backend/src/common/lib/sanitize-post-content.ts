@@ -91,6 +91,11 @@ const ALLOWED_STYLE_PROPERTIES = [
   'justify-content',
   'align-items',
   'flex-direction',
+  'box-sizing',
+  'overflow-x',
+  '-webkit-overflow-scrolling',
+  'white-space',
+  'border-collapse',
 ];
 
 const ALLOWED_STYLES = Object.fromEntries(
@@ -103,9 +108,11 @@ const ALLOWED_STYLES = Object.fromEntries(
  * в `PostsService.create`/`update` перед записью в БД. Allowlist тегов —
  * форматирование из задачи (абзацы/переносы/жирный/курсив/подчёркивание/
  * заголовки/разделитель/контейнер с собственным оформлением/списки/ссылки/
- * картинки) + `style` на любом из них (см. `ALLOWED_STYLE_PROPERTIES` выше) —
- * без него стилизованные карточки, вставленные через HTML-режим редактора
- * (см. `features/publish-post/ui/PostEditor`), теряли бы всё оформление.
+ * картинки/таблицы/инлайновый span) + `style` на любом из них (см.
+ * `ALLOWED_STYLE_PROPERTIES` выше) — без него стилизованные карточки и
+ * таблицы, вставленные через HTML-режим редактора (см.
+ * `features/publish-post/ui/PostEditor`, узлы `Table`/`Span` в
+ * `rich-html-extensions.ts`), теряли бы всё оформление.
  */
 export function sanitizePostContent(html: string): string {
   return sanitizeHtml(html, {
@@ -125,6 +132,14 @@ export function sanitizePostContent(html: string): string {
       'li',
       'a',
       'img',
+      'table',
+      'thead',
+      'tbody',
+      'tfoot',
+      'tr',
+      'th',
+      'td',
+      'span',
     ],
     allowedAttributes: {
       // target/rel не приходят от клиента — их принудительно проставляет
@@ -132,6 +147,9 @@ export function sanitizePostContent(html: string): string {
       // их обратно уже после трансформации.
       a: ['href', 'target', 'rel'],
       img: ['src', 'alt'],
+      table: ['role', 'cellpadding', 'cellspacing'],
+      th: ['colspan', 'rowspan'],
+      td: ['colspan', 'rowspan'],
       '*': ['style'],
     },
     allowedStyles: {

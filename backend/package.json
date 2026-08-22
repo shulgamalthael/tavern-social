@@ -21,7 +21,8 @@
     "migration:dev": "prisma migrate dev",
     "migration:deploy": "prisma migrate deploy",
     "migration:create": "prisma migrate dev --create-only",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "promote-admin": "ts-node prisma/promote-admin.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
