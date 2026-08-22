@@ -1,7 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { selectUnreadThreadCount, useThreadStore } from '@/entities/thread';
+import { useCurrentUser } from '@/entities/user';
 import {
   NAV_ITEMS,
   PRIMARY_NAV_COUNT,
@@ -10,7 +12,7 @@ import {
 } from '@/features/section-navigation';
 import { cn } from '@/shared/lib/cn';
 import { Badge } from '@/shared/ui/Badge';
-import { MoreIcon } from '@/shared/ui/icons';
+import { MoreIcon, ShieldIcon } from '@/shared/ui/icons';
 import styles from './NavigationDock.module.scss';
 
 const PRIMARY_ITEMS = NAV_ITEMS.slice(0, PRIMARY_NAV_COUNT);
@@ -27,6 +29,7 @@ export function NavigationDock() {
   const section = useNavigationStore((state) => state.section);
   const goToSection = useNavigationStore((state) => state.goToSection);
   const unreadCount = useThreadStore(selectUnreadThreadCount);
+  const { currentUser } = useCurrentUser();
   const [isMoreOpen, setMoreOpen] = useState(false);
   const moreContainerRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +106,16 @@ export function NavigationDock() {
                 </button>
               );
             })}
+            {/* Не `goToSection` — «Админка» больше не клиентский раздел SPA,
+             * а отдельный маршрут `/admin` со своей серверной проверкой
+             * сессии/роли (см. `app/(protected)/admin/page.tsx`). Обычная
+             * ссылка, полноценная навигация, а не смена секции в сторе. */}
+            {currentUser.role === 'admin' && (
+              <Link href="/admin" role="menuitem" className={styles['dock__popover-item']}>
+                <ShieldIcon />
+                Админка
+              </Link>
+            )}
           </div>
         )}
       </div>

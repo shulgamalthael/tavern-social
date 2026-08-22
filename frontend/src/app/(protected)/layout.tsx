@@ -6,17 +6,17 @@ import { redirect } from 'next/navigation';
 // eslint-disable-next-line no-restricted-imports
 import { getSessionUser } from '@/features/auth/api/session.server';
 import { CurrentUserProvider } from '@/entities/user';
-import { HomeApp } from './home-app';
 
 /**
- * Единственный защищённый роут приложения. Проверка сессии здесь —
- * авторитетная (см. также оптимистичную проверку в `proxy.ts`): без валидной
- * cookie рендер даже не начинается. `initialUser` прокидывается пропом в
- * `CurrentUserProvider`, а не читается клиентским store, — так каждый запрос
- * получает свои данные без риска утечки между пользователями через общий
- * модульный store (см. AGENTS.md, раздел про auth).
+ * Общий рубеж для всех защищённых маршрутов (сейчас `/` и `/admin`, см.
+ * AGENTS.md, раздел про auth — «если появится больше защищённых маршрутов,
+ * поднимите этот паттерн в (protected)/layout.tsx»). Авторитетная проверка
+ * сессии (см. также оптимистичную в `proxy.ts`) — здесь и только здесь;
+ * дочерние страницы получают уже гарантированно вошедшего пользователя.
+ * Ролевые проверки (например, `/admin` — только `role === 'admin'`) — это
+ * следующий, более узкий рубеж внутри конкретной страницы, не здесь.
  */
-export default async function Home() {
+export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const currentUser = await getSessionUser();
 
   if (!currentUser) {
@@ -26,9 +26,5 @@ export default async function Home() {
     redirect('/auth/clear');
   }
 
-  return (
-    <CurrentUserProvider initialUser={currentUser}>
-      <HomeApp />
-    </CurrentUserProvider>
-  );
+  return <CurrentUserProvider initialUser={currentUser}>{children}</CurrentUserProvider>;
 }

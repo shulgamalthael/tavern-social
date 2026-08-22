@@ -1,0 +1,20 @@
+@use '@/shared/styles/mixins' as *;
+@use './admin-tokens' as tokens;
+
+.admin-shell {
+  display: flex;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.admin-shell__content {
+  flex: 1;
+  min-width: 0;
+  margin-left: tokens.$admin-sidebar-width;
+}
+
+@include mobile {
+  .admin-shell__content {
+    margin-left: tokens.$admin-sidebar-width-mobile;
+  }
+}

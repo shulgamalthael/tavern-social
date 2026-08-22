@@ -1,0 +1,60 @@
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.about__bio {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--tavern-ink);
+  white-space: pre-line;
+}
+
+// Разделитель между разными по смыслу блоками (текст/город/интересы) —
+// только между ними, не перед первым: если `about` не задан, город не
+// должен получить осиротевшую линию сверху без ничего над ней.
+.about__row,
+.about__section {
+  &:not(:first-child) {
+    padding-top: 14px;
+    border-top: 1px solid var(--tavern-line);
+  }
+}
+
+.about__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--tavern-muted);
+}
+
+.about__row-icon {
+  flex-shrink: 0;
+  color: var(--tavern-muted);
+}
+
+.about__section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.about__section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tavern-muted);
+}
+
+.about__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}

@@ -1,0 +1,149 @@
+@use '@/shared/styles/mixins' as *;
+@use './admin-tokens' as tokens;
+
+.admin-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: tokens.$admin-sidebar-width;
+  height: 100vh;
+  padding: 18px 14px;
+  border-right: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+  overflow-y: auto;
+}
+
+.admin-sidebar__back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  border-radius: var(--tavern-radius-control);
+  color: var(--tavern-muted);
+  font-size: 13px;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.admin-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 0 8px;
+  color: var(--tavern-ink);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.admin-sidebar__brand-icon {
+  flex-shrink: 0;
+  color: var(--tavern-accent);
+}
+
+.admin-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: none;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.admin-sidebar__nav-item--active {
+  background: var(--tavern-ink);
+  color: var(--tavern-bg);
+  font-weight: 500;
+}
+
+.admin-sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 10px 8px 0;
+  border-top: 1px solid var(--tavern-line);
+}
+
+.admin-sidebar__user-name {
+  overflow: hidden;
+  color: var(--tavern-muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@include mobile {
+  .admin-sidebar {
+    width: tokens.$admin-sidebar-width-mobile;
+    padding: 14px 8px;
+    align-items: center;
+  }
+
+  .admin-sidebar__back-label,
+  .admin-sidebar__brand-label,
+  .admin-sidebar__nav-label,
+  .admin-sidebar__user-name {
+    display: none;
+  }
+
+  .admin-sidebar__back,
+  .admin-sidebar__brand {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .admin-sidebar__nav-item {
+    justify-content: center;
+    width: 40px;
+    padding: 0;
+  }
+
+  .admin-sidebar__user {
+    justify-content: center;
+    padding: 10px 0 0;
+  }
+}

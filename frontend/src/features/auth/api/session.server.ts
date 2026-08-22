@@ -15,6 +15,7 @@ interface MeProfileResponse {
   tags: string[];
   avatarUrl: string | null;
   coverUrl: string | null;
+  role: 'user' | 'admin';
 }
 
 function toCurrentUser(profile: MeProfileResponse): CurrentUser {
@@ -29,6 +30,7 @@ function toCurrentUser(profile: MeProfileResponse): CurrentUser {
     tags: profile.tags,
     avatarUrl: profile.avatarUrl,
     coverUrl: profile.coverUrl,
+    role: profile.role,
   };
 }
 

@@ -14,8 +14,10 @@ import { useCurrentUser } from '@/entities/user';
 import { getSocketTicket } from '@/features/auth';
 import { type SectionId, useNavigationStore } from '@/features/section-navigation';
 import { BACKEND_WS_URL } from '@/shared/config/realtime';
+import { cn } from '@/shared/lib/cn';
 import { getInitials } from '@/shared/lib/get-initials';
 import { usePersistedScroll } from '@/shared/lib/use-persisted-scroll';
+import { AdminBar } from '@/widgets/admin';
 import { CommunitiesWidget } from '@/widgets/communities';
 import { FeedWidget } from '@/widgets/feed';
 import { FriendsWidget } from '@/widgets/friends';
@@ -282,8 +284,14 @@ export function HomeApp() {
     // exhaustive-deps.
   }, [currentUser.id, loadThreads]);
 
+  const isAdmin = currentUser.role === 'admin';
+
   return (
-    <div className={styles.app} ref={appRef}>
+    <div
+      className={cn(styles.app, isAdmin && styles['app--with-admin-bar'])}
+      ref={appRef}
+    >
+      {isAdmin && <AdminBar />}
       <Header />
       <ActiveSection />
       <NavigationDock />

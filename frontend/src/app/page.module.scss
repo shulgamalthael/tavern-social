@@ -29,3 +29,12 @@
   overscroll-behavior-y: contain;
   padding-bottom: 148px;
 }
+
+// Задаёт `Header` смещение вниз, когда над ним рендерится `AdminBar` (см.
+// `HomeApp` — класс ставится только для `role === 'admin'`), чтобы два
+// `sticky`-элемента стыковались друг под другом, а не перекрывали друг
+// друга. Значение — фактическая высота `.admin-bar__inner`
+// (`widgets/admin/ui/AdminBar.module.scss`), меняются оба вместе.
+.app--with-admin-bar {
+  --admin-bar-h: 36px;
+}

@@ -152,3 +152,41 @@ export function BellIcon(props: IconProps): ReactElement {
     </BaseIcon>
   );
 }
+
+export function LocationIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 21c4-4.4 6.5-8 6.5-11.2A6.5 6.5 0 0 0 5.5 9.8C5.5 13 8 16.6 12 21z" />
+      <circle cx={12} cy={9.8} r={2.2} />
+    </BaseIcon>
+  );
+}
+
+export function ShieldIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 3.5 5 6v6c0 4.6 3 8 7 9.5 4-1.5 7-4.9 7-9.5V6l-7-2.5z" />
+      <path d="M9 12.2l2 2 4-4.4" />
+    </BaseIcon>
+  );
+}
+
+export function ChartIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M5 19V11" />
+      <path d="M12 19V7" />
+      <path d="M19 19v-5" />
+      <path d="M4 19h16" />
+    </BaseIcon>
+  );
+}
+
+export function TagIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M11.5 3.5H6a2.5 2.5 0 0 0-2.5 2.5v5.5c0 .5.2 1 .6 1.4l8 8c.8.8 2 .8 2.8 0l5.5-5.5c.8-.8.8-2 0-2.8l-8-8c-.4-.4-.9-.6-1.4-.6z" />
+      <circle cx={8} cy={8} r={1.2} fill="currentColor" stroke="none" />
+    </BaseIcon>
+  );
+}

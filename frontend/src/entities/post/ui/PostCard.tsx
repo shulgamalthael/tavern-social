@@ -26,6 +26,10 @@ export interface PostCardProps {
   isReposted?: boolean;
   onToggleLike?: () => void;
   onToggleDislike?: () => void;
+  /** Кнопка «Передать дальше» показывается, только когда колбэк передан —
+   * тот же принцип, что и у `onDelete`/`onEdit` ниже: вызывающий widget
+   * решает видимость (см. `entities/post/lib/can-repost-post.ts` — свой
+   * контент репостнуть нельзя, backend всё равно отклонит). */
   onToggleRepost?: () => void;
   /** Клик по аватару/имени автора — переход на его профиль. Вызывается и
    * для автора самого поста, и (отдельно) для автора репостнутого поста —
@@ -85,8 +89,6 @@ export function PostCard({
   // (см. backend `PostsService.listComments`), без клика на «Ответить»; сам
   // клик по «Ответить» ниже только фокусирует инпут, а не разворачивает.
   const showComments = isCommentsOpen || post.comments > 0;
-  // Лайк/дизлайк/ответ/репост на карточке репоста всегда применяются к оригиналу.
-  const interactionPostId = post.repostOf?.id ?? post.id;
   // `wallOwnerId` пуст для постов группы (взаимоисключающе с `groupId`,
   // см. entities/post/model/types.ts) — без этой проверки `null !== authorId`
   // ошибочно читался бы как «на чужой стене».
@@ -303,19 +305,26 @@ export function PostCard({
         >
           Ответить · {post.comments}
         </button>
-        <button
-          type="button"
-          className={cn(styles.post__reaction, isReposted && styles['post__reaction--active'])}
-          onClick={onToggleRepost}
-        >
-          {isReposted ? 'Передано дальше' : 'Передать дальше'} · {post.reposts}
-        </button>
+        {onToggleRepost && (
+          <button
+            type="button"
+            className={cn(styles.post__reaction, isReposted && styles['post__reaction--active'])}
+            onClick={onToggleRepost}
+          >
+            {isReposted ? 'Передано дальше' : 'Передать дальше'} · {post.reposts}
+          </button>
+        )}
       </footer>
 
       {showComments && (
         <div className={styles['post__comments']}>
+          {/* `post.id`, а не `post.repostOf?.id` — в отличие от лайка/дизлайка/
+           * репоста (см. `onToggleLike`/`onToggleRepost` в шапке виджета,
+           * который рендерит эту карточку), комментарий под репостом — это
+           * разговор именно здесь, не под оригиналом: иначе он молча
+           * всплывал бы и на самом оригинале везде, где тот показан. */}
           <CommentList
-            postId={interactionPostId}
+            postId={post.id}
             onReply={(target) => {
               setReplyTarget(target);
               setFocusSignal((n) => n + 1);
@@ -324,7 +333,7 @@ export function PostCard({
           />
           <CommentComposer
             ref={composerRef}
-            postId={interactionPostId}
+            postId={post.id}
             replyTarget={replyTarget}
             onCancelReply={() => setReplyTarget(null)}
           />

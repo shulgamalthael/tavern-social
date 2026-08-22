@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useGroupStore } from '@/entities/group';
 import {
   canDeletePost,
+  canRepostPost,
   PostCard,
   PostCardSkeleton,
   usePostStore,
@@ -229,7 +230,11 @@ export function GroupPageView({ groupId }: GroupPageViewProps) {
                       isReposted={Boolean(repostedPostIds[targetId])}
                       onToggleLike={() => toggleLike(targetId)}
                       onToggleDislike={() => toggleDislike(targetId)}
-                      onToggleRepost={() => toggleRepost(targetId)}
+                      onToggleRepost={
+                        canRepostPost(post, currentUser.id)
+                          ? () => toggleRepost(targetId)
+                          : undefined
+                      }
                       onAuthorClick={goToUserProfile}
                       onGroupClick={goToGroup}
                       onDelete={

@@ -8,6 +8,7 @@ export { togglePostDislike } from './api/toggle-post-dislike';
 export type { ToggleDislikeResult } from './api/toggle-post-dislike';
 export { canDeleteComment } from './lib/can-delete-comment';
 export { canDeletePost } from './lib/can-delete-post';
+export { canRepostPost } from './lib/can-repost-post';
 export { selectPostById, usePostStore } from './model/post-store';
 export type { PostStore } from './model/post-store';
 export type { FeedKind, LinkPreview, Post, RepostSummary } from './model/types';

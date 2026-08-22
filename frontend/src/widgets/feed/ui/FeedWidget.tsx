@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import {
   canDeletePost,
+  canRepostPost,
   PostCard,
   PostCardSkeleton,
   usePostStore,
@@ -118,7 +119,9 @@ export function FeedWidget() {
                 isReposted={Boolean(repostedPostIds[targetId])}
                 onToggleLike={() => toggleLike(targetId)}
                 onToggleDislike={() => toggleDislike(targetId)}
-                onToggleRepost={() => toggleRepost(targetId)}
+                onToggleRepost={
+                  canRepostPost(post, currentUser.id) ? () => toggleRepost(targetId) : undefined
+                }
                 onAuthorClick={goToUserProfile}
                 onDelete={
                   canDeletePost(post, currentUser.id)

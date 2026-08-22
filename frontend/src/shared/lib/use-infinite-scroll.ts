@@ -23,9 +23,20 @@ export function useInfiniteScroll(
     const sentinel = sentinelRef.current;
     if (!sentinel || !nextCursor) return undefined;
 
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) loadMore();
-    });
+    // `rootMargin` расширяет область срабатывания на 400px вниз за пределы
+    // реального вьюпорта — без этого нулевой высоты `sentinel` в некоторых
+    // раскладках оказывается на доли пикселя ниже видимой области даже в
+    // максимально проскролленном состоянии (сумма дробных высот строк
+    // округляется иначе, чем `scrollHeight`), и `IntersectionObserver`
+    // никогда не срабатывает — подгрузка следующей страницы молча замирает
+    // на первой. Заодно UX лучше: следующая страница подгружается заранее,
+    // не точно у самого края.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { rootMargin: '400px 0px' },
+    );
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [nextCursor, loadMore]);

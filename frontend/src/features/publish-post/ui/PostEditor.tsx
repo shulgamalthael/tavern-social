@@ -7,7 +7,18 @@ import StarterKit from '@tiptap/starter-kit';
 import type { Post } from '@/entities/post';
 import { cn } from '@/shared/lib/cn';
 import { Button } from '@/shared/ui/Button';
-import { Div, InlineStyle } from '../lib/rich-html-extensions';
+import {
+  Div,
+  InlineStyle,
+  Span,
+  Table,
+  TableBody,
+  TableCell,
+  TableFoot,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../lib/rich-html-extensions';
 import styles from './PostEditor.module.scss';
 
 /** Те же правила, что и multer на backend (`common/lib/upload.ts`) —
@@ -98,6 +109,14 @@ export function PostEditor({
       TiptapImage.configure({ inline: false }),
       Div,
       InlineStyle,
+      Span,
+      Table,
+      TableHead,
+      TableBody,
+      TableFoot,
+      TableRow,
+      TableCell,
+      TableHeader,
     ],
     content: post?.text ?? '',
     editorProps: {

@@ -4,14 +4,59 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ffe7bfaa-5868-4759-bace-829feb31aa13" name="Changes" comment="Init Project" />
+    <list default="true" id="ffe7bfaa-5868-4759-bace-829feb31aa13" name="Changes" comment="Init Project">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/prisma/migrations/20260821140000_add_user_role_and_ban/migration.sql" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/prisma/promote-admin.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/admin.controller.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/admin.module.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/admin.service.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/admin.types.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/dto/ban-user.dto.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/dto/list-admin-posts.dto.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/dto/list-admin-users.dto.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/modules/admin/lib/bucket-by-day.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/backend/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/app.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/common/guards/session-auth.guard.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/common/guards/session-auth.guard.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/common/lib/sanitize-post-content.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/common/lib/sanitize-post-content.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/common/types/authenticated-request.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/common/types/authenticated-request.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/posts/dto/create-post.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/posts/dto/create-post.dto.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/posts/dto/update-post.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/posts/dto/update-post.dto.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/posts/posts.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/posts/posts.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/users/users.mapper.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/users/users.mapper.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/users/users.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/users/users.types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/.claude/scheduled_tasks.lock" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/PROJECT_CONTEXT.md" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/PROJECT_CONTEXT.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/home-app.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/home-app.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/page.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/page.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/post/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/post/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/post/ui/PostCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/post/ui/PostCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/user/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/user/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/user/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/user/model/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/auth/api/session.server.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/auth/api/session.server.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/publish-post/lib/rich-html-extensions.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/publish-post/lib/rich-html-extensions.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/publish-post/ui/PostEditor.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/publish-post/ui/PostEditor.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/lib/use-infinite-scroll.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/lib/use-infinite-scroll.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/ui/icons/icons.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/ui/icons/icons.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/ui/icons/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/ui/icons/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/feed/ui/FeedWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/feed/ui/FeedWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/groups/ui/GroupPageView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/groups/ui/GroupPageView.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/header/ui/Header.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/header/ui/Header.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/navigation-dock/ui/NavigationDock.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/navigation-dock/ui/NavigationDock.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/navigation-dock/ui/NavigationDock.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/navigation-dock/ui/NavigationDock.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/profile/ui/ProfileWidget.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/profile/ui/ProfileWidget.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/profile/ui/ProfileWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/profile/ui/ProfileWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/profile/ui/UserProfileView.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/profile/ui/UserProfileView.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
-  </component>
-  <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="324" />
   </component>
   <component name="FormatOnSaveOptions">
     <option name="myRunOnSave" value="false" />
@@ -107,28 +152,28 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "master",
-    "javascript.preferred.runtime.type.id": "node",
-    "junie.onboarding.icon.badge.shown": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings",
-    "to.speed.mode.migration.done": "true",
-    "ts.external.directory.path": "D:\\projects\\tavern\\frontend\\node_modules\\typescript\\lib"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;project.propVCSSupport.DirectoryMappings&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\projects\\tavern\\frontend\\node_modules\\typescript\\lib&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -146,6 +191,7 @@
       <workItem from="1787129894178" duration="11000" />
       <workItem from="1787130034876" duration="13835000" />
       <workItem from="1787191300188" duration="1740000" />
+      <workItem from="1787414570176" duration="871000" />
     </task>
     <task id="LOCAL-00001" summary="Init project">
       <option name="closed" value="true" />

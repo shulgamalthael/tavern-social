@@ -95,12 +95,6 @@
   }
 }
 
-.profile__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
 // Заглушка сетки «Фотографии» в `ProfilePageSkeleton` — та же сетка, что и
 // в `GalleryGrid.module.scss` (`.gallery__grid`/`.gallery__tile`), но
 // отдельным классом: сама `GalleryGrid` грузится независимо от остальной

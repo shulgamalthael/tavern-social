@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   canDeletePost,
+  canRepostPost,
   PostCard,
   PostCardSkeleton,
   usePostStore,
@@ -20,7 +21,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { MediaPlaceholder } from '@/shared/ui/MediaPlaceholder';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
-import { Tag } from '@/shared/ui/Tag';
+import { AboutCard } from './AboutCard';
 import { GalleryGrid } from './GalleryGrid';
 import { ProfileFriendsCard } from './ProfileFriendsCard';
 import styles from './ProfileWidget.module.scss';
@@ -121,27 +122,12 @@ export function ProfileWidget() {
 
       <div className={styles['profile__grid']}>
         <div className={styles['profile__side']}>
-          <Card>
-            <h2 className={styles['profile__card-title']}>О себе</h2>
-            {currentUser.about || currentUser.city || currentUser.tags.length > 0 ? (
-              <div className={styles['profile__about']}>
-                {currentUser.about && <p>{currentUser.about}</p>}
-                {currentUser.city && <p>Город: {currentUser.city}</p>}
-                {currentUser.tags.length > 0 && (
-                  <div className={styles['profile__tags']}>
-                    {currentUser.tags.map((tag) => (
-                      <Tag key={tag}>{tag}</Tag>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <EmptyState
-                title="Пока нет информации о себе"
-                description="Расскажите о себе — нажмите «Править страницу»."
-              />
-            )}
-          </Card>
+          <AboutCard
+            about={currentUser.about}
+            city={currentUser.city}
+            tags={currentUser.tags}
+            isOwn
+          />
 
           <Card>
             <h2 className={styles['profile__card-title']}>Фотографии</h2>
@@ -179,7 +165,9 @@ export function ProfileWidget() {
                   isReposted={Boolean(repostedPostIds[targetId])}
                   onToggleLike={() => toggleLike(targetId)}
                   onToggleDislike={() => toggleDislike(targetId)}
-                  onToggleRepost={() => toggleRepost(targetId)}
+                  onToggleRepost={
+                    canRepostPost(post, currentUser.id) ? () => toggleRepost(targetId) : undefined
+                  }
                   onAuthorClick={goToUserProfile}
                   onDelete={
                     canDeletePost(post, currentUser.id)

@@ -1,9 +1,15 @@
+export type UserRole = 'user' | 'admin';
+
 export interface CurrentUser {
   id: string;
   name: string;
   initials: string;
   /** Короткая подпись у имени — как в Settings. Пусто, пока пользователь её не заполнил. */
   tagline: string;
+  /** Показывать ли пункт «Админка» в навигации (`features/section-navigation`)
+   * — реальная защита `/admin/*`-запросов на backend (`AdminGuard`), это
+   * поле только про UI. */
+  role: UserRole;
   /** Переопределяет --tavern-accent для этого пользователя. */
   accent?: string;
   about: string | null;
