@@ -1,0 +1,185 @@
+// Свой минимальный набор классов, не переиспользование `OrdersSection.
+// module.scss` — тот файл уже общий для `OrdersSection`/`AppointmentsSection`
+// (карточка "клиент + список позиций"), а заявкам с формы нужна ещё кнопка
+// удаления и бейдж типа формы, которых там нет. Токены/отступы — те же, что
+// и в `OrdersSection.module.scss`, чтобы вкладка выглядела частью того же
+// Dashboard, а не отдельным стилем.
+
+.status {
+  padding: 32px 0;
+}
+
+.error {
+  margin: 0 0 4px;
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+}
+
+.card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.label {
+  display: block;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.date {
+  display: block;
+  margin-top: 2px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.typeBadge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.deleteButton {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+    color: var(--tavern-danger);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 0;
+  border-top: 1px dashed var(--tavern-line);
+}
+
+.item {
+  display: flex;
+  gap: 6px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+
+  &__label {
+    color: var(--tavern-muted);
+    flex: 0 0 auto;
+
+    &::after {
+      content: ':';
+    }
+  }
+
+  &__value {
+    overflow-wrap: anywhere;
+  }
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, black 45%, transparent);
+  z-index: 100;
+}
+
+.confirmCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 360px;
+  padding: 20px;
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-surface);
+}
+
+.confirmCard__text {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 14px;
+}
+
+.confirmCard__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirmCard__cancel {
+  padding: 8px 14px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: transparent;
+  color: var(--tavern-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.confirmCard__delete {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-danger);
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+}

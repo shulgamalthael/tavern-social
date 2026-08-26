@@ -1,0 +1,129 @@
+@use '@/shared/styles/mixins' as *;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.search {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.search__icon {
+  position: absolute;
+  left: 22px;
+  width: 15px;
+  height: 15px;
+  color: var(--tavern-muted);
+  pointer-events: none;
+}
+
+.search__input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 34px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.categories {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 14px 12px 24px;
+}
+
+.category__title {
+  margin: 0 0 8px;
+  padding: 0 2px;
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.category__grid {
+  // Раньше это была узкая 280px-колонка сбоку — фиксированные две колонки
+  // тогда были осмысленным потолком. Теперь панель всегда на всю ширину
+  // экрана (раскладной «второй хедер» на десктопе, полноэкранная вкладка на
+  // телефоне/планшете, см. `WebsiteBuilderWidget.module.scss`) — авто-сетка
+  // из карточек ~150px вместо фиксированных колонок использует эту ширину
+  // по максимуму на любом экране.
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 10px 9px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: grab;
+  // Без этого перетаскивание пальцем на телефоне/планшете конфликтует со
+  // штатным скроллом страницы (браузер начинает скроллить вместо драга,
+  // пока dnd-kit не успел перехватить жест) — см. также `.block__grip` в
+  // `CanvasBlock.module.scss`, та же причина.
+  touch-action: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--tavern-accent);
+    box-shadow: 0 4px 10px rgb(0 0 0 / 6%);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &[data-dragging] {
+    opacity: 0.4;
+  }
+}
+
+.item__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}

@@ -1,0 +1,82 @@
+@use '@/shared/styles/mixins' as *;
+
+.canvasRoot {
+  // `min-height: 0` — без него как grid-item (ячейка `.body` в
+  // `WebsiteBuilderWidget.module.scss`) он отказался бы сжиматься меньше
+  // высоты своего контента (дефолтный `min-height: auto` у grid/flex-
+  // элементов), и вместо внутреннего скролла раздувал бы всю строку сетки.
+  height: 100%;
+  min-height: 0;
+  background: var(--tavern-bg);
+}
+
+.viewport {
+  // `align-items: flex-start` — критично для скролла. Без него `.frame`
+  // как flex-item этого (row-направленного) контейнера по умолчанию
+  // растягивается по кросс-оси (`align-items: stretch` — начальное
+  // значение) РОВНО на высоту `.viewport`, что бы ни говорил его
+  // собственный `min-height` — stretch задаёт высоту сам, а не только
+  // нижнюю границу. Дальше `.frame { overflow: hidden }` молча обрезает
+  // весь контент ниже этой высоты, и `ScrollArea` (родитель, см.
+  // `ScrollArea.tsx`) видит `scrollHeight`, равный обрезанной высоте —
+  // то есть «скроллить нечего», хотя реальный контент страницы в разы
+  // длиннее. `flex-start` отключает stretch, отдавая `.frame` его
+  // естественную высоту по контенту (`min-height` работает как настоящий
+  // пол, а не потолок) — так и должно было быть с самого начала.
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100%;
+  padding: 32px 24px 120px;
+
+  // На телефоне/планшете холст занимает отдельную полноэкранную вкладку
+  // (см. `WebsiteBuilderWidget.module.scss`, `[data-active-pane]`), а не
+  // узкую колонку рядом с двумя другими панелями — щедрые десктопные отступы
+  // здесь были ни к чему, только крали и без того тесную ширину.
+  @include mobileOrTablet {
+    padding: 12px 0 24px;
+  }
+}
+
+.frame {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-height: 480px;
+  background: var(--site-bg, #ffffff);
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 8%),
+    0 12px 32px rgb(15 23 42 / 12%);
+  transition: width 0.2s ease;
+  overflow: hidden;
+
+  // Ключевая часть фикса «холст сплюснут на телефоне/планшете»: ширина
+  // холста (`Canvas.tsx`, инлайн `style={{ width: viewportWidth }}`) — это
+  // СИМУЛЯЦИЯ чужого экрана (390/834px) внутри просторного десктопного
+  // холста, а не размер самого холста. На реальном тесном экране редактора
+  // симулировать ЕЩЁ один, ещё более узкий экран внутри и так тесной панели
+  // не нужно и вредно — холст должен просто занимать всю ширину панели.
+  // `!important` оправдан именно тут: единственный способ переопределить
+  // инлайн-стиль CSS-классом без протаскивания viewport-ширины через JS
+  // (что было бы лишним состоянием ради чисто визуального переключения).
+  // Переключатель вьюпорта в тулбаре при этом продолжает работать как
+  // раньше — он не про ширину холста, а про то, чьи responsive-переопределения
+  // сейчас редактируются (см. `resolveResponsive`), это не меняется.
+  @include mobileOrTablet {
+    width: 100% !important;
+    min-height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+.page {
+  min-height: 480px;
+  color: var(--site-text, #0f172a);
+  background: var(--site-bg, #ffffff);
+  font-family: var(--site-font-body, inherit);
+}
+
+.empty {
+  padding: 48px 24px;
+}

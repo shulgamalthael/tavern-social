@@ -1,0 +1,178 @@
+@use '@/shared/styles/mixins' as *;
+
+.block {
+  position: relative;
+  outline: 1px dashed transparent;
+  outline-offset: -1px;
+  transition: outline-color 0.1s ease;
+
+  &:hover {
+    outline-color: color-mix(in srgb, #2563eb 45%, transparent);
+  }
+}
+
+.block--selected {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.block--hidden {
+  opacity: 0.45;
+}
+
+.block--unsupported {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  outline: 1px dashed #dc2626;
+  outline-offset: -1px;
+  background: color-mix(in srgb, #dc2626 8%, transparent);
+}
+
+.unsupported__label {
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.unsupported__delete {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #ffffff;
+  cursor: pointer;
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.block--dragging {
+  opacity: 0.5;
+  z-index: 30;
+}
+
+.block__toolbar {
+  // Внутри верхней границы блока (не плавает над ним) — если бы тулбар
+  // всплывал строго снаружи блока (`top: -29px`), у первого блока страницы
+  // или у блока сразу под соседним без отступа между ними он налезал бы на
+  // контент СОСЕДНЕГО блока выше, а не на пустое место (не у каждой пары
+  // соседних блоков есть зазор для полосы над границей).
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  height: 27px;
+  padding: 0 4px 0 2px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 25%);
+
+  // На тачскрине `:hover` никогда не срабатывает — тулбар открывается только
+  // выбором блока (тапом), и им сразу же и пользуются, поэтому кнопки внутри
+  // стоит сделать чуть крупнее, чем на десктопе с курсором (см. `.block__grip`/
+  // `.block__action` ниже).
+  @include mobileOrTablet {
+    height: 34px;
+  }
+}
+
+.block:hover > .block__toolbar,
+.block--selected > .block__toolbar {
+  display: flex;
+}
+
+.block__grip {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: #ffffff;
+  cursor: grab;
+  // Иначе перетаскивание пальцем конфликтует со штатным скроллом страницы —
+  // браузер уводит жест в скролл раньше, чем dnd-kit успевает его перехватить.
+  touch-action: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  @include mobileOrTablet {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+.block__label {
+  padding: 0 6px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.block__actions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  margin-left: 4px;
+  padding-left: 4px;
+  border-left: 1px solid rgb(255 255 255 / 30%);
+}
+
+.block__action {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(255 255 255 / 20%);
+  }
+
+  @include mobileOrTablet {
+    width: 30px;
+    height: 30px;
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.block__action--danger:hover {
+  background: #dc2626;
+}
+
+.block__content {
+  min-height: 4px;
+}

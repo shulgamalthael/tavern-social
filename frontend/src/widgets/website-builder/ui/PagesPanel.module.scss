@@ -1,0 +1,230 @@
+.panel {
+  height: 100%;
+  background: var(--tavern-surface);
+}
+
+.viewport {
+  padding: 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 4px;
+  border-radius: var(--tavern-radius-control);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.row--active {
+  background: var(--tavern-soft);
+
+  &:hover {
+    background: var(--tavern-soft);
+  }
+}
+
+.row__order {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+}
+
+.row__moveButton {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 14px;
+  border: 0;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--tavern-ink);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.row__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.row__title {
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row__slug {
+  overflow: hidden;
+  color: var(--tavern-muted);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row__input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--tavern-accent);
+  border-radius: 6px;
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.row__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.row__action {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.row__action--danger:hover {
+  background: color-mix(in srgb, #dc2626 12%, transparent);
+  color: #dc2626;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  margin-top: 8px;
+  border: 1px dashed var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: none;
+  color: var(--tavern-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-soft);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 14, 22, 0.55);
+}
+
+.confirmCard {
+  width: min(360px, 100%);
+  padding: 16px;
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-surface);
+  box-shadow: var(--tavern-shadow-card);
+}
+
+.confirmCard__text {
+  color: var(--tavern-ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirmCard__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.confirmCard__cancel {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.confirmCard__delete {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: #dc2626;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+}

@@ -1,0 +1,79 @@
+@use '@/shared/styles/mixins' as *;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--tavern-surface);
+}
+
+.tabs {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 8px 0;
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.back {
+  // Только на телефоне/планшете — там инспектор занимает весь экран как
+  // отдельная вкладка билдера (см. `WebsiteBuilderWidget.module.scss`,
+  // `[data-active-pane]`), а не постоянная колонка рядом с холстом, поэтому
+  // нужен явный путь назад. На десктопе колонка всегда на виду — кнопка не
+  // нужна, `InspectorPanel.tsx` и не рендерит её там (`onBack` не передан).
+  display: none;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0 2px 6px 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  @include mobileOrTablet {
+    display: grid;
+  }
+}
+
+.tab {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.tab--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+}
+
+.empty {
+  padding: 32px 20px;
+}

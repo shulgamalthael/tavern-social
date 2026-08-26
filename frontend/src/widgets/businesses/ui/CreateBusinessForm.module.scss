@@ -1,0 +1,89 @@
+@use '@/shared/styles/mixins' as *;
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.back {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-top: 2px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-accent);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  @include card;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  input,
+  select {
+    @include control;
+    outline: none;
+
+    &:focus-visible {
+      border-color: var(--tavern-accent);
+    }
+  }
+
+  textarea {
+    padding: 10px 14px;
+    border: 1px solid var(--tavern-line);
+    border-radius: var(--tavern-radius-control);
+    background: var(--tavern-surface);
+    color: var(--tavern-ink);
+    font: inherit;
+    line-height: 1.45;
+    resize: vertical;
+    outline: none;
+
+    &:focus-visible {
+      border-color: var(--tavern-accent);
+    }
+  }
+}
+
+.field__label {
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.error {
+  padding: 10px 14px;
+  border-radius: var(--tavern-radius-control);
+  background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+  color: var(--tavern-danger);
+  font-size: 13px;
+}

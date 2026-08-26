@@ -1,0 +1,228 @@
+@use '@/shared/styles/mixins' as *;
+
+.toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+}
+
+.toolbar__group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar__back {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--tavern-radius-control);
+  color: var(--tavern-muted);
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 17px;
+    height: 17px;
+  }
+}
+
+.toolbar__name {
+  overflow: hidden;
+  max-width: 220px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  @include mobile {
+    display: none;
+  }
+}
+
+.toolbar__icon-button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.toolbar__viewports {
+  // Раньше скрывался на телефоне — но это единственный способ перейти на
+  // вьюпорт «планшет»/«десктоп» для полей с `field.responsive` (см.
+  // `readResponsiveProp`/`writeResponsiveProp` в `BlockInspectorForm.tsx`) и
+  // для «Скрыть на этом экране» у блока (`CanvasBlock.tsx`) — без него с
+  // телефона нельзя было настроить контент под ДРУГОЙ экран вообще, только
+  // под тот, что уже стоит по умолчанию (`desktop`). Остальные элементы тут
+  // и так icon-only на телефоне (см. ниже) — три компактные кнопки
+  // помещаются без переполнения.
+  padding: 3px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.toolbar__viewport-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: calc(var(--tavern-radius-control) - 3px);
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.toolbar__viewport-button--active {
+  background: var(--tavern-surface);
+  color: var(--tavern-accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+}
+
+.toolbar__save-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 90px;
+  color: var(--tavern-muted);
+  font-size: 12.5px;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    color: var(--tavern-accent);
+  }
+
+  @include mobile {
+    display: none;
+  }
+}
+
+.toolbar__ghost-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  @include mobile {
+    span {
+      display: none;
+    }
+  }
+}
+
+.toolbar__publish-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  @include mobile {
+    span {
+      display: none;
+    }
+  }
+}
+
+.toolbar__external-link {
+  @include mobile {
+    display: none;
+  }
+}
+
+@include mobile {
+  .toolbar {
+    padding: 0 10px;
+    gap: 6px;
+  }
+}

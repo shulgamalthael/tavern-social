@@ -1,0 +1,89 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview {
+  display: grid;
+  place-items: center;
+  height: 96px;
+  border: 1px dashed var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+  overflow: hidden;
+}
+
+.preview__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview__empty {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.input {
+  display: none;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-soft);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.button--danger {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-danger);
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.error {
+  color: var(--tavern-danger);
+  font-size: 12px;
+}

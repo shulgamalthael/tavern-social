@@ -1,0 +1,162 @@
+@use '@/shared/styles/mixins' as *;
+
+.status {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}
+
+.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--tavern-bg);
+}
+
+.bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+}
+
+.back {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--tavern-muted);
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.bar__titles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar__name {
+  color: var(--tavern-ink);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--tavern-sunk);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge--published {
+  background: color-mix(in srgb, #16a34a 14%, transparent);
+  color: #16a34a;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+
+  @include mobileOrTablet {
+    flex-direction: column;
+  }
+}
+
+.nav {
+  display: flex;
+  flex: 0 0 220px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 12px;
+  border-right: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+
+  // На телефоне/планшете постоянная боковая колонка на 220px откусывала бы
+  // неоправданную долю и без того тесного экрана — превращаем в
+  // горизontальную прокручиваемую полосу вкладок сверху, тот же список,
+  // просто другое направление раскладки.
+  @include mobileOrTablet {
+    flex: 0 0 auto;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 10px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--tavern-line);
+  }
+}
+
+.nav__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: none;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  @include mobileOrTablet {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+.nav__item--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+}
+
+.nav__divider {
+  height: 1px;
+  margin: 8px 4px;
+  background: var(--tavern-line);
+
+  @include mobileOrTablet {
+    width: 1px;
+    height: auto;
+    margin: 4px 6px;
+  }
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+  overflow-y: auto;
+}

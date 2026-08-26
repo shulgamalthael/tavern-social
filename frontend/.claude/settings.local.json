@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/projects/tavern/**)",
+      "Bash(docker compose *)",
+      "Bash(node *)",
+      "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" http://localhost:4000/health --max-time 5)",
+      "Bash(npm run *)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -Command \"Stop-Process -Id 24072 -Force\")"
+    ]
+  }
+}

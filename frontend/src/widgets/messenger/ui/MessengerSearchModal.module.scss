@@ -1,0 +1,173 @@
+@use '@/shared/styles/mixins' as *;
+
+.search {
+  width: min(440px, 100%);
+}
+
+.search__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.search__input {
+  @include control;
+  width: 100%;
+  background: var(--tavern-sunk);
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.search__state {
+  padding: 12px 0;
+}
+
+.search__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search__section-title {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--tavern-muted);
+}
+
+.search__people {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// Строка найденного человека — тот же приём, что и `.dropdown__row` в
+// `AddParticipantDropdown.module.scss` (поиск людей внутри уже открытого
+// диалога), здесь просто своя копия: разный контекст модалки, общий
+// примитив под обе пока не заводили (см. AGENTS.md — общий примитив только
+// при реальном 2+ переиспользовании со схожими требованиями, здесь как раз
+// второй случай, но с разным родителем и разными сценариями клика).
+.search__person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.search__person-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.search__person-name {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search__person-subtitle {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--tavern-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search__groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+// Кнопка, не просто подпись — клик открывает чат целиком (нашли диалог по
+// имени участника, но конкретное сообщение не искали, см.
+// `MessengerSearchModal.tsx`, `onSelectThread`), а не только сообщения под
+// ним.
+.search__group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.search__group-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tavern-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search__result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.search__result-text {
+  overflow: hidden;
+  min-width: 0;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search__result-time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--tavern-muted);
+}

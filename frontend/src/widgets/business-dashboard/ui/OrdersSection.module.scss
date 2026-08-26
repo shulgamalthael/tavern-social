@@ -1,0 +1,142 @@
+.status {
+  padding: 32px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+}
+
+.card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customerName {
+  display: block;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.date {
+  display: block;
+  margin-top: 2px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.statusSelect {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &[data-status='confirmed'] {
+    border-color: color-mix(in srgb, var(--tavern-accent) 40%, transparent);
+    color: var(--tavern-accent);
+  }
+
+  &[data-status='completed'] {
+    border-color: color-mix(in srgb, #16a34a 40%, transparent);
+    color: #16a34a;
+  }
+
+  &[data-status='cancelled'] {
+    border-color: color-mix(in srgb, var(--tavern-danger) 40%, transparent);
+    color: var(--tavern-danger);
+  }
+}
+
+.contacts {
+  display: flex;
+  gap: 12px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--tavern-line);
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.note {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--tavern-line);
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.paymentBadge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 600;
+
+  &[data-payment-status='paid'] {
+    background: color-mix(in srgb, #16a34a 14%, transparent);
+    color: #16a34a;
+  }
+
+  &[data-payment-status='refunded'] {
+    background: color-mix(in srgb, var(--tavern-danger) 14%, transparent);
+    color: var(--tavern-danger);
+  }
+}

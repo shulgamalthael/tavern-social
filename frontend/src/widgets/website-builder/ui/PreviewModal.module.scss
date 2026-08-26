@@ -1,0 +1,117 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 14, 22, 0.72);
+}
+
+.bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--tavern-surface);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 8%);
+}
+
+.bar__title {
+  flex: 1;
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.switcher {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--tavern-sunk);
+}
+
+.switcher__item {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.switcher__item--active {
+  background: var(--tavern-surface);
+  color: var(--tavern-accent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 10%);
+}
+
+.close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+}
+
+.bodyViewport {
+  // `align-items: flex-start` — тот же фикс, что и у холста билдера (см.
+  // `Canvas.module.scss`, тот же комментарий там подробно объясняет
+  // механизм): без него `.frame` как flex-item этого (row-направленного)
+  // контейнера растягивался бы по кросс-оси РОВНО на высоту `.bodyViewport`
+  // (дефолтный `align-items: stretch`), и `.frame { overflow: hidden }`
+  // молча обрезал бы весь сайт ниже этой высоты — `ScrollArea` видел бы
+  // урезанный `scrollHeight` и казался нескроллящимся, хотя сам сайт длиннее.
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 28px 20px 60px;
+}
+
+.frame {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-height: 200px;
+  background: var(--site-bg, #ffffff);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 35%);
+  transition: width 0.2s ease;
+  overflow: hidden;
+}

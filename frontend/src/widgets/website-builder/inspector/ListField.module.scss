@@ -1,0 +1,124 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  overflow: hidden;
+}
+
+.item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 6px 6px 10px;
+}
+
+.item__toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--tavern-ink);
+  cursor: pointer;
+
+  svg {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--tavern-muted);
+  }
+}
+
+.item__title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.item__action {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--tavern-soft);
+    color: var(--tavern-ink);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.item__action--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tavern-danger) 12%, transparent);
+  color: var(--tavern-danger);
+}
+
+.item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 10px 12px;
+  border-top: 1px solid var(--tavern-line);
+}
+
+.add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border: 1px dashed var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: none;
+  color: var(--tavern-accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--tavern-soft);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}

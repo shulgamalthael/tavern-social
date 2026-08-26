@@ -1,0 +1,156 @@
+.root {
+  // Фиксированная `height`, не `min-height` — та же причина, что у `.app`
+  // в `src/app/page.module.scss`: `.siteScroll` ниже должен прокручиваться
+  // сам, в пределах своего бюджета высоты, а не растягивать всю страницу.
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--tavern-bg);
+}
+
+.status {
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  padding: 48px;
+}
+
+.bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+}
+
+.back {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 9px;
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-accent);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.bar__name {
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar__badge {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.bar__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.settingsButton {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 9px;
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-accent);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.editButton {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  font-size: 13px;
+  font-weight: 600;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.siteScroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.siteViewport {
+  display: flex;
+  justify-content: center;
+}
+
+.empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 48px 20px;
+}
+
+.emptyAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  font-size: 13px;
+  font-weight: 600;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}

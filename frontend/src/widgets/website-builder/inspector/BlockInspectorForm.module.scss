@@ -1,0 +1,45 @@
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.header__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.header__label {
+  color: var(--tavern-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.header__description {
+  margin-top: 2px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.fields {
+  padding: 16px;
+}

@@ -1,0 +1,70 @@
+@use '@/shared/styles/mixins' as *;
+
+.forward {
+  width: min(380px, 100%);
+}
+
+.forward__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.forward__input {
+  @include control;
+  width: 100%;
+  background: var(--tavern-sunk);
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.forward__error {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--tavern-danger);
+}
+
+.forward__state {
+  padding: 12px 0;
+}
+
+.forward__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.forward__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.forward__row-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,128 @@
+@use '@/shared/styles/mixins' as *;
+
+.cross {
+  display: flex;
+  flex-direction: column;
+}
+
+.cross__middle {
+  display: flex;
+  align-items: stretch;
+}
+
+.cross__block {
+  flex: 1;
+  min-width: 0;
+}
+
+.zone {
+  position: relative;
+  z-index: 5;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::before {
+    content: '';
+    position: absolute;
+    border-radius: 999px;
+    background: var(--tavern-accent);
+    // В покое линия не невидима — едва заметный, но всегда явный намёк, что
+    // сюда можно что-то добавить, даже без наведения/выбора (см. корневой
+    // план задачи: «на десктопе визуально понятно, что можно что-то
+    // добавить»). Сама кнопка «+» — уже нет, требует наведения/выбора (см.
+    // ниже) — незачем показывать интерактивный кружок, до которого курсор
+    // ещё не дотянулся.
+    opacity: 0.22;
+    transition: opacity 0.15s ease;
+  }
+}
+
+.zone--horizontal {
+  width: 100%;
+  height: 14px;
+
+  &::before {
+    top: 50%;
+    left: 16px;
+    right: 16px;
+    height: 2px;
+    transform: translateY(-50%);
+  }
+
+  @include mobileOrTablet {
+    height: 22px;
+  }
+}
+
+.zone--vertical {
+  width: 16px;
+
+  &::before {
+    top: 8px;
+    bottom: 8px;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+  }
+
+  @include mobileOrTablet {
+    width: 26px;
+  }
+}
+
+.cross:hover .zone::before,
+.cross--selected .zone::before {
+  opacity: 0.65;
+}
+
+.button {
+  position: relative;
+  z-index: 1;
+  display: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  @include mobileOrTablet {
+    width: 26px;
+    height: 26px;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+}
+
+// Десктоп: наведение в ЛЮБУЮ точку креста (сам блок или любая из четырёх
+// зон) сразу показывает все четыре кнопки — не нужно попасть курсором
+// именно в узкую полоску, чтобы вообще узнать об их существовании.
+.cross:hover .button {
+  display: grid;
+}
+
+// Телефон/планшет: наведения нет — крест виден только у ВЫБРАННОГО блока
+// (см. `BlockInsertCross.tsx`), не у каждого блока сразу на каждом уровне
+// вложенности (иначе вложенные узкие колонки превращаются в частокол
+// одинаковых кружков). Работает и на десктопе — выбранный блок держит крест
+// видимым и без наведения, как и его тулбар (`CanvasBlock.module.scss`).
+.cross--selected .button {
+  display: grid;
+}

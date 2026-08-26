@@ -1,0 +1,43 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.numberInput,
+.select {
+  padding: 7px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-family: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--tavern-accent);
+    outline-offset: 1px;
+  }
+}
+
+.numberInput {
+  width: 56px;
+  text-align: center;
+}
+
+.select {
+  width: 100%;
+  cursor: pointer;
+}

@@ -1,0 +1,173 @@
+@use '@/shared/styles/mixins' as *;
+
+.root {
+  // Фиксированная `height`, а не `min-height` — тот же приём и по той же
+  // причине, что и у `.app` в `src/app/page.module.scss` (см. её
+  // комментарий): панелям ниже нужен однозначный бюджет высоты, чтобы
+  // `flex: 1; min-height: 0` реально ограничивал их и отдавал прокрутку их
+  // собственным `ScrollArea`, а не странице целиком.
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--tavern-bg);
+}
+
+.status {
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  padding: 48px;
+}
+
+.banner {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--tavern-danger) 12%, var(--tavern-surface));
+  color: var(--tavern-danger);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}
+
+// «Второй хедер» — раскладной доступ к библиотеке/инспектору вместо
+// постоянных колонок сбоку (см. корневой план задачи: холст должен быть на
+// весь экран, а не делить ширину с сайдбаром всегда). Только десктоп — на
+// телефоне/планшете тот же переключатель снизу, см. `.panelBarBottom`
+// (курсор дотягивается куда угодно, а палец удобнее тянуть к низу экрана).
+.panelBar {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+
+  @include mobileOrTablet {
+    display: none;
+  }
+}
+
+.panelBarTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  svg:first-child {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.panelBarTab--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+}
+
+.panelBarChevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s ease;
+}
+
+.panelBarChevron--open {
+  transform: rotate(180deg);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+// Библиотека/инспектор — раскладная панель ограниченной высоты поверх
+// холста, ОДИНАКОВО на любом экране (см. `WebsiteBuilderWidget.tsx` — раньше
+// на телефоне/планшете это был отдельный полноэкранный режим, прятавший
+// холст целиком; отказались специально, чтобы правки полей сразу было видно
+// на холсте, а не только после закрытия панели). На телефоне потолок пониже
+// — там и без того мало места, холсту нужно оставить побольше.
+.panel {
+  flex: 0 0 auto;
+  max-height: 65vh;
+  min-height: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+
+  @include mobileOrTablet {
+    max-height: 48vh;
+  }
+
+  @include mobile {
+    max-height: 42vh;
+  }
+}
+
+.canvasArea {
+  flex: 1;
+  min-height: 0;
+}
+
+// Тот же переключатель, что `.panelBar` выше, просто снизу и только на
+// телефоне/планшете — см. `WebsiteBuilderWidget.tsx`, `.panelBarBottom`.
+.panelBarBottom {
+  display: none;
+  flex: 0 0 auto;
+  align-items: stretch;
+  justify-content: space-around;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+
+  @include mobileOrTablet {
+    display: flex;
+  }
+}
+
+.bottomTab {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  max-width: 160px;
+  margin: 0 auto;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+
+  svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.bottomTab--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+}

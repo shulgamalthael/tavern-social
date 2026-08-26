@@ -1,0 +1,51 @@
+.heading {
+  margin: 0;
+  font-family: var(--site-font-heading);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--site-text);
+}
+
+.text {
+  margin: 0;
+  color: var(--site-text);
+  font-size: 15.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.richtext {
+  color: var(--site-text);
+  font-size: 15.5px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.quote__icon {
+  width: 26px;
+  height: 26px;
+  color: var(--site-primary);
+}
+
+.quote__text {
+  margin: 0;
+  font-family: var(--site-font-heading);
+  font-size: 20px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--site-text);
+}
+
+.quote__author {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--site-muted);
+}

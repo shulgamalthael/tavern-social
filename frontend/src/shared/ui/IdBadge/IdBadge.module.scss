@@ -1,0 +1,78 @@
+.id-badge {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 7px;
+  row-gap: 2px;
+  max-width: 100%;
+  padding: 4px 5px 4px 10px;
+  border: 1px solid var(--tavern-line);
+  // Не полный пилл (999px), как у коротких тегов/ролей в остальном
+  // интерфейсе — id переменной длины иногда переносится на вторую строку
+  // (см. `flex-wrap` выше, для узких карточек друзей), и вытянутый овал в
+  // таком состоянии смотрелся бы сломанным. Обычный скруглённый чип держит
+  // форму в обоих случаях.
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.id-badge__label {
+  flex-shrink: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tavern-muted);
+  white-space: nowrap;
+}
+
+.id-badge__value {
+  min-width: 0;
+  padding-left: 7px;
+  border-left: 1px solid var(--tavern-line);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--tavern-ink);
+  // Значение теперь всегда короткое (см. `formatShortId` в `IdBadge.tsx`),
+  // но `overflow-wrap` остаётся страховкой на случай, если где-то передадут
+  // нестандартный id длиннее ожидаемого — переламывается сам, а не вылезает
+  // за край узкой карточки.
+  overflow-wrap: anywhere;
+}
+
+.id-badge__copy {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--tavern-line);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.id-badge__copy--done {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-accent);
+  }
+}

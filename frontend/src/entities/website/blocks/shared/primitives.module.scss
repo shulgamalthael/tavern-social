@@ -1,0 +1,406 @@
+// Общие строительные блоки для repeatable-блоков (`RepeatableIconCards`/
+// `RepeatablePeopleCards`/`RepeatableSimpleCards`/`FormBlock`) — только
+// `--site-*`-переменные темы сайта (см. `theme-tokens.ts`), никаких
+// `--tavern-*`: это независимая тема сайта, который строит пользователь, не
+// часть визуального языка самой Таверны (см. `WebsiteRenderer.module.scss`).
+// Брейкпоинты — обычные фиксированные медиазапросы, не `@use`-миксины
+// Таверны: этот слой (`entities/website`) должен собираться независимо от
+// остального приложения (задел на будущее, см. корневой план — публичный
+// домен без Таверны вокруг).
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+// --- SectionHeading ------------------------------------------------------
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.heading--left {
+  align-items: flex-start;
+  margin: 0;
+  text-align: left;
+}
+
+.heading__eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--site-primary);
+}
+
+.heading__title {
+  margin: 0;
+  font-family: var(--site-font-heading);
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--site-text);
+}
+
+.heading__description {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+
+// --- RepeatableIconCards ---------------------------------------------------
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 3), minmax(0, 1fr));
+  gap: 24px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.icon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+  border: var(--site-card-border-width) solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+  box-shadow: var(--site-card-shadow);
+}
+
+.icon-card__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: calc(var(--site-radius) * 0.7);
+  background: color-mix(in srgb, var(--site-primary) 14%, transparent);
+  color: var(--site-primary);
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.icon-card__title {
+  margin: 0;
+  font-family: var(--site-font-heading);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--site-text);
+}
+
+.icon-card__description {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+// --- RepeatablePeopleCards -------------------------------------------------
+
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 3), minmax(0, 1fr));
+  gap: 24px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.people-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border: var(--site-card-border-width) solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+  box-shadow: var(--site-card-shadow);
+}
+
+.people-card--team {
+  align-items: center;
+  text-align: center;
+}
+
+.people-card__photo {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.people-card__photo-placeholder {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--site-primary) 16%, transparent);
+  color: var(--site-primary);
+  font-family: var(--site-font-heading);
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.people-card__rating {
+  display: flex;
+  gap: 2px;
+}
+
+.people-card__star {
+  width: 15px;
+  height: 15px;
+  color: var(--site-border);
+}
+
+.people-card__star--filled {
+  width: 15px;
+  height: 15px;
+  color: #f5b400;
+}
+
+.people-card__text {
+  margin: 0;
+  flex: 1;
+  color: var(--site-text);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.people-card--quote .people-card__text {
+  font-style: italic;
+}
+
+.people-card__byline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.people-card--team .people-card__byline {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.people-card__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.people-card__avatar-placeholder {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--site-primary) 16%, transparent);
+  color: var(--site-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.people-card__byline-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.people-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--site-text);
+}
+
+.people-card__role {
+  font-size: 12.5px;
+  color: var(--site-muted);
+}
+
+// --- RepeatableSimpleCards --------------------------------------------------
+
+.simple-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 3), minmax(0, 1fr));
+  gap: 24px;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.simple-card {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: var(--site-card-border-width) solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+  box-shadow: var(--site-card-shadow);
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+.simple-card__image {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+}
+
+.simple-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px;
+}
+
+.simple-card__meta {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--site-primary);
+}
+
+.simple-card__title {
+  margin: 0;
+  font-family: var(--site-font-heading);
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--site-text);
+}
+
+.simple-card__description {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+// --- FormBlock -------------------------------------------------------------
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 480px;
+}
+
+.form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--site-text);
+}
+
+.form__input,
+.form__textarea {
+  border: 1px solid var(--site-border);
+  border-radius: calc(var(--site-radius) * 0.6);
+  background: var(--site-bg);
+  color: var(--site-text);
+  font: inherit;
+  padding: 10px 12px;
+
+  &:focus-visible {
+    outline: 2px solid var(--site-primary);
+    outline-offset: 1px;
+  }
+}
+
+.form__textarea {
+  resize: vertical;
+}
+
+.form__submit {
+  align-self: flex-start;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: calc(var(--site-radius) * 0.6);
+  background: var(--site-primary);
+  color: var(--site-bg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+}
+
+.form__success {
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--site-radius);
+  background: color-mix(in srgb, var(--site-primary) 10%, transparent);
+  color: var(--site-text);
+  font-size: 14.5px;
+}
+
+// Ошибка сети/backend при отправке — фиксированный красный, не завязанный
+// на тему сайта (в токенах темы нет "danger"-цвета, см. `theme-tokens.ts`):
+// то же решение, что и у нативной валидации браузера — цвет ошибки не
+// обязан подстраиваться под палитру конкретного сайта.
+.form__error {
+  margin: 0;
+  font-size: 13.5px;
+  color: #d9342b;
+}
+
+// Honeypot — скрыто от реальных посетителей (не `display: none`/`visibility:
+// hidden`, некоторые боты их учитывают и пропускают поле; вместо этого —
+// вынесено за пределы видимой области, но остаётся в потоке документа и
+// технически "видимо" для менее аккуратных скриптов), из чтения экранным
+// диктором исключено через `aria-hidden` на родительском `<label>` (см.
+// `FormBlock.tsx`).
+.form__honeypot {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

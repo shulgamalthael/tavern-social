@@ -1,0 +1,20 @@
+'use server';
+
+import { backendFetch } from '@/shared/lib/backend-client';
+import { getSessionToken } from '@/shared/lib/session-token.server';
+import type { Order, OrderStatus } from '../model/types';
+
+export async function updateOrderStatus(
+  businessId: string,
+  orderId: string,
+  status: OrderStatus,
+): Promise<Order> {
+  const token = await getSessionToken();
+  if (!token) throw new Error('Сессия истекла — обновите страницу');
+
+  return backendFetch<Order>(`/businesses/${businessId}/orders/${orderId}`, {
+    method: 'PATCH',
+    token,
+    body: { status },
+  });
+}

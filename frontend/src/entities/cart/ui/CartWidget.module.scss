@@ -1,0 +1,337 @@
+// Токены `--tavern-*` (не `--site-*` темы сайта) — сознательно: `Modal`
+// рендерится через портал в `document.body` (см. `shared/ui/Modal/Modal.tsx`),
+// а `--site-*` — CSS custom properties, положенные инлайн-стилем на обёртку
+// `WebsiteRenderer` (см. `buildThemeCssVars`); наследование custom properties
+// идёт по DOM-дереву, а портал физически выносит контент модалки ЗА пределы
+// той обёртки — внутри портала `--site-*` были бы просто не определены.
+// Плавающая кнопка ниже (`.fab`) не в портале, но по тем же причинам держим
+// её в одних токенах с модалкой, а не смешиваем два разных языка стилей в
+// одном виджете.
+
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tavern-accent);
+  color: #ffffff;
+  box-shadow: var(--tavern-shadow-card);
+  cursor: pointer;
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.fab__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--tavern-danger);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.modal {
+  width: min(420px, 100%);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  color: var(--tavern-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-soft);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.empty {
+  margin-top: 16px;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+}
+
+.row__image {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--tavern-soft);
+  color: var(--tavern-muted);
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.row__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.row__title {
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__price {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.stepper {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+
+  span {
+    min-width: 18px;
+    color: var(--tavern-ink);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--tavern-line);
+    border-radius: 6px;
+    background: var(--tavern-surface);
+    color: var(--tavern-ink);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--tavern-soft);
+    }
+
+    svg {
+      width: 10px;
+      height: 10px;
+    }
+  }
+}
+
+.remove {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--tavern-danger) 12%, transparent);
+    color: var(--tavern-danger);
+  }
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0;
+  color: var(--tavern-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.coupon {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+
+  input {
+    flex: 1;
+  }
+}
+
+.couponApplied {
+  margin-top: 6px;
+  // Тот же зелёный, что и `paymentBadge[data-payment-status='paid']` в
+  // `OrdersSection.module.scss` — нет отдельного токена "success" в
+  // палитре, используем то же конкретное значение, что и там.
+  color: #16a34a;
+  font-size: 12px;
+}
+
+.hint {
+  margin-top: 8px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+// Визуально "выключенный" блок оплаты — вместо молчаливого пропуска шага,
+// когда `createOrder` не вернул `clientSecret` (см. `CartWidget.tsx`,
+// `paymentUnavailableReason`).
+.paymentUnavailable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px dashed var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+}
+
+.paymentUnavailable__badge {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--tavern-line);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.paymentUnavailable__text {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.input,
+.textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.error {
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  text-align: center;
+}
+
+.success__icon {
+  width: 32px;
+  height: 32px;
+  color: var(--tavern-accent);
+}

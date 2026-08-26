@@ -1,0 +1,87 @@
+// `--tavern-*`, не `--site-*` — см. комментарий `CartWidget.module.scss`
+// (тот же портал-в-`document.body` у `Modal`, та же причина).
+
+.modal {
+  width: min(420px, 100%);
+}
+
+.title {
+  color: var(--tavern-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.serviceLine {
+  margin-top: 4px;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.input,
+.textarea {
+  padding: 9px 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.error {
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  text-align: center;
+}
+
+.success__icon {
+  width: 32px;
+  height: 32px;
+  color: var(--tavern-accent);
+}
+
+.hint {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}

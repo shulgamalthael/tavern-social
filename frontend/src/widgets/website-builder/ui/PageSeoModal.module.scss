@@ -1,0 +1,80 @@
+@use '@/shared/styles/mixins' as *;
+
+.modal {
+  width: min(440px, 100%);
+}
+
+.title {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.input {
+  @include control;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.textarea {
+  @include control;
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.cancel {
+  padding: 8px 14px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: transparent;
+  color: var(--tavern-ink);
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-soft);
+  }
+}

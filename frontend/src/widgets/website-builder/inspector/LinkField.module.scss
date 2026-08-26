@@ -1,0 +1,47 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.typeSelect,
+.valueSelect,
+.valueInput {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-family: inherit;
+
+  &:focus-visible {
+    outline: 2px solid var(--tavern-accent);
+    outline-offset: 1px;
+  }
+}
+
+.typeSelect,
+.valueSelect {
+  cursor: pointer;
+}
+
+.anchorRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.anchorPrefix {
+  flex: 0 0 auto;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hint {
+  color: var(--tavern-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}

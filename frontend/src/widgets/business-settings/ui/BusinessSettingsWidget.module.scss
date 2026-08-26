@@ -1,0 +1,179 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.back {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-top: 2px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-accent);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.title {
+  color: var(--tavern-ink);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin-top: 2px;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.section {
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-surface);
+  overflow: hidden;
+}
+
+.section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.section__title {
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.section__hint {
+  margin-top: 2px;
+  color: var(--tavern-muted);
+  font-size: 12.5px;
+}
+
+.error {
+  margin: 14px 16px 0;
+  padding: 10px 14px;
+  border-radius: var(--tavern-radius-control);
+  background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.status {
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.confirm__hint {
+  color: var(--tavern-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.confirm__danger {
+  background: var(--tavern-danger);
+
+  &:hover {
+    background: color-mix(in srgb, var(--tavern-danger) 85%, black);
+  }
+}
+
+// --- BusinessSeoSection -----------------------------------------------------
+
+.seoForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.seoField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seoLabel {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.seoInput,
+.seoTextarea {
+  padding: 9px 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-bg);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.seoTextarea {
+  resize: vertical;
+}
+
+.seoActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.seoSaved {
+  color: var(--tavern-muted);
+  font-size: 12.5px;
+}

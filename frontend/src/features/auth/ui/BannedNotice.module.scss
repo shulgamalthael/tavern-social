@@ -1,0 +1,51 @@
+// Та же композиция полноэкранной карточки, что и у `/auth` (`app/auth/
+// page.module.scss`) — читается как «тот же уровень» приложения (экран до
+// входа в зал), а не как обычная ошибка внутри интерфейса.
+.banned {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.banned__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.banned__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tavern-danger) 12%, transparent);
+  color: var(--tavern-danger);
+}
+
+.banned__title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 21px;
+  font-weight: 500;
+}
+
+.banned__message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--tavern-ink);
+}
+
+.banned__hint {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tavern-muted);
+}
