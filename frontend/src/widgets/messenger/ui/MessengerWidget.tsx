@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { type ChatMessage, useThreadStore } from '@/entities/thread';
+import { type ChatMessage, type ThreadParticipant, useThreadStore } from '@/entities/thread';
 import { useCurrentUser } from '@/entities/user';
 import { useNavigationStore } from '@/features/section-navigation';
 import { MessageComposer } from '@/features/send-message';
+import { ThreadSearchBar } from '@/features/search-messages';
 import { cn } from '@/shared/lib/cn';
 import { formatDayLabel } from '@/shared/lib/format-day-label';
 import { formatMessageTime } from '@/shared/lib/format-message-time';
@@ -13,12 +14,52 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { AddPersonIcon, BackIcon } from '@/shared/ui/icons';
+import { AddPersonIcon, BackIcon, PinIcon, SearchIcon } from '@/shared/ui/icons';
+import { Modal } from '@/shared/ui/Modal';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { AddParticipantDropdown } from './AddParticipantDropdown';
+import { ForwardMessageModal } from './ForwardMessageModal';
 import { MessageBubble } from './MessageBubble';
+import { MessengerSearchModal } from './MessengerSearchModal';
 import styles from './MessengerWidget.module.scss';
+
+/** Превью последнего сообщения в списке диалогов — раньше при вложении без
+ * текста строка оставалась пустой (просто не было `lastMessage.text`),
+ * теперь честно показывает, что там фото/файл, а не тишина. */
+function threadPreviewText(message: ChatMessage | undefined): string {
+  if (!message) return '';
+  if (message.text) return message.text;
+  const hasImage = message.attachments.some((attachment) =>
+    attachment.mimeType.startsWith('image/'),
+  );
+  if (hasImage) return '📷 Фото';
+  if (message.attachments.length > 0) return '📎 Файл';
+  return '';
+}
+
+/** Сколько держится подсветка «сюда прыгнули» после скролла — достаточно,
+ * чтобы заметить, но не настолько долго, чтобы выглядело зависшим. */
+const MESSAGE_HIGHLIGHT_MS = 1500;
+
+/** Скроллит к сообщению по стабильному `id` бабла (см. `MessageBubble.tsx`,
+ * `message-${id}`) — используется закреплёнными сообщениями, поиском (в
+ * чате и по всем чатам) и цитатой ответа; ничего не делает, если сообщение
+ * не в текущем DOM (не загружено — история сообщений не пагинируется, так
+ * что практически недостижимо, но на всякий случай не падает). Помимо
+ * скролла, на секунду подсвечивает найденный бабл (`data-highlighted` —
+ * обычный HTML-атрибут, а не CSS-модульный класс: функция не привязана к
+ * конкретному компоненту-владельцу стиля, стиль подсветки описан в
+ * `MessageBubble.module.scss`, `[data-highlighted='true']`) — просто скролл
+ * без ориентира на плотной странице легко принять за то, что ничего не
+ * произошло, особенно если целевое сообщение и так было видно на экране. */
+function scrollToMessage(messageId: string) {
+  const element = document.getElementById(`message-${messageId}`);
+  if (!element) return;
+  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  element.setAttribute('data-highlighted', 'true');
+  window.setTimeout(() => element.removeAttribute('data-highlighted'), MESSAGE_HIGHLIGHT_MS);
+}
 
 const THREADS_SKELETON_COUNT = 7;
 
@@ -39,11 +80,15 @@ function ThreadItemSkeleton() {
 
 type ChatRow =
   | { kind: 'day'; key: string; label: string }
-  | { kind: 'cluster'; key: string; mine: boolean; messages: ChatMessage[] };
+  | { kind: 'cluster'; key: string; mine: boolean; senderId: string; messages: ChatMessage[] };
 
 /** Разбивает плоский список сообщений на разделители дня и цепочки подряд
  * идущих сообщений одного отправителя — как в Telegram: сообщения одного
- * автора без ответа между ними визуально «слипаются» в одну группу. */
+ * автора без ответа между ними визуально «слипаются» в одну группу.
+ * Кластеризация по `senderId`, не только по `mine` — в групповом чате все
+ * чужие сообщения формально `mine: false`, но у разных собеседников разный
+ * `senderId`, и подряд идущие сообщения ДВУХ разных людей не должны
+ * слипаться в один кластер под одной подписью. */
 function buildChatRows(messages: ChatMessage[]): ChatRow[] {
   const rows: ChatRow[] = [];
   let lastDayLabel: string | null = null;
@@ -57,13 +102,14 @@ function buildChatRows(messages: ChatMessage[]): ChatRow[] {
       lastCluster = null;
     }
 
-    if (lastCluster && lastCluster.mine === message.mine) {
+    if (lastCluster && lastCluster.senderId === message.senderId) {
       lastCluster.messages.push(message);
     } else {
       lastCluster = {
         kind: 'cluster',
         key: `cluster:${message.id}`,
         mine: message.mine,
+        senderId: message.senderId,
         messages: [message],
       };
       rows.push(lastCluster);
@@ -73,24 +119,84 @@ function buildChatRows(messages: ChatMessage[]): ChatRow[] {
   return rows;
 }
 
+interface ClusterSenderLabelProps {
+  participants: ThreadParticipant[];
+  senderId: string;
+}
+
+/** Аватар + имя над цепочкой чужих сообщений в групповом чате — иначе
+ * в группе 3+ человек непонятно, кто из «не я» именно это написал (в
+ * личном 1:1-диалоге собеседник один и так виден в шапке чата, здесь эта
+ * подпись не нужна — см. вызов ниже, только для `isGroup`). */
+function ClusterSenderLabel({ participants, senderId }: ClusterSenderLabelProps) {
+  const sender = participants.find((participant) => participant.id === senderId);
+  if (!sender) return null;
+
+  return (
+    <div className={styles['messenger__cluster-sender']}>
+      <Avatar initials={sender.initials} src={sender.avatarUrl} size="sm" />
+      <span className={styles['messenger__cluster-sender-name']}>{sender.name}</span>
+    </div>
+  );
+}
+
 export function MessengerWidget() {
   const threads = useThreadStore((state) => state.threads);
   const status = useThreadStore((state) => state.status);
   const error = useThreadStore((state) => state.error);
   const loadThreads = useThreadStore((state) => state.loadThreads);
   const activeThreadId = useThreadStore((state) => state.activeThreadId);
+  const draftTarget = useThreadStore((state) => state.draftTarget);
   const setActiveThread = useThreadStore((state) => state.setActiveThread);
+  const openDirectThreadWith = useThreadStore((state) => state.openDirectThreadWith);
   const addParticipant = useThreadStore((state) => state.addParticipant);
+  const startEditingMessage = useThreadStore((state) => state.startEditingMessage);
+  const deleteMessage = useThreadStore((state) => state.deleteMessage);
+  const startReplyingToMessage = useThreadStore((state) => state.startReplyingToMessage);
+  const forwardMessage = useThreadStore((state) => state.forwardMessage);
+  const pinMessage = useThreadStore((state) => state.pinMessage);
+  const unpinMessage = useThreadStore((state) => state.unpinMessage);
   const goToSection = useNavigationStore((state) => state.goToSection);
   const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
   const { currentUser } = useCurrentUser();
   const [isChatOpen, setChatOpen] = useState(false);
   const [isAddParticipantOpen, setAddParticipantOpen] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState<{
+    sourceThreadId: string;
+    messageId: string;
+  } | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState<{
+    threadId: string;
+    messageId: string;
+  } | null>(null);
+  const [isDeletingPending, setDeletingPending] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isThreadSearchOpen, setThreadSearchOpen] = useState(false);
+  const [isAllThreadsSearchOpen, setAllThreadsSearchOpen] = useState(false);
+  const [pinnedIndex, setPinnedIndex] = useState(0);
+  // Какой тред уже отражён в `pinnedIndex` — сбрасываем указатель на первое
+  // закреплённое сообщение при переключении диалога, тем же приёмом «adjust
+  // state during render», что и `MessageComposer` (см. там же — почему не
+  // эффект).
+  const [syncedPinnedThreadId, setSyncedPinnedThreadId] = useState<string | null>(null);
 
   const activeThread = threads.find((thread) => thread.id === activeThreadId);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const lastScrolledThreadId = useRef<string | null>(null);
   const addParticipantContainerRef = useRef<HTMLDivElement>(null);
+
+  if (activeThread && activeThread.id !== syncedPinnedThreadId) {
+    setSyncedPinnedThreadId(activeThread.id);
+    setPinnedIndex(0);
+  }
+
+  // Маленькое превью-фото у закреплённого сообщения в плашке — просто
+  // ориентир, что там за сообщение, поэтому кроп в квадрат уместен (в
+  // отличие от полноразмерной картинки в самом бабле, см. `MessageBubble.
+  // module.scss`, где кроп для одной картинки убрали).
+  const pinnedImage = activeThread?.pinnedMessages[pinnedIndex]?.attachments.find((attachment) =>
+    attachment.mimeType.startsWith('image/'),
+  );
 
   useEffect(() => {
     // Виджет размонтируется при уходе в другой раздел (`ActiveSection` в
@@ -154,11 +260,56 @@ export function MessengerWidget() {
     setActiveThread(threadId);
     setChatOpen(true);
     setAddParticipantOpen(false);
+    setThreadSearchOpen(false);
+  };
+
+  const openThreadAndScrollTo = (threadId: string, messageId: string) => {
+    openThread(threadId);
+    setAllThreadsSearchOpen(false);
+    // Сообщения диалога уже в сторе (весь список грузится один раз при
+    // старте, см. `loadThreads`) — переключение треда не ждёт новый REST-
+    // запрос, но DOM-узел бабла появляется только после коммита React, чуть
+    // позже текущего события клика — `requestAnimationFrame` даёт этому
+    // случиться первым.
+    requestAnimationFrame(() => scrollToMessage(messageId));
+  };
+
+  const openThreadFromSearch = (threadId: string) => {
+    openThread(threadId);
+    setAllThreadsSearchOpen(false);
+  };
+
+  /** Найденный в поиске человек, с которым ещё нет личного диалога — тот же
+   * черновик (`draftTarget`), что и у кнопки «Написать» на карточке друга/
+   * странице профиля (см. `openDirectThreadWith`), просто ещё один источник
+   * вызова. Если диалог с ним всё же уже есть (групповой — `MessengerSearchModal`
+   * не показывает в «Людях» тех, у кого есть личный, но групповой не
+   * исключён), `openDirectThreadWith` сам найдёт и откроет его вместо
+   * создания черновика. */
+  const openPersonFromSearch = (person: ThreadParticipant) => {
+    openDirectThreadWith(person);
+    setChatOpen(true);
+    setAllThreadsSearchOpen(false);
+  };
+
+  const confirmDeleteMessage = async () => {
+    if (!deletingMessage) return;
+    setDeletingPending(true);
+    setDeleteError(null);
+    try {
+      await deleteMessage(deletingMessage.threadId, deletingMessage.messageId);
+      setDeletingMessage(null);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Не удалось удалить сообщение');
+    } finally {
+      setDeletingPending(false);
+    }
   };
 
   const closeChat = () => {
     setChatOpen(false);
     setAddParticipantOpen(false);
+    setThreadSearchOpen(false);
     // На мобильном «Назад» возвращает к списку, но тред формально остаётся
     // «просматриваемым» — тот же сброс, что и при уходе из раздела: иначе
     // новые сообщения в нём молча помечаются прочитанными за спиной списка.
@@ -186,11 +337,11 @@ export function MessengerWidget() {
         </div>
       )}
 
-      {status === 'success' && threads.length === 0 && (
+      {status === 'success' && threads.length === 0 && !draftTarget && (
         <div className={styles['messenger-page__status']}>
           <EmptyState
             title="Пока нет сообщений"
-            description="Как только у вас появятся друзья, здесь будут ваши разговоры с ними."
+            description="Напишите кому-нибудь первым — дружба для этого не нужна."
             action={
               <Button variant="outline" onClick={() => goToSection('friends')}>
                 Перейти к друзьям
@@ -200,41 +351,56 @@ export function MessengerWidget() {
         </div>
       )}
 
-      {status === 'success' && threads.length > 0 && (
+      {status === 'success' && (threads.length > 0 || draftTarget) && (
         <div className={styles.messenger} data-chat-open={isChatOpen}>
-          <ScrollArea
-            className={styles['messenger__thread-list']}
-            viewportClassName={styles['messenger__thread-list-viewport']}
-          >
-            {threads.map((thread) => {
-              const lastMessage = thread.messages[thread.messages.length - 1];
-              return (
-                <button
-                  key={thread.id}
-                  type="button"
-                  className={cn(
-                    styles['messenger__thread-item'],
-                    thread.id === activeThreadId && styles['messenger__thread-item--active'],
-                  )}
-                  onClick={() => openThread(thread.id)}
-                >
-                  <Avatar initials={thread.initials} src={thread.avatarUrl} size="sm" />
-                  <span className={styles['messenger__thread-body']}>
-                    <span className={styles['messenger__thread-name']}>{thread.name}</span>
-                    <span className={styles['messenger__thread-preview']}>{lastMessage?.text}</span>
-                  </span>
-                  <span className={styles['messenger__thread-meta']}>
-                    {lastMessage && (
-                      <span className={styles['messenger__thread-time']}>
-                        {formatMessageTime(lastMessage.createdAt)}
-                      </span>
+          <div className={styles['messenger__thread-panel']}>
+            <div className={styles['messenger__thread-list-head']}>
+              <span className={styles['messenger__thread-list-title']}>Сообщения</span>
+              <button
+                type="button"
+                className={styles['messenger__thread-list-search-button']}
+                aria-label="Поиск по чатам, сообщениям и людям"
+                onClick={() => setAllThreadsSearchOpen(true)}
+              >
+                <SearchIcon />
+              </button>
+            </div>
+            <ScrollArea
+              className={styles['messenger__thread-list']}
+              viewportClassName={styles['messenger__thread-list-viewport']}
+            >
+              {threads.map((thread) => {
+                const lastMessage = thread.messages[thread.messages.length - 1];
+                return (
+                  <button
+                    key={thread.id}
+                    type="button"
+                    className={cn(
+                      styles['messenger__thread-item'],
+                      thread.id === activeThreadId && styles['messenger__thread-item--active'],
                     )}
-                    {thread.unread ? <Badge variant="soft">{thread.unread}</Badge> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </ScrollArea>
+                    onClick={() => openThread(thread.id)}
+                  >
+                    <Avatar initials={thread.initials} src={thread.avatarUrl} size="sm" />
+                    <span className={styles['messenger__thread-body']}>
+                      <span className={styles['messenger__thread-name']}>{thread.name}</span>
+                      <span className={styles['messenger__thread-preview']}>
+                        {threadPreviewText(lastMessage)}
+                      </span>
+                    </span>
+                    <span className={styles['messenger__thread-meta']}>
+                      {lastMessage && (
+                        <span className={styles['messenger__thread-time']}>
+                          {formatMessageTime(lastMessage.createdAt)}
+                        </span>
+                      )}
+                      {thread.unread ? <Badge variant="soft">{thread.unread}</Badge> : null}
+                    </span>
+                  </button>
+                );
+              })}
+            </ScrollArea>
+          </div>
 
           <div className={styles['messenger__chat']}>
             {activeThread ? (
@@ -292,6 +458,15 @@ export function MessengerWidget() {
                       </button>
                     </>
                   )}
+                  <button
+                    type="button"
+                    className={styles['messenger__add-participant-button']}
+                    aria-label="Поиск по чату"
+                    aria-expanded={isThreadSearchOpen}
+                    onClick={() => setThreadSearchOpen((open) => !open)}
+                  >
+                    <SearchIcon />
+                  </button>
                   <div
                     className={styles['messenger__add-participant']}
                     ref={addParticipantContainerRef}
@@ -319,6 +494,52 @@ export function MessengerWidget() {
                   </div>
                 </header>
 
+                {isThreadSearchOpen && (
+                  <ThreadSearchBar
+                    threadId={activeThread.id}
+                    onSelectMessage={(messageId) => {
+                      scrollToMessage(messageId);
+                      setThreadSearchOpen(false);
+                    }}
+                    onClose={() => setThreadSearchOpen(false)}
+                  />
+                )}
+
+                {activeThread.pinnedMessages.length > 0 && (
+                  <div className={styles['messenger__pinned-bar']}>
+                    <PinIcon className={styles['messenger__pinned-icon']} />
+                    {pinnedImage && (
+                      // eslint-disable-next-line @next/next/no-img-element -- маленький превью-квадрат закреплённого сообщения, не подходит под next/image
+                      <img
+                        src={pinnedImage.url}
+                        alt=""
+                        className={styles['messenger__pinned-thumb']}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      className={styles['messenger__pinned-text']}
+                      onClick={() => scrollToMessage(activeThread.pinnedMessages[pinnedIndex].id)}
+                    >
+                      {threadPreviewText(activeThread.pinnedMessages[pinnedIndex]) || 'Вложение'}
+                    </button>
+                    {activeThread.pinnedMessages.length > 1 && (
+                      <button
+                        type="button"
+                        className={styles['messenger__pinned-next']}
+                        aria-label="Следующее закреплённое сообщение"
+                        onClick={() =>
+                          setPinnedIndex(
+                            (index) => (index + 1) % activeThread.pinnedMessages.length,
+                          )
+                        }
+                      >
+                        {pinnedIndex + 1}/{activeThread.pinnedMessages.length}
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <ScrollArea
                   className={styles['messenger__chat-body']}
                   viewportClassName={styles['messenger__chat-body-viewport']}
@@ -337,6 +558,12 @@ export function MessengerWidget() {
                           row.mine && styles['messenger__cluster--mine'],
                         )}
                       >
+                        {activeThread.isGroup && !row.mine && (
+                          <ClusterSenderLabel
+                            participants={activeThread.participants}
+                            senderId={row.senderId}
+                          />
+                        )}
                         {row.messages.map((message, index) => (
                           <MessageBubble
                             key={message.id}
@@ -345,6 +572,38 @@ export function MessengerWidget() {
                               isFirstInCluster: index === 0,
                               isLastInCluster: index === row.messages.length - 1,
                             }}
+                            onEdit={() =>
+                              startEditingMessage(activeThread.id, message.id, message.text)
+                            }
+                            onDelete={() =>
+                              setDeletingMessage({
+                                threadId: activeThread.id,
+                                messageId: message.id,
+                              })
+                            }
+                            onReply={() =>
+                              startReplyingToMessage(
+                                activeThread.id,
+                                message.id,
+                                message.mine
+                                  ? currentUser.name
+                                  : (activeThread.participants.find(
+                                      (participant) => participant.id === message.senderId,
+                                    )?.name ?? 'Собеседник'),
+                                message.text,
+                                message.attachments.length > 0,
+                              )
+                            }
+                            onForward={() =>
+                              setForwardingMessage({
+                                sourceThreadId: activeThread.id,
+                                messageId: message.id,
+                              })
+                            }
+                            onPin={() => void pinMessage(activeThread.id, message.id)}
+                            onUnpin={() => void unpinMessage(activeThread.id, message.id)}
+                            onAuthorClick={goToUserProfile}
+                            onReplyQuoteClick={scrollToMessage}
                           />
                         ))}
                       </div>
@@ -353,6 +612,52 @@ export function MessengerWidget() {
                 </ScrollArea>
 
                 <MessageComposer threadId={activeThread.id} />
+              </>
+            ) : draftTarget ? (
+              // Черновик — реального диалога ещё нет (см. `useThreadStore.draftTarget`),
+              // поэтому ни статуса «в зале», ни истории сообщений, ни
+              // добавления собеседника здесь быть не может: `Thread`
+              // появится только вместе с первым сообщением из `MessageComposer`.
+              <>
+                <header className={styles['messenger__chat-head']}>
+                  <button
+                    type="button"
+                    className={styles['messenger__back-button']}
+                    onClick={closeChat}
+                    aria-label="Назад к списку"
+                  >
+                    <BackIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles['messenger__chat-head-trigger']}
+                    onClick={() => goToUserProfile(draftTarget.id)}
+                  >
+                    <Avatar initials={draftTarget.initials} src={draftTarget.avatarUrl} size="sm" />
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      styles['messenger__chat-head-trigger'],
+                      styles['messenger__chat-head-name-trigger'],
+                    )}
+                    onClick={() => goToUserProfile(draftTarget.id)}
+                  >
+                    <span className={styles['messenger__chat-head-body']}>
+                      <span className={styles['messenger__thread-name']}>{draftTarget.name}</span>
+                    </span>
+                  </button>
+                </header>
+
+                <div className={styles['messenger__chat-body']}>
+                  <EmptyState
+                    className={styles['messenger__placeholder']}
+                    title="Новый разговор"
+                    description={`Ещё нет ни одного сообщения — напишите ${draftTarget.name} первым.`}
+                  />
+                </div>
+
+                <MessageComposer threadId={null} />
               </>
             ) : (
               <EmptyState
@@ -363,6 +668,63 @@ export function MessengerWidget() {
             )}
           </div>
         </div>
+      )}
+
+      {forwardingMessage && (
+        <ForwardMessageModal
+          threads={threads}
+          onForward={(targetThreadId) =>
+            forwardMessage(
+              forwardingMessage.sourceThreadId,
+              forwardingMessage.messageId,
+              targetThreadId,
+            )
+          }
+          onClose={() => setForwardingMessage(null)}
+        />
+      )}
+
+      {deletingMessage && (
+        <Modal
+          onClose={() => (isDeletingPending ? undefined : setDeletingMessage(null))}
+          label="Удалить сообщение"
+        >
+          <div className={styles['messenger__delete-modal']}>
+            <h2>Удалить сообщение?</h2>
+            <p className={styles['messenger__delete-modal-hint']}>
+              Необратимо: сообщение и его вложения пропадут для всех участников диалога.
+            </p>
+            {deleteError && (
+              <p className={styles['messenger__delete-modal-error']}>{deleteError}</p>
+            )}
+            <div className={styles['messenger__delete-modal-actions']}>
+              <Button
+                variant="outline"
+                onClick={() => setDeletingMessage(null)}
+                disabled={isDeletingPending}
+              >
+                Отмена
+              </Button>
+              <Button
+                className={styles['messenger__delete-modal-danger']}
+                onClick={() => void confirmDeleteMessage()}
+                disabled={isDeletingPending}
+              >
+                Удалить
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {isAllThreadsSearchOpen && (
+        <MessengerSearchModal
+          threads={threads}
+          onSelectMessage={openThreadAndScrollTo}
+          onSelectThread={openThreadFromSearch}
+          onSelectPerson={openPersonFromSearch}
+          onClose={() => setAllThreadsSearchOpen(false)}
+        />
       )}
     </main>
   );

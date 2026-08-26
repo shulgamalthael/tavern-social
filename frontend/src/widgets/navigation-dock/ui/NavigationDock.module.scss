@@ -8,7 +8,7 @@
 .dock {
   position: fixed;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(var(--tavern-dock-gap) + env(safe-area-inset-bottom));
   z-index: 40;
   display: flex;
   align-items: center;
@@ -111,25 +111,54 @@
   font-weight: 500;
 }
 
-@include mobile {
+.dock__badge {
+  // Оверлей поверх иконки, а не строчный бейдж рядом с подписью (её на
+  // этих экранах нет, см. `@include mobileOrTablet` ниже) — тот же приём,
+  // что и счётчик непрочитанного на иконке приложения.
+  @include mobileOrTablet {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+  }
+}
+
+@include mobileOrTablet {
+  // Пальцем целиться в подпись под иконкой сложнее, чем в саму иконку —
+  // без текста кнопка становится одной большой круглой мишенью ≥48px
+  // (рекомендованный минимум сенсорной цели, Apple HIG/WCAG 2.5.5), а не
+  // узкой полоской с обрезанным словом.
   .dock {
-    gap: 0;
-    padding: 4px;
+    gap: 8px;
+    padding: 6px;
   }
 
   .dock__item {
-    gap: 4px;
-    height: 34px;
-    padding: 0 8px;
-    font-size: 11px;
+    position: relative;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
 
     svg {
-      width: 14px;
-      height: 14px;
+      width: 21px;
+      height: 21px;
     }
   }
 
   .dock__item-label {
-    max-width: 54px;
+    // Не `display: none` — `sr-only`: подпись остаётся доступной
+    // screen reader'ам (`aria-label`/`title` на кнопке дублируют её для
+    // визуальных подсказок, но сам текст внутри кнопки — самый надёжный
+    // источник для ассистивных технологий, лишним не будет).
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 }

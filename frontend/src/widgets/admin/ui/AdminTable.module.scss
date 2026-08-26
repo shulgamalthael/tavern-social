@@ -137,21 +137,13 @@
   color: var(--tavern-muted);
 }
 
+// Позиционирование `IdBadge`/`IdBadgeGroup` в начале карточки записи — сам
+// внешний вид бейджа задаёт общий компонент (`shared/ui/IdBadge`), здесь
+// только запрет растягиваться на всю ширину карточки (без этого
+// `align-items: stretch` у `.admin-table__record`, flex-колонки, растянул
+// бы бейдж на 100% ширины).
 .admin-table__id {
   align-self: flex-start;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--tavern-sunk);
-  color: var(--tavern-muted);
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 10.5px;
-  letter-spacing: 0.01em;
-}
-
-.admin-table__content-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
 }
 
 .admin-table__content-badge {
@@ -164,26 +156,77 @@
   font-weight: 500;
 }
 
-.admin-table__thumbs {
+// Шапка записи в `AdminPostsPanel` — аватар/имя/id слева, компактная кнопка
+// удаления справа, прижаты к верху (`align-items: flex-start`), а не к
+// центру, как у общей `.admin-table__record-row` ниже (которая годится для
+// короткой строки пользователя/группы/сообщества, но с полным рендером
+// записи — см. `.admin-table__post-content` — утянула бы аватар и кнопку в
+// визуальный центр всей записи, если та выше экрана). Тот же приём, что у
+// `.post__head` в `entities/post/ui/PostCard.module.scss`.
+.admin-table__post-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.admin-table__post-head-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
   gap: 6px;
 }
 
-.admin-table__thumb {
-  width: 40px;
-  height: 40px;
+// Иконка вместо текстовой кнопки — тот же визуальный вес и та же форма
+// (38×38, обводка), что у `.admin-table__menu-trigger` в `AdminUsersPanel`,
+// но красный акцент на hover сразу читается как «удалить», без надписи,
+// перетягивающей внимание с самой записи в шапке.
+.admin-table__post-delete {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 38px;
+  height: 38px;
   border: 1px solid var(--tavern-line);
-  border-radius: 6px;
-  object-fit: cover;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    border-color: var(--tavern-danger);
+    background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+    color: var(--tavern-danger);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
-.admin-table__thumb-more {
-  padding: 0 6px;
-  color: var(--tavern-muted);
-  font-size: 11px;
-  font-weight: 600;
+// Полный рендер `post.text` (см. `AdminPostsPanel.tsx`) — та же типографика
+// и то же поведение картинок, что у `.post__text` на основном сайте
+// (`entities/post/ui/PostCard.module.scss`), через общий миксин, чтобы не
+// дублировать правила для `strong`/`a`/`table`/`img` и т. п. второй раз.
+// `img` в миксине уже даёт `max-height: 480px` + `object-fit: contain` —
+// полный размер с сохранением пропорций без отдельной вёрстки превью.
+.admin-table__post-content {
+  overflow-x: auto;
+  color: var(--tavern-ink);
+  font-size: 14px;
+  line-height: 1.55;
+  text-wrap: pretty;
+  @include rich-content;
 }
 
 .admin-table__role-badge {
@@ -192,6 +235,23 @@
   border-radius: 999px;
   background: var(--tavern-soft);
   color: var(--tavern-accent);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+// Заливка вместо контурного тона `.admin-table__role-badge` — супер-админ
+// на ступень выше обычного, сплошной акцентный чип это подчёркивает без
+// нового цвета в палитре. Показывается вместо обычного «админ», не рядом с
+// ним (см. AdminUsersPanel.tsx) — супер-админ всегда и так админ, дублировать
+// бейдж незачем.
+.admin-table__super-admin-badge {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
   font-size: 10.5px;
   font-weight: 600;
   text-transform: uppercase;
@@ -218,6 +278,93 @@
 
 .admin-table__danger-button {
   color: var(--tavern-danger);
+}
+
+// Список действий одной строки `AdminUsersPanel` — до 4 действий (супер-
+// админ/админ/бан/удаление) рядом кнопками не помещались уже на планшете
+// (768–1024px), схлопывая колонку с именем/почтой в нулевую ширину (см.
+// `AdminUsersPanel.tsx`, `hasActions`). Тот же анкорный дропдаун с закрытием
+// по клику снаружи, что у `Header`/`NavigationDock`, просто свой — общего
+// примитива под него в проекте пока нет, а больше нигде в админке за раз не
+// показывается больше одного действия (`.admin-table__actions` выше).
+.admin-table__menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.admin-table__menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    border-color: var(--tavern-accent);
+    color: var(--tavern-ink);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.admin-table__menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: max-content;
+  min-width: 190px;
+  padding: 6px;
+  @include card;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 22%);
+}
+
+.admin-table__menu-item {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: none;
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.admin-table__menu-item--danger {
+  color: var(--tavern-danger);
+
+  &:hover {
+    background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+  }
 }
 
 .admin-table__modal {
@@ -265,6 +412,7 @@
   }
 
   .admin-table__actions {
+    flex-wrap: wrap;
     width: 100%;
     justify-content: flex-end;
   }

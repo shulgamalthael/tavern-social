@@ -2,38 +2,54 @@
 
 .feed {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 24px;
-  align-items: flex-start;
+
+  @include desktop {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  // От этой ширины лента больше не делит место с сайдбаром пополам —
+  // колонка становится по-настоящему центральной колонкой экрана (не
+  // «центр минус место под сайдбар»), а сайдбар докуется справа абсолютным
+  // позиционированием, не участвуя в потоке и не сдвигая центр колонки.
+  @include wide {
+    display: block;
+    position: relative;
+  }
+}
+
+// Общий `SectionContainer` (max-width 1140px, тот же для всех разделов)
+// рассчитан на одну колонку — с этой шириной центрированная лента прежнего
+// размера (~700px, как раньше на `flex: 1 1 440px`) не оставляла бы места
+// под сайдбар сбоку без наложения. У ленты, единственной среди разделов,
+// здесь своя, более широкая полоса. `main.feed` (элемент + класс) —
+// специально выше специфичность, чем у `.section-container` (0,1,1 против
+// 0,0,1 — оба класса висят на одном `<main>`), поэтому это правило надёжно
+// выигрывает вне зависимости от порядка подключения стилей, а не от удачи.
+:global(main).feed {
+  @include wide {
+    max-width: 1440px;
+  }
 }
 
 .feed__column {
-  flex: 1 1 440px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
 
-.feed__hero {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-}
+  @include desktop {
+    flex: 1 1 440px;
+  }
 
-.feed__title {
-  margin: 0;
-  font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(21px, 4.4vw, 26px);
-  font-weight: 500;
-}
-
-.feed__subtitle {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: var(--tavern-muted);
+  @include wide {
+    flex: initial;
+    max-width: 700px;
+    margin: 0 auto;
+  }
 }
 
 .feed__tabs {
@@ -77,16 +93,41 @@
 }
 
 .feed__sidebar {
-  flex: 1 1 296px;
-  min-width: 280px;
-  max-width: 340px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 
   @include desktop {
+    flex: 1 1 296px;
+    min-width: 280px;
+    max-width: 340px;
     position: sticky;
     top: 92px;
+  }
+
+  // Вне общего потока — центрирование `.feed__column` больше не учитывает
+  // сайдбар как «соседа по строке» (см. комментарий у `.feed` выше). Позиция
+  // считается от центра контейнера (`left: 50%` + половина ширины колонки +
+  // зазор), а не от правого края — так сайдбар всегда стоит вплотную к
+  // колонке с одним и тем же зазором, независимо от фактической ширины
+  // `SectionContainer` на конкретном экране. `position: absolute`, а не
+  // `sticky` — с уходом из потока `sticky` терять нечего «прилипать» к
+  // (нет больше соседней колонки, задающей высоту прокрутки), поэтому
+  // сайдбар прокручивается вместе со страницей, как обычный контент.
+  @include wide {
+    position: absolute;
+    // Намеренно на padding-top `SectionContainer` ниже уровня колонки
+    // (`clamp(18px, 3vw, 30px)` на этой ширине уже упирается в максимум —
+    // 30px), а не вровень с ней (`top: 0`, которое было бы вровень —
+    // `.feed` как ближайший позиционированный предок уже сам начинается от
+    // отступа контейнера, поэтому `top: 0` совпал бы с колонкой): небольшая
+    // ступенька читается как акцент раскладки, а не просто «сайдбар
+    // пририсован впритык».
+    top: 30px;
+    left: calc(50% + 350px + 28px);
+    width: 300px;
+    min-width: 0;
+    max-width: none;
   }
 }
 

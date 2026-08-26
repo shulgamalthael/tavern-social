@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   banUser,
   deleteAdminUser,
   getAdminUsers,
+  setSuperAdmin,
   setUserRole,
   unbanUser,
   type AdminUser,
@@ -20,6 +21,8 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { IdBadge } from '@/shared/ui/IdBadge';
+import { MoreIcon } from '@/shared/ui/icons';
 import { Loader } from '@/shared/ui/Loader';
 import { Modal } from '@/shared/ui/Modal';
 import styles from './AdminTable.module.scss';
@@ -63,6 +66,29 @@ export function AdminUsersPanel() {
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  /** До 4 действий на строку (супер-админ/админ/бан/удаление) не помещались
+   * рядом с именем и почтой уже на планшете (768–1024px) — колонка с именем
+   * схлопывалась в ноль ширины или почта обрезалась до пары символов. Один
+   * открывающийся по клику список действий вместо ряда кнопок — не только
+   * чинит это, но и не требует держать два разных варианта разметки под
+   * разные брейкпоинты. Открыт максимум один список сразу (id пользователя
+   * или `null`), тот же паттерн анкорного дропдауна с закрытием по клику
+   * снаружи, что у `Header`/`NavigationDock`. */
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuContainerRefs = useRef(new Map<string, HTMLDivElement>());
+
+  useEffect(() => {
+    if (!openMenuId) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      const container = menuContainerRefs.current.get(openMenuId);
+      if (container && !container.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [openMenuId]);
 
   // `status` переходит в 'loading' не здесь (react-hooks/set-state-in-effect
   // не разрешает синхронный setState в теле эффекта), а в обработчиках,
@@ -173,6 +199,28 @@ export function AdminUsersPanel() {
     }
   };
 
+  /** Доступно только текущему супер-админу (см. `currentUser.isSuperAdmin`
+   * ниже — кнопка вообще не рендерится без этого, backend всё равно
+   * проверяет сам через `SuperAdminGuard`). Выдача супер-прав заодно всегда
+   * делает пользователя админом (см. `AdminService.setSuperAdmin`) — здесь
+   * это просто отражается в обновлённой записи из ответа, отдельно
+   * дёргать `setUserRole` не нужно. */
+  const toggleSuperAdmin = async (user: AdminUser) => {
+    setPendingId(user.id);
+    setActionError(null);
+    try {
+      replaceUser(await setSuperAdmin(user.id, !user.isSuperAdmin));
+    } catch (superAdminError) {
+      setActionError(
+        superAdminError instanceof Error
+          ? superAdminError.message
+          : 'Не удалось изменить супер-права',
+      );
+    } finally {
+      setPendingId(null);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setPendingId(deleteTarget.id);
@@ -256,15 +304,24 @@ export function AdminUsersPanel() {
         <div className={styles['admin-table__list']}>
           {users.map((user) => {
             const isSelf = user.id === currentUser.id;
+            const canToggleSuperAdmin = currentUser.isSuperAdmin && !isSelf;
+            const canToggleRole = !isSelf && !user.isSuperAdmin;
+            const canModerate = user.role !== 'admin';
+            const hasActions = canToggleSuperAdmin || canToggleRole || canModerate;
             return (
               <div key={user.id} className={styles['admin-table__record']}>
-                <code className={styles['admin-table__id']}>{user.id}</code>
+                <IdBadge id={user.id} label="Пользователь" className={styles['admin-table__id']} />
                 <div className={styles['admin-table__record-row']}>
                   <Avatar initials={user.initials} src={user.avatarUrl} size="md" />
                   <div className={styles['admin-table__cell']}>
                     <span className={styles['admin-table__primary']}>
                       <span className={styles['admin-table__name']}>{user.name}</span>
-                      {user.role === 'admin' && (
+                      {user.isSuperAdmin && (
+                        <span className={styles['admin-table__super-admin-badge']}>
+                          супер-админ
+                        </span>
+                      )}
+                      {user.role === 'admin' && !user.isSuperAdmin && (
                         <span className={styles['admin-table__role-badge']}>админ</span>
                       )}
                       {user.isBanned && (
@@ -277,45 +334,103 @@ export function AdminUsersPanel() {
                       {user.isBanned && user.bannedReason ? ` · причина: ${user.bannedReason}` : ''}
                     </span>
                   </div>
-                  <div className={styles['admin-table__actions']}>
-                    {!isSelf && (
-                      <Button
-                        variant="outline"
-                        onClick={() => void toggleRole(user)}
+                  {hasActions && (
+                    <div
+                      className={styles['admin-table__menu']}
+                      ref={(node) => {
+                        if (node) menuContainerRefs.current.set(user.id, node);
+                        else menuContainerRefs.current.delete(user.id);
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className={styles['admin-table__menu-trigger']}
+                        aria-label={`Действия с пользователем ${user.name}`}
+                        aria-haspopup="menu"
+                        aria-expanded={openMenuId === user.id}
+                        onClick={() => setOpenMenuId((id) => (id === user.id ? null : user.id))}
                         disabled={pendingId === user.id}
                       >
-                        {user.role === 'admin' ? 'Снять админа' : 'Сделать админом'}
-                      </Button>
-                    )}
-                    {user.role !== 'admin' &&
-                      (user.isBanned ? (
-                        <Button
-                          variant="outline"
-                          onClick={() => void unban(user)}
-                          disabled={pendingId === user.id}
+                        <MoreIcon />
+                      </button>
+                      {openMenuId === user.id && (
+                        <div
+                          className={styles['admin-table__menu-panel']}
+                          role="menu"
+                          aria-label={`Действия с пользователем ${user.name}`}
                         >
-                          Разбанить
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          onClick={() => setBanTarget(user)}
-                          disabled={pendingId === user.id}
-                        >
-                          Забанить
-                        </Button>
-                      ))}
-                    {user.role !== 'admin' && (
-                      <Button
-                        variant="ghost"
-                        className={styles['admin-table__danger-button']}
-                        onClick={() => setDeleteTarget(user)}
-                        disabled={pendingId === user.id}
-                      >
-                        Удалить
-                      </Button>
-                    )}
-                  </div>
+                          {canToggleSuperAdmin && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={styles['admin-table__menu-item']}
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                void toggleSuperAdmin(user);
+                              }}
+                            >
+                              {user.isSuperAdmin ? 'Снять супер-админа' : 'Сделать супер-админом'}
+                            </button>
+                          )}
+                          {canToggleRole && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={styles['admin-table__menu-item']}
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                void toggleRole(user);
+                              }}
+                            >
+                              {user.role === 'admin' ? 'Снять админа' : 'Сделать админом'}
+                            </button>
+                          )}
+                          {canModerate &&
+                            (user.isBanned ? (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className={styles['admin-table__menu-item']}
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  void unban(user);
+                                }}
+                              >
+                                Разбанить
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className={styles['admin-table__menu-item']}
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  setBanTarget(user);
+                                }}
+                              >
+                                Забанить
+                              </button>
+                            ))}
+                          {canModerate && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={cn(
+                                styles['admin-table__menu-item'],
+                                styles['admin-table__menu-item--danger'],
+                              )}
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                setDeleteTarget(user);
+                              }}
+                            >
+                              Удалить
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

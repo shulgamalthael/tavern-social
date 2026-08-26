@@ -29,11 +29,50 @@
   background: var(--tavern-surface);
 }
 
-.messenger__thread-list {
+.messenger__thread-panel {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 300px;
   min-width: 260px;
   max-width: 380px;
+  min-height: 0;
   border-right: 1px solid var(--tavern-line);
+}
+
+.messenger__thread-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.messenger__thread-list-title {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.messenger__thread-list-search-button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+}
+
+.messenger__thread-list {
+  flex: 1;
+  min-height: 0;
 }
 
 .messenger__thread-list-viewport {
@@ -195,6 +234,62 @@
   }
 }
 
+.messenger__pinned-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+}
+
+.messenger__pinned-icon {
+  flex-shrink: 0;
+  color: var(--tavern-accent);
+}
+
+.messenger__pinned-thumb {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.messenger__pinned-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-accent);
+  }
+}
+
+.messenger__pinned-next {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 999px;
+  background: var(--tavern-sunk);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
 .messenger__chat-body {
   flex: 1;
   min-height: 0;
@@ -234,6 +329,23 @@
   align-items: flex-end;
 }
 
+// Аватар + имя над цепочкой чужих сообщений в групповом чате (см.
+// `ClusterSenderLabel` в MessengerWidget.tsx) — тот же небольшой отступ
+// снизу, что и `gap` кластера, плюс свой сверху, чтобы не липнуть к
+// предыдущей группе/разделителю дня.
+.messenger__cluster-sender {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 1px;
+}
+
+.messenger__cluster-sender-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tavern-muted);
+}
+
 .messenger__placeholder {
   flex: 1;
   display: flex;
@@ -242,32 +354,44 @@
   justify-content: center;
 }
 
-@include desktop {
-  // Тот же приём, что и в мобильном блоке ниже, только под десктопный
-  // размер дока: `.dock__item` здесь 38px (базовое значение, не
-  // переопределённое `@include mobile`) + паддинг дока 6px×2 + рамка 1px×2
-  // = 52px, плюс его собственный отступ `16px + env(safe-area-inset-bottom)`,
-  // плюс тот же зазор для дыхания 12px — итого 80px «настоящего» места вместо
-  // зарезервированных `.app` 148px.
-  .messenger-page {
-    margin-bottom: calc(env(safe-area-inset-bottom) - 68px);
+.messenger__delete-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
   }
 }
 
-@include mobile {
-  // `.app` резервирует фиксированные 148px снизу (см. `page.module.scss`) —
-  // безопасный отступ от плавающего дока, рассчитанный с запасом для обычных
-  // прокручиваемых разделов. Мессенджер же сам заполняет высоту через
-  // `flex: 1`, поэтому этот запас превращается в пустую полосу между чатом и
-  // доком. Отвоёвываем обратно всё, кроме реального места дока на мобилке
-  // (высота пункта 34px + паддинг 4px×2 + рамка 2px = 44px, плюс его
-  // собственный отступ `16px + env(safe-area-inset-bottom)`, плюс небольшой
-  // зазор для дыхания) — см. `NavigationDock.module.scss`, `.dock`/`.dock__item`.
-  .messenger-page {
-    margin-bottom: calc(env(safe-area-inset-bottom) - 76px);
-  }
+.messenger__delete-modal-hint {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
 
-  .messenger__thread-list {
+.messenger__delete-modal-error {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--tavern-danger);
+}
+
+.messenger__delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.messenger__delete-modal-danger {
+  color: var(--tavern-danger);
+}
+
+@include mobile {
+  .messenger__thread-panel {
     max-width: none;
     border-right: 0;
   }
@@ -280,7 +404,7 @@
     display: none;
   }
 
-  .messenger[data-chat-open='true'] .messenger__thread-list {
+  .messenger[data-chat-open='true'] .messenger__thread-panel {
     display: none;
   }
 }

@@ -2,9 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import type { EditableProfile } from '@/entities/user';
 import { BackendError, backendFetch } from '@/shared/lib/backend-client';
-import { getInitials } from '@/shared/lib/get-initials';
 import { SESSION_COOKIE_NAME } from '@/shared/config/session';
 import { getSessionToken } from '@/shared/lib/session-token.server';
 
@@ -90,40 +88,6 @@ export async function endSession(): Promise<void> {
   }
 
   redirect('/auth');
-}
-
-export interface UpdateProfileState {
-  error?: string;
-  user?: EditableProfile;
-}
-
-/** Сохраняет имя/подпись — вызывается из формы настроек. */
-export async function updateProfile(
-  _prevState: UpdateProfileState,
-  formData: FormData,
-): Promise<UpdateProfileState> {
-  const token = await getSessionToken();
-  if (!token) {
-    redirect('/auth');
-  }
-
-  const name = readField(formData, 'name');
-  const tagline = readField(formData, 'tagline');
-
-  try {
-    const profile = await backendFetch<{ name: string; tagline: string }>('/users/me', {
-      method: 'PATCH',
-      token,
-      body: { name, tagline },
-    });
-    return {
-      user: { name: profile.name, initials: getInitials(profile.name), tagline: profile.tagline },
-    };
-  } catch (error) {
-    return {
-      error: error instanceof BackendError ? error.message : 'Не удалось сохранить профиль',
-    };
-  }
 }
 
 export interface UpdateSettingsInput {

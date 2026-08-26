@@ -167,17 +167,29 @@ export function ScrollArea({
         setHovering(false);
         rest.onMouseLeave?.(event);
       }}
+      style={
+        {
+          // `...rest.style` — ПЕРВЫМ, до собственных переменных ниже: этот
+          // `style` объявлен после `{...rest}` на самом элементе (нужно,
+          // чтобы `--scroll-fade-*` не потерялись, если бы `style` шёл через
+          // `{...rest}` последним), а в JSX при повторении атрибута
+          // побеждает тот, что синтаксически ниже — без явного слияния
+          // здесь любой `style`, переданный вызывающим компонентом
+          // (`<ScrollArea style={...}>`), молча отбрасывался бы целиком,
+          // что и произошло при первой попытке применить тему сайта на
+          // `BlogListWidget`/`BlogPostWidget` через этот проп.
+          ...rest.style,
+          // На обёртке, а не на viewport — свой цветной «::before»-подклад
+          // затухания (см. ScrollArea.module.scss) висит на этом же узле, а
+          // CSS-переменные, заданные инлайн-стилем, не всплывают вверх от
+          // потомка к предку, только вниз по потомкам (их всё равно видит и
+          // viewport, он и так дочерний).
+          '--scroll-fade-top': fade.top ? `${FADE_SIZE_PX}px` : '0px',
+          '--scroll-fade-bottom': fade.bottom ? `${FADE_SIZE_PX}px` : '0px',
+        } as CSSProperties
+      }
     >
-      <div
-        className={cn(styles['scroll-area__viewport'], viewportClassName)}
-        ref={viewportRef}
-        style={
-          {
-            '--scroll-fade-top': fade.top ? `${FADE_SIZE_PX}px` : '0px',
-            '--scroll-fade-bottom': fade.bottom ? `${FADE_SIZE_PX}px` : '0px',
-          } as CSSProperties
-        }
-      >
+      <div className={cn(styles['scroll-area__viewport'], viewportClassName)} ref={viewportRef}>
         {children}
       </div>
       {thumb && (

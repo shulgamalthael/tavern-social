@@ -108,12 +108,35 @@
   border-top: 1px solid var(--tavern-line);
 }
 
+.admin-sidebar__user-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .admin-sidebar__user-name {
   overflow: hidden;
   color: var(--tavern-muted);
   font-size: 12.5px;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+// Та же заливка, что у `.admin-bar__super-badge` (главный сайт) и
+// `.admin-table__super-admin-badge` (список пользователей) — один и тот же
+// визуальный язык «супер-админ» во всех трёх местах, где он может
+// встретиться.
+.admin-sidebar__user-badge {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 @include mobile {
@@ -126,7 +149,7 @@
   .admin-sidebar__back-label,
   .admin-sidebar__brand-label,
   .admin-sidebar__nav-label,
-  .admin-sidebar__user-name {
+  .admin-sidebar__user-info {
     display: none;
   }
 

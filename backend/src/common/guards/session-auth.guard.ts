@@ -43,16 +43,22 @@ export class SessionAuthGuard implements CanActivate {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true, isBanned: true },
+      select: { role: true, isSuperAdmin: true, isBanned: true, bannedReason: true },
     });
     if (!user) {
       throw new UnauthorizedException('Сессия недействительна или истекла');
     }
     if (user.isBanned) {
-      throw new ForbiddenException('Аккаунт заблокирован администратором');
+      // Причину бана (если админ её указал) кладём прямо в сообщение — это
+      // единственное место, откуда frontend вообще узнаёт о бане (см.
+      // `features/auth/api/session.server.ts`, `BannedError`), отдельного
+      // запроса за причиной нет.
+      throw new ForbiddenException(
+        `Аккаунт заблокирован администратором${user.bannedReason ? `: ${user.bannedReason}` : ''}`,
+      );
     }
 
-    request.user = { id: userId, role: user.role };
+    request.user = { id: userId, role: user.role, isSuperAdmin: user.isSuperAdmin };
     return true;
   }
 }

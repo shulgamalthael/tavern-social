@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useCurrentUser } from '@/entities/user';
+import { cn } from '@/shared/lib/cn';
 import { Avatar } from '@/shared/ui/Avatar';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { Loader } from '@/shared/ui/Loader';
@@ -43,17 +44,22 @@ function groupByParent(comments: Comment[]): {
 
 function CommentRow({
   comment,
+  isReply,
   onReply,
   onDelete,
   onAuthorClick,
 }: {
   comment: Comment;
+  /** Строка — ответ, а не комментарий верхнего уровня — рисует «локоть»,
+   * соединяющий её аватар с общей вертикальной линией треда (см.
+   * `.comment-list__row--reply` в CommentList.module.scss). */
+  isReply?: boolean;
   onReply?: () => void;
   onDelete?: () => void;
   onAuthorClick?: (authorId: string) => void;
 }) {
   return (
-    <div className={styles['comment-list__row']}>
+    <div className={cn(styles['comment-list__row'], isReply && styles['comment-list__row--reply'])}>
       <button
         type="button"
         className={styles['comment-list__avatar-trigger']}
@@ -153,6 +159,7 @@ export function CommentList({ postId, onReply, onAuthorClick }: CommentListProps
                     <li key={reply.id} className={styles['comment-list__item']}>
                       <CommentRow
                         comment={reply}
+                        isReply
                         onDelete={
                           canDeleteComment(reply, currentUser.id)
                             ? () => void removeComment(postId, reply.id)

@@ -29,7 +29,15 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*.ts", "prisma/seed.ts", "prisma/promote-admin.ts", "prisma.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "prisma/seed.ts",
+    "prisma/promote-admin.ts",
+    "prisma/promote-super-admin.ts",
+    "prisma/migrate-pages-to-table.ts",
+    "prisma/migrate-legacy-link-props.ts",
+    "prisma.config.ts"
+  ],
   "exclude": ["node_modules", "dist"],
   // Polling вместо нативных fs-событий: bind mount Docker Desktop на Windows
   // не всегда пробрасывает inotify-события из контейнера в хост, из-за чего

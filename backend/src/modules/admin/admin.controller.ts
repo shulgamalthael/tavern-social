@@ -14,6 +14,7 @@ import {
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { AdminGuard } from '@/common/guards/admin.guard';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
+import { SuperAdminGuard } from '@/common/guards/super-admin.guard';
 import type { RequestUser } from '@/common/types/authenticated-request';
 import type { PaginatedDto } from '@/common/types/paginated';
 import { AdminService } from './admin.service';
@@ -29,6 +30,7 @@ import { ListAdminCommunitiesDto } from './dto/list-admin-communities.dto';
 import { ListAdminGroupsDto } from './dto/list-admin-groups.dto';
 import { ListAdminPostsDto } from './dto/list-admin-posts.dto';
 import { ListAdminUsersDto } from './dto/list-admin-users.dto';
+import { SetSuperAdminDto } from './dto/set-super-admin.dto';
 import { SetUserRoleDto } from './dto/set-user-role.dto';
 
 /** Каждый маршрут — `SessionAuthGuard` (кто это) + `AdminGuard` (админ ли
@@ -76,6 +78,18 @@ export class AdminController {
     @Body() dto: SetUserRoleDto,
   ): Promise<AdminUserDto> {
     return this.adminService.setUserRole(id, currentUser.id, dto);
+  }
+
+  /** Дополнительный рубеж поверх обычного `AdminGuard` (класса) — выдавать/
+   * снимать супер-права может только другой супер-админ, не любой админ. */
+  @Patch('users/:id/super-admin')
+  @UseGuards(SuperAdminGuard)
+  setSuperAdmin(
+    @Param('id') id: string,
+    @CurrentUser() currentUser: RequestUser,
+    @Body() dto: SetSuperAdminDto,
+  ): Promise<AdminUserDto> {
+    return this.adminService.setSuperAdmin(id, currentUser.id, dto);
   }
 
   @Get('posts')

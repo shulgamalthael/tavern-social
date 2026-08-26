@@ -17,14 +17,13 @@ import type { ListAdminCommunitiesDto } from './dto/list-admin-communities.dto';
 import type { ListAdminGroupsDto } from './dto/list-admin-groups.dto';
 import type { ListAdminPostsDto } from './dto/list-admin-posts.dto';
 import type { ListAdminUsersDto } from './dto/list-admin-users.dto';
+import type { SetSuperAdminDto } from './dto/set-super-admin.dto';
 import type { SetUserRoleDto } from './dto/set-user-role.dto';
 import { bucketByDay } from './lib/bucket-by-day';
 
 const STATS_WINDOW_DAYS = 30;
 const TOP_AUTHORS_LIMIT = 5;
 const TOP_CIRCLES_LIMIT = 5;
-const TABLE_TAG_PATTERN = /<table[\s>]/i;
-const LINK_TAG_PATTERN = /<a\s/i;
 
 @Injectable()
 export class AdminService {
@@ -178,6 +177,7 @@ export class AdminService {
         email: user.email,
         avatarUrl: user.avatarUrl,
         role: user.role,
+        isSuperAdmin: user.isSuperAdmin,
         isBanned: user.isBanned,
         bannedAt: user.bannedAt?.toISOString() ?? null,
         bannedReason: user.bannedReason,
@@ -192,9 +192,15 @@ export class AdminService {
     if (id === adminId) {
       throw new BadRequestException('Нельзя забанить самого себя');
     }
-    const target = await this.prisma.user.findUnique({ where: { id }, select: { role: true } });
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: { role: true, isSuperAdmin: true },
+    });
     if (!target) {
       throw new NotFoundException('Пользователь не найден');
+    }
+    if (target.isSuperAdmin) {
+      throw new BadRequestException('Нельзя забанить супер-администратора');
     }
     if (target.role === 'admin') {
       throw new BadRequestException('Нельзя забанить другого администратора');
@@ -219,17 +225,29 @@ export class AdminService {
 
   /** Назначение/снятие роли admin — единственный способ выдать права
    * администратора через UI (раньше только `promote-admin.ts` bootstrap-
-   * скрипт напрямую в БД). Держит два инварианта: админ не может изменить
-   * свою же роль (та же защита, что и у бана/удаления самого себя) и в
+   * скрипт напрямую в БД). Держит три инварианта: админ не может изменить
+   * свою же роль (та же защита, что и у бана/удаления самого себя), в
    * системе всегда остаётся хотя бы один администратор — иначе `/admin`
-   * стал бы безвозвратно недоступен никому. */
+   * стал бы безвозвратно недоступен никому, — и роль супер-админа вообще
+   * нельзя тронуть отсюда: `isSuperAdmin=true` обязан подразумевать
+   * role=admin (см. `setSuperAdmin` ниже), понижение в роли сломало бы этот
+   * инвариант и открыло бы лазейку — понизить, потом уже как обычного
+   * пользователя забанить/удалить. */
   async setUserRole(id: string, adminId: string, dto: SetUserRoleDto): Promise<AdminUserDto> {
     if (id === adminId) {
       throw new BadRequestException('Нельзя изменить свою собственную роль');
     }
-    const target = await this.prisma.user.findUnique({ where: { id }, select: { role: true } });
+    const target = await this.prisma.user.findUnique({
+      where: { id },
+      select: { role: true, isSuperAdmin: true },
+    });
     if (!target) {
       throw new NotFoundException('Пользователь не найден');
+    }
+    if (target.isSuperAdmin) {
+      throw new BadRequestException(
+        'Нельзя изменить роль супер-администратора — сначала снимите супер-права',
+      );
     }
     if (target.role === dto.role) {
       return this.toUserDto(
@@ -255,6 +273,39 @@ export class AdminService {
     return this.toUserDto(user);
   }
 
+  /**
+   * Выдача/снятие супер-статуса — доступно только другому супер-админу
+   * (см. `SuperAdminGuard`, `AdminController`), не обычному админу: иначе
+   * любой админ мог бы наделать себе союзников-супер-админов и защитить их
+   * друг за друга от удаления. Та же защита себя самого, что и у
+   * `setUserRole`/`banUser`/`deleteUser` — по тем же причинам (замкнутый
+   * круг взаимной неприкасаемости, если бы можно было выдать/снять себе
+   * самому).
+   *
+   * Выдача (`isSuperAdmin: true`) заодно выставляет `role: 'admin'`, если
+   * его ещё не было — инвариант «супер-админ обязан быть админом» держится
+   * в одной операции, а не в расчёте на то, что вызывающий сначала выдаст
+   * обычную роль отдельным запросом. Снятие (`isSuperAdmin: false`) роль
+   * `admin` не трогает — человек остаётся обычным админом, снять её можно
+   * потом обычным `setUserRole`.
+   */
+  async setSuperAdmin(id: string, granterId: string, dto: SetSuperAdminDto): Promise<AdminUserDto> {
+    if (id === granterId) {
+      throw new BadRequestException('Нельзя изменить супер-права у самого себя');
+    }
+    const target = await this.prisma.user.findUnique({ where: { id }, select: { id: true } });
+    if (!target) {
+      throw new NotFoundException('Пользователь не найден');
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: dto.isSuperAdmin ? { isSuperAdmin: true, role: 'admin' } : { isSuperAdmin: false },
+      include: { _count: { select: { posts: true } } },
+    });
+    return this.toUserDto(user);
+  }
+
   /** Полное удаление аккаунта — каскад в схеме чистит все связанные строки
    * (посты, комментарии, дружбы и т. д., см. `onDelete: Cascade` в
    * `schema.prisma`), здесь остаётся только то, что каскад не видит: файлы
@@ -265,10 +316,13 @@ export class AdminService {
     }
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: { avatarUrl: true, coverUrl: true, role: true },
+      select: { avatarUrl: true, coverUrl: true, role: true, isSuperAdmin: true },
     });
     if (!user) {
       throw new NotFoundException('Пользователь не найден');
+    }
+    if (user.isSuperAdmin) {
+      throw new BadRequestException('Нельзя удалить супер-администратора');
     }
     if (user.role === 'admin') {
       throw new BadRequestException('Нельзя удалить другого администратора');
@@ -326,8 +380,6 @@ export class AdminService {
           text: content,
           isRepost: post.repostOf !== null,
           images: extractImageUrls(content),
-          hasTable: TABLE_TAG_PATTERN.test(content),
-          hasLink: LINK_TAG_PATTERN.test(content),
           authorId: post.authorId,
           authorName: post.author.name,
           authorAvatarUrl: post.author.avatarUrl,
@@ -461,6 +513,7 @@ export class AdminService {
     email: string;
     avatarUrl: string | null;
     role: AdminUserDto['role'];
+    isSuperAdmin: boolean;
     isBanned: boolean;
     bannedAt: Date | null;
     bannedReason: string | null;
@@ -473,6 +526,7 @@ export class AdminService {
       email: user.email,
       avatarUrl: user.avatarUrl,
       role: user.role,
+      isSuperAdmin: user.isSuperAdmin,
       isBanned: user.isBanned,
       bannedAt: user.bannedAt?.toISOString() ?? null,
       bannedReason: user.bannedReason,

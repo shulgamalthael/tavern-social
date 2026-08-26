@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { selectUnreadThreadCount, useThreadStore } from '@/entities/thread';
 import { useCurrentUser } from '@/entities/user';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/features/section-navigation';
 import { cn } from '@/shared/lib/cn';
 import { Badge } from '@/shared/ui/Badge';
-import { MoreIcon, ShieldIcon } from '@/shared/ui/icons';
+import { BriefcaseIcon, MoreIcon, ShieldIcon } from '@/shared/ui/icons';
 import styles from './NavigationDock.module.scss';
 
 const PRIMARY_ITEMS = NAV_ITEMS.slice(0, PRIMARY_NAV_COUNT);
@@ -32,8 +32,29 @@ export function NavigationDock() {
   const { currentUser } = useCurrentUser();
   const [isMoreOpen, setMoreOpen] = useState(false);
   const moreContainerRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLElement>(null);
 
   const isMoreActive = isMoreOpen || SECONDARY_ITEMS.some((item) => item.id === section);
+
+  // Реальная высота дока — в CSS-переменную на `:root`, а не в захардкоженное
+  // число: страница (`page.module.scss`, `.app`) резервирует снизу ровно
+  // столько места, сколько док занимает по факту, и не «доедает» лишнее, и
+  // не проседает, если высота дока когда-нибудь снова изменится (крупнее
+  // иконки, новый пункт и т. п.) — без отдельной поправки на каждый такой
+  // случай, как раньше. `ResizeObserver` ловит изменение размера дока по
+  // любой причине — переключение брейкпоинта тоже меняет реальный
+  // `offsetHeight`, не только явный resize окна.
+  useLayoutEffect(() => {
+    const dock = dockRef.current;
+    if (!dock) return undefined;
+    const setHeight = () => {
+      document.documentElement.style.setProperty('--tavern-dock-h', `${dock.offsetHeight}px`);
+    };
+    setHeight();
+    const observer = new ResizeObserver(setHeight);
+    observer.observe(dock);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isMoreOpen) return undefined;
@@ -52,7 +73,7 @@ export function NavigationDock() {
   };
 
   return (
-    <nav className={styles.dock} aria-label="Основные разделы">
+    <nav className={styles.dock} aria-label="Основные разделы" ref={dockRef}>
       {PRIMARY_ITEMS.map((item) => {
         const Icon = SECTION_ICONS[item.id];
         const isActive = section === item.id;
@@ -62,12 +83,18 @@ export function NavigationDock() {
             key={item.id}
             type="button"
             aria-current={isActive ? 'page' : undefined}
+            aria-label={item.short}
+            title={item.short}
             className={cn(styles['dock__item'], isActive && styles['dock__item--active'])}
             onClick={() => select(item.id)}
           >
             <Icon />
             <span className={styles['dock__item-label']}>{item.short}</span>
-            {showUnreadBadge && <Badge variant="soft">{unreadCount}</Badge>}
+            {showUnreadBadge && (
+              <Badge variant="soft" className={styles['dock__badge']}>
+                {unreadCount}
+              </Badge>
+            )}
           </button>
         );
       })}
@@ -76,6 +103,7 @@ export function NavigationDock() {
         <button
           type="button"
           aria-label="Ещё разделы"
+          title="Ещё"
           aria-expanded={isMoreOpen}
           className={cn(styles['dock__item'], isMoreActive && styles['dock__item--active'])}
           onClick={() => setMoreOpen((open) => !open)}
@@ -106,6 +134,14 @@ export function NavigationDock() {
                 </button>
               );
             })}
+            {/* Тот же приём, что и у «Админки» ниже — конструктор сайтов не
+             * раздел SPA, а отдельная группа маршрутов (`/businesses`,
+             * `/business/[id]`, `/business/[id]/edit`, см. `widgets/
+             * website-builder`), поэтому обычная ссылка, а не `goToSection`. */}
+            <Link href="/businesses" role="menuitem" className={styles['dock__popover-item']}>
+              <BriefcaseIcon />
+              Бизнесы
+            </Link>
             {/* Не `goToSection` — «Админка» больше не клиентский раздел SPA,
              * а отдельный маршрут `/admin` со своей серверной проверкой
              * сессии/роли (см. `app/(protected)/admin/page.tsx`). Обычная

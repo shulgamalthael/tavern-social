@@ -1,8 +1,14 @@
 .tag {
+  overflow: hidden;
+  display: inline-block;
+  max-width: 160px;
   padding: 4px 10px;
   border: 1px solid var(--tavern-line);
   border-radius: 999px;
   background: var(--tavern-sunk);
-  font-size: 12px;
   color: var(--tavern-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: top;
 }

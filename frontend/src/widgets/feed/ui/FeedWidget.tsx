@@ -53,15 +53,6 @@ export function FeedWidget() {
   return (
     <SectionContainer className={styles.feed}>
       <div className={styles['feed__column']}>
-        <div className={styles['feed__hero']}>
-          <div>
-            <h1 className={styles['feed__title']}>
-              Добрый вечер, {currentUser.name.split(' ')[0]}
-            </h1>
-            <p className={styles['feed__subtitle']}>Здесь появится всё, что происходит в зале.</p>
-          </div>
-        </div>
-
         <PostComposer />
 
         <div className={styles['feed__tabs']} role="tablist">

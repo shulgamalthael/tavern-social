@@ -36,6 +36,22 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   LOG_LEVEL?: string;
+
+  @IsOptional()
+  @IsString()
+  SITES_BASE_DOMAIN?: string;
+
+  /** Необязательны — без них `StripeAdapter` просто не создаёт `PaymentIntent`
+   * (заказ по-прежнему создаётся как заявка без оплаты, см. `OrdersService.
+   * createFromCart`), чтобы клонировавший репозиторий разработчик без
+   * Stripe-аккаунта не упирался в падение при старте. */
+  @IsOptional()
+  @IsString()
+  STRIPE_SECRET_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  STRIPE_WEBHOOK_SECRET?: string;
 }
 
 /** Валидирует process.env один раз при старте — падаем сразу, а не на первом запросе. */

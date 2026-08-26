@@ -4,19 +4,42 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Message, Thread, ThreadParticipant, User } from '@prisma/client';
+import type {
+  Message,
+  MessageAttachment,
+  Prisma,
+  Thread,
+  ThreadParticipant,
+  User,
+} from '@prisma/client';
+import { deleteUploadedFile, uploadedFileUrl } from '@/common/lib/upload';
 import { pluralizeRu } from '@/common/lib/pluralize-ru';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import { PresenceService } from '@/infrastructure/redis/presence.service';
 import type { PublicProfile } from '@/modules/users/users.types';
 import { UsersService } from '@/modules/users/users.service';
+import type { EditMessageDto } from './dto/edit-message.dto';
 import type { SendMessageDto } from './dto/send-message.dto';
-import type { MessageDto, ThreadDto } from './threads.types';
+import type { ForwardedFromDto, MessageDto, ReplyToDto, ThreadDto } from './threads.types';
+
+/** Общий `include` для всех мест, где сообщение уходит наружу как `MessageDto`
+ * — один источник формы вместо копирования `include` в каждый запрос. */
+const MESSAGE_INCLUDE = {
+  attachments: { orderBy: { order: 'asc' } },
+  forwardedFrom: { include: { sender: true } },
+  replyTo: { include: { sender: true, attachments: true } },
+} satisfies Prisma.MessageInclude;
+
+type MessageWithRelations = Message & {
+  attachments: MessageAttachment[];
+  forwardedFrom: (Message & { sender: User }) | null;
+  replyTo: (Message & { sender: User; attachments: MessageAttachment[] }) | null;
+};
 
 type ParticipantWithUser = ThreadParticipant & { user: User };
 type ThreadWithParticipantsAndMessages = Thread & {
   participants: ParticipantWithUser[];
-  messages: Message[];
+  messages: MessageWithRelations[];
 };
 
 export interface SentMessage {
@@ -34,6 +57,22 @@ export interface ParticipantAdded {
   newParticipant: PublicProfile;
 }
 
+export interface PinnedChanged {
+  thread: ThreadDto;
+  participantUserIds: string[];
+}
+
+export interface MessageDeleted {
+  threadId: string;
+  messageId: string;
+  participantUserIds: string[];
+}
+
+export interface ThreadSearchResult {
+  threadId: string;
+  messages: MessageDto[];
+}
+
 @Injectable()
 export class ThreadsService {
   constructor(
@@ -48,7 +87,7 @@ export class ThreadsService {
       orderBy: { updatedAt: 'desc' },
       include: {
         participants: { include: { user: true } },
-        messages: { orderBy: { createdAt: 'asc' } },
+        messages: { orderBy: { createdAt: 'asc' }, include: MESSAGE_INCLUDE },
       },
     });
 
@@ -70,7 +109,7 @@ export class ThreadsService {
       },
       include: {
         participants: { include: { user: true } },
-        messages: { orderBy: { createdAt: 'asc' } },
+        messages: { orderBy: { createdAt: 'asc' }, include: MESSAGE_INCLUDE },
       },
     });
 
@@ -86,7 +125,7 @@ export class ThreadsService {
       },
       include: {
         participants: { include: { user: true } },
-        messages: { orderBy: { createdAt: 'asc' } },
+        messages: { orderBy: { createdAt: 'asc' }, include: MESSAGE_INCLUDE },
       },
     });
 
@@ -150,7 +189,7 @@ export class ThreadsService {
       },
       include: {
         participants: { include: { user: true } },
-        messages: { orderBy: { createdAt: 'asc' } },
+        messages: { orderBy: { createdAt: 'asc' }, include: MESSAGE_INCLUDE },
       },
     });
   }
@@ -167,17 +206,46 @@ export class ThreadsService {
       where: { id: threadId },
       include: {
         participants: { include: { user: true } },
-        messages: { orderBy: { createdAt: 'asc' } },
+        messages: { orderBy: { createdAt: 'asc' }, include: MESSAGE_INCLUDE },
       },
     });
   }
 
-  async sendMessage(threadId: string, senderId: string, dto: SendMessageDto): Promise<SentMessage> {
+  async sendMessage(
+    threadId: string,
+    senderId: string,
+    dto: SendMessageDto,
+    files: Express.Multer.File[],
+  ): Promise<SentMessage> {
     const participants = await this.assertParticipant(threadId, senderId);
+    const text = dto.text?.trim() ?? '';
+    if (!text && files.length === 0) {
+      throw new BadRequestException('Сообщение должно содержать текст или вложение');
+    }
+    // Отвечать можно только на сообщение из этого же треда — иначе цитата
+    // вела бы на чужой, недоступный этому диалогу текст.
+    if (dto.replyToId) {
+      await this.assertMessageInThread(threadId, dto.replyToId);
+    }
 
     const message = await this.prisma.$transaction(async (tx) => {
       const created = await tx.message.create({
-        data: { threadId, senderId, text: dto.text },
+        data: {
+          threadId,
+          senderId,
+          text,
+          replyToId: dto.replyToId,
+          attachments: {
+            create: files.map((file, index) => ({
+              url: uploadedFileUrl('messages', file.filename),
+              mimeType: file.mimetype,
+              fileName: file.originalname,
+              sizeBytes: file.size,
+              order: index,
+            })),
+          },
+        },
+        include: MESSAGE_INCLUDE,
       });
       await tx.thread.update({ where: { id: threadId }, data: { updatedAt: new Date() } });
       await tx.threadParticipant.update({
@@ -191,6 +259,186 @@ export class ThreadsService {
       message: this.toMessageDto(message),
       participantUserIds: participants.map((participant) => participant.userId),
     };
+  }
+
+  /** Редактирование текста — только своё сообщение, только текст (вложения
+   * менять нельзя, тот же выбор, что у большинства чатов: убрать/добавить
+   * файл — это, по сути, другое сообщение). */
+  async editMessage(
+    threadId: string,
+    messageId: string,
+    userId: string,
+    dto: EditMessageDto,
+  ): Promise<SentMessage> {
+    const participants = await this.assertParticipant(threadId, userId);
+    const existing = await this.assertMessageInThread(threadId, messageId);
+    if (existing.senderId !== userId) {
+      throw new ForbiddenException('Можно редактировать только своё сообщение');
+    }
+
+    const message = await this.prisma.message.update({
+      where: { id: messageId },
+      data: { text: dto.text, editedAt: new Date() },
+      include: MESSAGE_INCLUDE,
+    });
+
+    return {
+      message: this.toMessageDto(message),
+      participantUserIds: participants.map((participant) => participant.userId),
+    };
+  }
+
+  /**
+   * Удаление — только своё сообщение (в отличие от постов, здесь нет
+   * модераторского удаления чужих: сообщения видны только участникам
+   * диалога, а не всему залу, так что у обычной переписки нет той же
+   * потребности в модерации, что у публичной ленты). Жёсткое удаление
+   * строки (тот же выбор, что `PostsService.remove` — без плейсхолдера
+   * «сообщение удалено»), вложения на диске подчищаются отдельно: каскад в
+   * схеме удаляет только строки `MessageAttachment`, не сами файлы.
+   * Ответы/пересылки, ссылавшиеся на это сообщение (`replyToId`/
+   * `forwardedFromId`), не удаляются вместе с ним — `onDelete: SetNull` в
+   * схеме просто обнуляет ссылку, они остаются в своей истории.
+   */
+  async deleteMessage(
+    threadId: string,
+    messageId: string,
+    userId: string,
+  ): Promise<MessageDeleted> {
+    const participants = await this.assertParticipant(threadId, userId);
+    const existing = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      include: { attachments: true },
+    });
+    if (!existing || existing.threadId !== threadId) {
+      throw new NotFoundException('Сообщение не найдено');
+    }
+    if (existing.senderId !== userId) {
+      throw new ForbiddenException('Можно удалить только своё сообщение');
+    }
+
+    await this.prisma.message.delete({ where: { id: messageId } });
+    for (const attachment of existing.attachments) {
+      deleteUploadedFile(attachment.url);
+    }
+
+    return {
+      threadId,
+      messageId,
+      participantUserIds: participants.map((participant) => participant.userId),
+    };
+  }
+
+  /**
+   * Пересылка — отдельная запись `Message` в целевом треде, ссылающаяся на
+   * оригинал через `forwardedFromId` (тот же принцип, что репост поста), а
+   * не перемещение исходного сообщения. Текст снимается на момент пересылки
+   * (не живая ссылка на оригинал) — если оригинал потом отредактируют,
+   * пересланная копия не должна тихо поменяться вместе с ним.
+   */
+  async forwardMessage(
+    sourceThreadId: string,
+    messageId: string,
+    userId: string,
+    targetThreadId: string,
+  ): Promise<SentMessage> {
+    await this.assertParticipant(sourceThreadId, userId);
+    const original = await this.assertMessageInThread(sourceThreadId, messageId);
+    const targetParticipants = await this.assertParticipant(targetThreadId, userId);
+
+    const message = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.message.create({
+        data: {
+          threadId: targetThreadId,
+          senderId: userId,
+          text: original.text,
+          forwardedFromId: original.id,
+        },
+        include: MESSAGE_INCLUDE,
+      });
+      await tx.thread.update({ where: { id: targetThreadId }, data: { updatedAt: new Date() } });
+      await tx.threadParticipant.update({
+        where: { threadId_userId: { threadId: targetThreadId, userId } },
+        data: { lastReadAt: created.createdAt },
+      });
+      return created;
+    });
+
+    return {
+      message: this.toMessageDto(message),
+      participantUserIds: targetParticipants.map((participant) => participant.userId),
+    };
+  }
+
+  async pinMessage(threadId: string, messageId: string, userId: string): Promise<PinnedChanged> {
+    return this.setPinned(threadId, messageId, userId, new Date());
+  }
+
+  async unpinMessage(threadId: string, messageId: string, userId: string): Promise<PinnedChanged> {
+    return this.setPinned(threadId, messageId, userId, null);
+  }
+
+  private async setPinned(
+    threadId: string,
+    messageId: string,
+    userId: string,
+    pinnedAt: Date | null,
+  ): Promise<PinnedChanged> {
+    await this.assertParticipant(threadId, userId);
+    await this.assertMessageInThread(threadId, messageId);
+
+    await this.prisma.message.update({ where: { id: messageId }, data: { pinnedAt } });
+
+    const thread = await this.prisma.thread.findUniqueOrThrow({
+      where: { id: threadId },
+      include: {
+        participants: { include: { user: true } },
+        messages: { orderBy: { createdAt: 'asc' }, include: MESSAGE_INCLUDE },
+      },
+    });
+
+    return {
+      thread: await this.toDto(thread, userId),
+      participantUserIds: thread.participants.map((participant) => participant.userId),
+    };
+  }
+
+  /** Поиск по одному треду — только для его участника, без пагинации:
+   * список сообщений в треде и так не постраничный (см. `listForUser`). */
+  async searchInThread(threadId: string, userId: string, q: string): Promise<MessageDto[]> {
+    await this.assertParticipant(threadId, userId);
+    const messages = await this.prisma.message.findMany({
+      where: { threadId, text: { contains: q, mode: 'insensitive' } },
+      orderBy: { createdAt: 'desc' },
+      include: MESSAGE_INCLUDE,
+    });
+    return messages.map((message) => this.toMessageDto(message));
+  }
+
+  /** Поиск по всем тредам пользователя разом — сгруппировано по треду,
+   * frontend уже знает имена/аватары тредов из своего стора (см.
+   * `entities/thread`), сюда их дублировать незачем. */
+  async searchAcrossThreads(userId: string, q: string): Promise<ThreadSearchResult[]> {
+    const messages = await this.prisma.message.findMany({
+      where: {
+        thread: { participants: { some: { userId } } },
+        text: { contains: q, mode: 'insensitive' },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: MESSAGE_INCLUDE,
+    });
+
+    const byThread = new Map<string, MessageDto[]>();
+    for (const message of messages) {
+      const bucket = byThread.get(message.threadId) ?? [];
+      bucket.push(this.toMessageDto(message));
+      byThread.set(message.threadId, bucket);
+    }
+
+    return Array.from(byThread.entries()).map(([threadId, threadMessages]) => ({
+      threadId,
+      messages: threadMessages,
+    }));
   }
 
   async markRead(threadId: string, userId: string): Promise<void> {
@@ -214,6 +462,14 @@ export class ThreadsService {
       throw new ForbiddenException('Вы не участник этого диалога');
     }
     return thread.participants;
+  }
+
+  private async assertMessageInThread(threadId: string, messageId: string): Promise<Message> {
+    const message = await this.prisma.message.findUnique({ where: { id: messageId } });
+    if (!message || message.threadId !== threadId) {
+      throw new NotFoundException('Сообщение не найдено');
+    }
+    return message;
   }
 
   private async toDto(
@@ -241,6 +497,8 @@ export class ThreadsService {
       (message) => message.senderId !== userId && message.createdAt > me.lastReadAt,
     ).length;
 
+    const messages = thread.messages.map((message) => this.toMessageDto(message));
+
     return {
       id: thread.id,
       participants: others.map((participant) =>
@@ -249,17 +507,49 @@ export class ThreadsService {
       isGroup,
       status,
       unreadCount,
-      messages: thread.messages.map((message) => this.toMessageDto(message)),
+      messages,
+      pinnedMessages: messages
+        .filter((message) => message.pinnedAt)
+        .sort((a, b) => (a.pinnedAt! < b.pinnedAt! ? 1 : -1)),
     };
   }
 
-  private toMessageDto(message: Message): MessageDto {
+  private toMessageDto(message: MessageWithRelations): MessageDto {
+    const forwardedFrom: ForwardedFromDto | null = message.forwardedFrom
+      ? {
+          id: message.forwardedFrom.id,
+          senderId: message.forwardedFrom.senderId,
+          senderName: message.forwardedFrom.sender.name,
+        }
+      : null;
+
+    const replyTo: ReplyToDto | null = message.replyTo
+      ? {
+          id: message.replyTo.id,
+          senderId: message.replyTo.senderId,
+          senderName: message.replyTo.sender.name,
+          text: message.replyTo.text,
+          hasAttachment: message.replyTo.attachments.length > 0,
+        }
+      : null;
+
     return {
       id: message.id,
       threadId: message.threadId,
       senderId: message.senderId,
       text: message.text,
       createdAt: message.createdAt.toISOString(),
+      editedAt: message.editedAt?.toISOString() ?? null,
+      pinnedAt: message.pinnedAt?.toISOString() ?? null,
+      attachments: message.attachments.map((attachment) => ({
+        id: attachment.id,
+        url: attachment.url,
+        mimeType: attachment.mimeType,
+        fileName: attachment.fileName,
+        sizeBytes: attachment.sizeBytes,
+      })),
+      forwardedFrom,
+      replyTo,
     };
   }
 }

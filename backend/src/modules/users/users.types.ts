@@ -21,6 +21,11 @@ export interface MeProfile extends PublicProfile {
    * `entities/user/model/types.ts#CurrentUser.role` на frontend) — реальная
    * авторизация везде на `AdminGuard`, не на этом поле. */
   role: UserRole;
+  /** Только для показа кнопки выдачи супер-прав в админке (см.
+   * `entities/user/model/types.ts#CurrentUser.isSuperAdmin`) — реальная
+   * авторизация на `SuperAdminGuard`, не на этом поле, тот же принцип,
+   * что и у `role` выше. */
+  isSuperAdmin: boolean;
   settings: {
     quietHours: boolean;
     showPresence: boolean;

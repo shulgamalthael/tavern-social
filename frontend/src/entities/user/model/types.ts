@@ -10,6 +10,11 @@ export interface CurrentUser {
    * — реальная защита `/admin/*`-запросов на backend (`AdminGuard`), это
    * поле только про UI. */
   role: UserRole;
+  /** Показывать ли в админке кнопку выдачи супер-прав другому пользователю
+   * (`widgets/admin/ui/AdminUsersPanel.tsx`) — реальная защита на
+   * `SuperAdminGuard`, это поле тоже только про UI, тот же принцип, что и
+   * у `role` выше. */
+  isSuperAdmin: boolean;
   /** Переопределяет --tavern-accent для этого пользователя. */
   accent?: string;
   about: string | null;

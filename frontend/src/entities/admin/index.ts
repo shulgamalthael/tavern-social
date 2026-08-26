@@ -8,6 +8,7 @@ export { getAdminGroups, type GetAdminGroupsOptions } from './api/get-admin-grou
 export { getAdminPosts, type GetAdminPostsOptions } from './api/get-admin-posts';
 export { getAdminStats } from './api/get-admin-stats';
 export { getAdminUsers, type GetAdminUsersOptions } from './api/get-admin-users';
+export { setSuperAdmin } from './api/set-super-admin';
 export { setUserRole } from './api/set-user-role';
 export { unbanUser } from './api/unban-user';
 export type {

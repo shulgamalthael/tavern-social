@@ -20,6 +20,7 @@ import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { IdBadge } from '@/shared/ui/IdBadge';
 import { MediaPlaceholder } from '@/shared/ui/MediaPlaceholder';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
 import { AboutCard } from './AboutCard';
@@ -85,7 +86,12 @@ export function UserProfileView({ userId }: UserProfileViewProps) {
 
   const onMessage = () => {
     goToSection('messages');
-    void openDirectThreadWith(userId);
+    openDirectThreadWith({
+      id: userId,
+      name: profile.name,
+      initials: profile.initials,
+      avatarUrl: profile.avatarUrl,
+    });
   };
 
   return (
@@ -116,6 +122,7 @@ export function UserProfileView({ userId }: UserProfileViewProps) {
           <Avatar initials={profile.initials} src={profile.avatarUrl} size="xl" bordered />
           <div className={styles['profile__titles']}>
             <span className={styles['profile__name']}>{profile.name}</span>
+            {currentUser.role === 'admin' && <IdBadge id={userId} label="Пользователь" />}
             <span className={styles['profile__subtitle']}>
               {profile.tagline || 'Ещё не рассказали о себе'}
             </span>

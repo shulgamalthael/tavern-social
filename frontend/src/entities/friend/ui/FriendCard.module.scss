@@ -1,7 +1,32 @@
+// Карточка друга — вертикальная, для сетки (см. `widgets/friends/ui/
+// FriendsWidget.module.scss`, `.friends__grid`), а не горизонтальная строка
+// списка: аватар и имя — «личность» карточки, крупно и по центру сверху,
+// всё остальное (о себе/факты/теги/действия) — по левому краю под ними,
+// как обычный текст, а не тоже центрированное — так карточка читается, а не
+// выглядит табличкой на стенде.
 .friend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+
+  &:hover {
+    border-color: var(--tavern-accent);
+    box-shadow: var(--tavern-shadow-card);
+    transform: translateY(-2px);
+  }
+}
+
+.friend__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
 }
 
 // Аватар и имя — отдельные кликабельные `button`, ведущие на страницу
@@ -9,15 +34,16 @@
 // автора поста в PostCard. Сброс до вида обычного изображения/текста.
 .friend__avatar-trigger {
   display: block;
-  align-self: flex-start;
   padding: 0;
   border: 0;
   background: none;
   line-height: 0;
   cursor: pointer;
+  margin-bottom: 6px;
 }
 
 .friend__name-trigger {
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: none;
@@ -30,65 +56,148 @@
   }
 }
 
-.friend__body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1 1 260px;
-  min-width: 0;
+// Однострочный эллипсис — очень длинное имя (краш-тест плитки, см.
+// `widgets/friends/ui/FriendsWidget.module.scss`) обрезается, а не
+// переносится на вторую строку и не растягивает карточку выше соседей по
+// сетке.
+.friend__name {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 17px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.friend__top {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-}
-
-.friend__meta {
+// Резервирует одну строку высоты, даже когда заметки нет (см. FriendCard.tsx —
+// элемент теперь в разметке всегда) — без явного `line-height`/`min-height`
+// пустой `<span>` схлопнулся бы до нуля, и карточки без заметки оказались бы
+// на строку ниже соседних в той же плитке.
+.friend__note {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  min-height: 1.35em;
+  line-height: 1.35;
   font-size: 13px;
   color: var(--tavern-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .friend__status {
-  // Без margin-left: auto — на узких экранах `.friend__top` переносит
-  // статус на новый ряд, и там он «прижимался» бы в правый угол пустой
-  // строки одиноким островком. В обычном потоке он просто идёт следующим
-  // элементом сразу за именем/подписью, как и остальные.
+  display: flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 5px;
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 11px;
   color: var(--tavern-muted);
 }
 
-.friend__name {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 18px;
-  font-weight: 500;
+.friend__status-text {
+  overflow: hidden;
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.friend__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tavern-muted);
+}
+
+.friend__status-dot--online {
+  background: var(--tavern-accent);
 }
 
 .friend__about {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.6;
+  overflow: hidden;
+  // 3 строки заявленной `line-height` — держит место под клэмп целиком, даже
+  // когда текста нет вовсе (пустой `<p>`, см. FriendCard.tsx) или он короче
+  // 3 строк, иначе такая карточка была бы на 1-2 строки ниже соседей по той
+  // же плитке (см. `widgets/friends/ui/FriendsWidget.module.scss`).
+  min-height: calc(1.55em * 3);
+  font-size: 13.5px;
+  line-height: 1.55;
   text-wrap: pretty;
+  // Многострочный ellipsis — длинное «о себе» не должно растягивать одни
+  // карточки заметно выше соседних в той же строке сетки.
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
+// `min-height` держит место под 2 строки независимо от того, сколько фактов
+// реально показано (город — не у всех есть) и сколько строк они заняли —
+// иначе карточка с городом-и-длинным-названием переносилась бы на 2 строки
+// и торчала выше соседей, у которых всё уместилось в одну.
 .friend__facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  font-size: 12.5px;
+  gap: 5px 12px;
+  min-height: calc(1.4em * 2 + 5px);
+  font-size: 12px;
+  line-height: 1.4;
   color: var(--tavern-muted);
+}
+
+// `max-width` — страховка на краш-тест: аномально длинный город/факт не
+// раздувает ряд вширь и не толкает карточку на лишнюю строку, а обрезается
+// эллипсисом (см. `.friend__fact-text` ниже) внутри своего чипа.
+.friend__fact {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+
+  svg {
+    flex-shrink: 0;
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.friend__fact-text {
+  overflow: hidden;
+  min-width: 0;
+  max-width: 160px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .friend__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 6px;
+}
+
+// Один невидимый, но настоящий `Tag` вместо пустого ряда, когда у друга нет
+// тегов (см. FriendCard.tsx) — даёт точно ту же высоту, что и видимый чип, не
+// дублируя его padding/line-height здесь отдельным «магическим» значением.
+.friend__tags-placeholder {
+  visibility: hidden;
 }
 
 .friend__actions {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
+  margin-top: auto;
+  // Прижимает действия к низу карточки, даже когда у соседей в той же строке
+  // сетки «о себе»/теги короче и текста меньше — кнопки всегда на одном
+  // уровне по горизонтали, а не «плавают» под разным по высоте контентом.
+  padding-top: 4px;
+}
+
+.friend__remove {
+  flex-shrink: 0;
+  padding: 0;
+  width: 38px;
 }

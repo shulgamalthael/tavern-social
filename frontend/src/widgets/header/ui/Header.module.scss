@@ -23,17 +23,63 @@
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border-bottom: 1px solid transparent;
+  box-shadow: 0 8px 24px rgba(16, 30, 54, 0);
   transition:
     background-color 0.25s ease,
     border-color 0.25s ease,
-    backdrop-filter 0.25s ease;
+    backdrop-filter 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .header--scrolled {
-  background: color-mix(in srgb, var(--tavern-bg) 78%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  // `--tavern-surface` (белая «поверхность» карточек/модалок), а не
+  // `--tavern-bg` (приглушённый фон страницы) — шапка в прилипшем виде
+  // читается как отдельный слой интерфейса поверх контента, тот же язык,
+  // что у карточек, а не просто чуть более плотный кусок фона. 90%, не
+  // сплошная — сквозь неё всё ещё чуть видно то, что под ней (`backdrop-
+  // filter` это дополнительно размывает), поэтому тёплое атмосферное
+  // свечение (`globals.css`, `body::before`) не обрубается резким краем
+  // наверху страницы.
+  background: color-mix(in srgb, var(--tavern-surface) 90%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-bottom-color: var(--tavern-line);
+  // Та же лёгкая тень, что и у карточек (`--tavern-shadow-card`), но вдвое
+  // тише — шапка висит над контентом постоянно, а не появляется поверх него
+  // ненадолго, как модалка/дропдаун, поэтому тень должна читаться как едва
+  // уловимая глубина, а не как отдельный акцент.
+  box-shadow: 0 8px 24px rgba(16, 30, 54, 0.06);
+
+  // Затухание контента сразу под шапкой — тот же приём и тот же
+  // бело-серебристый тон, что у `ScrollArea` (`shared/ui/ScrollArea/
+  // ScrollArea.module.scss`, там это `mask-image` + цветной `::before`),
+  // но здесь без маски: `.app` — обычный `overflow-y: auto`-контейнер
+  // страницы (лента/друзья/сообщества и т. д.), не обёрнут в `ScrollArea`,
+  // поэтому вместо изменения прозрачности самого контента — полупрозрачный
+  // градиент-нашлёпка поверх него на несколько пикселей. `position:
+  // absolute` относительно самой шапки (она уже `position: sticky`, свой
+  // позиционирующий контекст), `top: 100%` — сразу под нижним краем шапки,
+  // так что двигается вместе с ней при скролле.
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 40px;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--tavern-surface) 75%, transparent),
+      transparent
+    );
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+}
+
+.header--scrolled::after {
+  opacity: 1;
 }
 
 .header__inner {

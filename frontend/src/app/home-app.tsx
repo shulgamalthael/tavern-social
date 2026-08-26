@@ -9,7 +9,7 @@ import {
   useToastStore,
 } from '@/entities/notification';
 import { usePostStore } from '@/entities/post';
-import { useThreadStore } from '@/entities/thread';
+import { mapMessage, mapThread, type ThreadResponse, useThreadStore } from '@/entities/thread';
 import { useCurrentUser } from '@/entities/user';
 import { getSocketTicket } from '@/features/auth';
 import { type SectionId, useNavigationStore } from '@/features/section-navigation';
@@ -42,12 +42,44 @@ const SECTION_WIDGETS: Record<SectionId, ComponentType> = {
   notifications: NotificationsWidget,
 };
 
+interface IncomingMessageAttachment {
+  id: string;
+  url: string;
+  mimeType: string;
+  fileName: string;
+  sizeBytes: number;
+}
+
+interface IncomingForwardedFrom {
+  id: string;
+  senderId: string;
+  senderName: string;
+}
+
+interface IncomingReplyTo {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  hasAttachment: boolean;
+}
+
 interface IncomingMessage {
   id: string;
   threadId: string;
   senderId: string;
   text: string;
   createdAt: string;
+  editedAt: string | null;
+  pinnedAt: string | null;
+  attachments: IncomingMessageAttachment[];
+  forwardedFrom: IncomingForwardedFrom | null;
+  replyTo: IncomingReplyTo | null;
+}
+
+interface IncomingMessageDeleted {
+  threadId: string;
+  messageId: string;
 }
 
 interface IncomingActor {
@@ -152,8 +184,14 @@ export function HomeApp() {
       useThreadStore.getState().receiveMessage(message.threadId, {
         id: message.id,
         mine: false,
+        senderId: message.senderId,
         text: message.text,
         createdAt: message.createdAt,
+        editedAt: message.editedAt,
+        pinnedAt: message.pinnedAt,
+        attachments: message.attachments,
+        forwardedFrom: message.forwardedFrom,
+        replyTo: message.replyTo,
       });
 
       // Диалог уже открыт и виден — сообщение и так появится живым в самом
@@ -173,6 +211,32 @@ export function HomeApp() {
           preview: message.text,
         });
       }
+    });
+
+    socket.on('message:edited', (message: IncomingMessage) => {
+      // Редактировать можно только своё сообщение (backend проверяет) —
+      // значит `senderId` здесь всегда автор правки; свою же правку я уже
+      // применил оптимистично в `editMessage` (см. `useThreadStore`), эхо
+      // по сокету игнорирую тем же приёмом, что и у `message:new`.
+      if (message.senderId === currentUser.id) return;
+      useThreadStore
+        .getState()
+        .receiveMessageEdit(message.threadId, mapMessage(message, currentUser.id));
+    });
+
+    socket.on('message:deleted', (payload: IncomingMessageDeleted) => {
+      // Как и `thread:pinned-changed` — эхо собственного удаления не
+      // фильтруем: `receiveMessageDeleted` идемпотентно убирает по id,
+      // повторное удаление уже отсутствующего сообщения — no-op.
+      useThreadStore.getState().receiveMessageDeleted(payload.threadId, payload.messageId);
+    });
+
+    socket.on('thread:pinned-changed', (thread: ThreadResponse) => {
+      // Закрепить/открепить может любой участник, не только автор
+      // сообщения — в отличие от `message:new`/`message:edited`, здесь эхо
+      // собственного действия не пропускаем: `receiveThreadUpdate` просто
+      // идемпотентно заменяет тред тем же самым объектом.
+      useThreadStore.getState().receiveThreadUpdate(mapThread(thread, currentUser.id));
     });
 
     socket.on('friend-request:new', (payload: IncomingFriendEvent) => {
@@ -285,14 +349,24 @@ export function HomeApp() {
   }, [currentUser.id, loadThreads]);
 
   const isAdmin = currentUser.role === 'admin';
+  // Мессенджер — единственный раздел, задуманный как полноэкранное
+  // приложение-в-приложении (см. `widgets/messenger`, «весь экран, как
+  // Telegram Web») — шапка сайта над ним не нужна ни на каком экране: у неё
+  // есть свой заголовок треда/диалога и кнопка «назад» внутри самого
+  // `MessengerWidget`, а `NavigationDock` (см. ниже) остаётся видимым и так
+  // даёт полную навигацию по разделам. Раньше прятали только на мобильном/
+  // планшетном экране (шапка отъедала заметную долю чата при нехватке
+  // вертикального места) — на десктопе места достаточно, но сама шапка
+  // всё равно лишняя для этого раздела, см. `.app__top--collapsed` в
+  // page.module.scss (без брейкпоинта — теперь безусловно).
+  const hideHeader = section === 'messages';
 
   return (
-    <div
-      className={cn(styles.app, isAdmin && styles['app--with-admin-bar'])}
-      ref={appRef}
-    >
-      {isAdmin && <AdminBar />}
-      <Header />
+    <div className={cn(styles.app, isAdmin && styles['app--with-admin-bar'])} ref={appRef}>
+      <div className={cn(styles['app__top'], hideHeader && styles['app__top--collapsed'])}>
+        {isAdmin && <AdminBar />}
+        <Header containerRef={appRef} />
+      </div>
       <ActiveSection />
       <NavigationDock />
       <NotificationToaster />

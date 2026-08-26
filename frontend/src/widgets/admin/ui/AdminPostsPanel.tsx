@@ -11,22 +11,20 @@ import {
 import { cn } from '@/shared/lib/cn';
 import type { AsyncStatus } from '@/shared/lib/async-status';
 import { useDebouncedValue } from '@/shared/lib/use-debounced-value';
+import { findClickedImageIndex } from '@/shared/lib/find-clicked-image-index';
 import { useInfiniteScroll } from '@/shared/lib/use-infinite-scroll';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
+import { CloseIcon } from '@/shared/ui/icons';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { IdBadge, IdBadgeGroup } from '@/shared/ui/IdBadge';
+import { ImageLightbox } from '@/shared/ui/ImageLightbox';
 import { Loader } from '@/shared/ui/Loader';
 import { Modal } from '@/shared/ui/Modal';
 import styles from './AdminTable.module.scss';
 
 const SEARCH_DEBOUNCE_MS = 300;
-/** Санитизированный HTML поста в списке модерации — только текст, без
- * разметки: превью строкой, а не мини-рендер поста (см. `PostCard`). */
-const TEXT_PREVIEW_LENGTH = 160;
-/** Сколько превью картинок показывать в строке — остальные сворачиваются в
- * счётчик «+N», чтобы длинная галерея не растягивала список записей. */
-const THUMBNAIL_LIMIT = 4;
 
 const TYPE_FILTERS: { id: AdminPostTypeFilter; label: string }[] = [
   { id: 'all', label: 'Все типы' },
@@ -40,11 +38,9 @@ const LOCATION_FILTERS: { id: AdminPostLocationFilter; label: string }[] = [
   { id: 'group', label: 'В группе' },
 ];
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+interface LightboxTarget {
+  images: string[];
+  index: number;
 }
 
 export function AdminPostsPanel() {
@@ -62,6 +58,7 @@ export function AdminPostsPanel() {
   const [deleteTarget, setDeleteTarget] = useState<AdminPost | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<LightboxTarget | null>(null);
 
   // `status` переходит в 'loading' не здесь (react-hooks/set-state-in-effect
   // не разрешает синхронный setState в теле эффекта), а в обработчиках,
@@ -208,87 +205,82 @@ export function AdminPostsPanel() {
 
       {status === 'success' && posts.length > 0 && (
         <div className={styles['admin-table__list']}>
-          {posts.map((post) => {
-            const preview = stripHtml(post.text).slice(0, TEXT_PREVIEW_LENGTH);
-            const hasContent = post.images.length > 0 || post.hasTable || post.hasLink;
-            const visibleThumbs = post.images.slice(0, THUMBNAIL_LIMIT);
-            const hiddenThumbsCount = post.images.length - visibleThumbs.length;
-
-            return (
-              <div key={post.id} className={styles['admin-table__record']}>
-                <code className={styles['admin-table__id']}>{post.id}</code>
-                <div className={styles['admin-table__record-row']}>
-                  <Avatar initials={post.authorInitials} src={post.authorAvatarUrl} size="md" />
-                  <div className={styles['admin-table__cell']}>
-                    <span className={styles['admin-table__primary']}>
-                      <span className={styles['admin-table__name']}>{post.authorName}</span>
-                      {post.isRepost && (
-                        <span className={styles['admin-table__role-badge']}>репост</span>
-                      )}
-                      {post.groupName && (
-                        <span className={styles['admin-table__role-badge']}>{post.groupName}</span>
-                      )}
-                    </span>
-                    {(preview || !hasContent) && (
-                      <span className={styles['admin-table__secondary']}>
-                        {preview || '(без текста)'}
-                      </span>
+          {posts.map((post) => (
+            <div key={post.id} className={styles['admin-table__record']}>
+              {/* Аватар/имя/id и кнопка удаления — общая шапка записи,
+               * прижатая к верху (`align-items: flex-start`, см. CSS), а не
+               * старая раскладка `.admin-table__record-row` (центрирует по
+               * вертикали — годится для короткой строки пользователя/группы,
+               * но с полным рендером записи ниже, который может быть выше
+               * экрана, утягивала аватар и кнопку в визуальный центр записи,
+               * а не к шапке, где они принадлежат). Тот же приём, что у
+               * `PostCard.tsx`: `.post__head` — аватар, имя и мета слева,
+               * компактная иконка-кнопка действия справа. */}
+              <div className={styles['admin-table__post-head']}>
+                <Avatar initials={post.authorInitials} src={post.authorAvatarUrl} size="md" />
+                <div className={styles['admin-table__post-head-body']}>
+                  <span className={styles['admin-table__primary']}>
+                    <span className={styles['admin-table__name']}>{post.authorName}</span>
+                    {post.isRepost && (
+                      <span className={styles['admin-table__role-badge']}>репост</span>
                     )}
-                    {hasContent && (
-                      <div className={styles['admin-table__content-badges']}>
-                        {post.images.length > 0 && (
-                          <span className={styles['admin-table__content-badge']}>
-                            Фото × {post.images.length}
-                          </span>
-                        )}
-                        {post.hasTable && (
-                          <span className={styles['admin-table__content-badge']}>Таблица</span>
-                        )}
-                        {post.hasLink && (
-                          <span className={styles['admin-table__content-badge']}>Ссылка</span>
-                        )}
-                      </div>
+                    {post.groupName && (
+                      <span className={styles['admin-table__role-badge']}>{post.groupName}</span>
                     )}
-                    {visibleThumbs.length > 0 && (
-                      <div className={styles['admin-table__thumbs']}>
-                        {visibleThumbs.map((src, index) => (
-                          // eslint-disable-next-line @next/next/no-img-element -- собственные загруженные превью, не оптимизируемый Next Image-контент
-                          <img
-                            key={src}
-                            src={src}
-                            alt={`Изображение записи ${index + 1}`}
-                            className={styles['admin-table__thumb']}
-                            loading="lazy"
-                          />
-                        ))}
-                        {hiddenThumbsCount > 0 && (
-                          <span className={styles['admin-table__thumb-more']}>
-                            +{hiddenThumbsCount}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <span className={styles['admin-table__meta']}>
-                      {post.likesCount} кружек · {post.commentsCount} ответов
-                    </span>
-                  </div>
-                  <div className={styles['admin-table__actions']}>
-                    <Button
-                      variant="ghost"
-                      className={styles['admin-table__danger-button']}
-                      onClick={() => setDeleteTarget(post)}
-                      disabled={pendingId === post.id}
-                    >
-                      Удалить
-                    </Button>
-                  </div>
+                  </span>
+                  <IdBadgeGroup>
+                    <IdBadge id={post.id} label="Запись" />
+                    <IdBadge id={post.authorId} label="Автор" />
+                  </IdBadgeGroup>
                 </div>
+                <button
+                  type="button"
+                  className={styles['admin-table__post-delete']}
+                  aria-label={`Удалить запись ${post.authorName}`}
+                  title="Удалить запись"
+                  onClick={() => setDeleteTarget(post)}
+                  disabled={pendingId === post.id}
+                >
+                  <CloseIcon />
+                </button>
               </div>
-            );
-          })}
+
+              {/* Полный рендер, тот же, что и на основном сайте (см.
+               * `PostCard.tsx`, `@include rich-content` в
+               * `AdminTable.module.scss`) — раньше здесь была обрезанная
+               * строка текста без разметки и отдельная строка мелких
+               * обрезанных превью картинок; для модерации нужно видеть
+               * запись как есть, форматирование и фото в полный размер
+               * включительно, а не гадать по значкам «Таблица»/«Фото×N». */}
+              {post.text ? (
+                <div
+                  className={styles['admin-table__post-content']}
+                  onClick={(event) => {
+                    const index = findClickedImageIndex(event, post.images);
+                    if (index >= 0) setLightbox({ images: post.images, index });
+                  }}
+                  dangerouslySetInnerHTML={{ __html: post.text }}
+                />
+              ) : (
+                <span className={styles['admin-table__secondary']}>(без текста)</span>
+              )}
+              <span className={styles['admin-table__meta']}>
+                {post.likesCount} кружек · {post.commentsCount} ответов
+              </span>
+            </div>
+          ))}
           <div ref={sentinelRef} aria-hidden="true" />
           {loadMoreStatus === 'loading' && <Loader label="Догружаем…" />}
         </div>
+      )}
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images.map((url, index) => ({ id: `${url}-${index}`, url }))}
+          index={lightbox.index}
+          onIndexChange={(index) => setLightbox((state) => (state ? { ...state, index } : state))}
+          onClose={() => setLightbox(null)}
+        />
       )}
 
       {deleteTarget && (

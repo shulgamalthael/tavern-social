@@ -22,6 +22,13 @@ RUN npm ci
 COPY prisma ./prisma
 RUN npx prisma generate
 COPY . .
+# node:22-bookworm-slim уже содержит пользователя node с uid/gid 1000, что
+# совпадает с обычным первым пользователем на Linux-хосте. Без этого процесс
+# в контейнере работает от root, и всё, что watch mode пишет в bind-mount
+# (dist/, .tsbuildinfo), оказывается на хосте с владельцем root — хост-пользователь
+# не может это ни отредактировать, ни удалить без sudo.
+RUN chown -R node:node /app
+USER node
 EXPOSE 4000
 CMD ["npm", "run", "dev"]
 

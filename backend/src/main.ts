@@ -11,7 +11,15 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RedisIoAdapter } from './infrastructure/websocket/redis-io.adapter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // `rawBody: true` — Nest сохраняет исходный Buffer тела запроса на
+  // `request.rawBody` ДО JSON-парсинга, для ВСЕХ маршрутов (не только
+  // вебхука) — сам JSON-парсинг остальных маршрутов при этом не меняется.
+  // Нужен ровно одному месту — `StripeWebhookController` (см. её комментарий):
+  // проверка подписи Stripe (`stripe.webhooks.constructEvent`) обязана
+  // получить БАЙТЫ тела запроса как их прислал Stripe, а не результат
+  // `JSON.parse` — даже одинаковое посимвольно значение, пересобранное через
+  // `JSON.stringify`, даёт другую подпись HMAC.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   const configService = app.get(ConfigService);
   const appConfig = configService.get<AppConfig>('app')!;
 

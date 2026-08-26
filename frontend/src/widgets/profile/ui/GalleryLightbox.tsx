@@ -12,6 +12,7 @@ import {
 } from '@/entities/post';
 import { cn } from '@/shared/lib/cn';
 import { ImageLightbox } from '@/shared/ui/ImageLightbox';
+import { ScrollArea } from '@/shared/ui/ScrollArea';
 import styles from './GalleryLightbox.module.scss';
 
 export interface GalleryLightboxProps {
@@ -118,14 +119,19 @@ export function GalleryLightbox({
 
             {showComments && (
               <div className={styles.comments}>
-                <CommentList
-                  postId={postId}
-                  onReply={(target) => {
-                    setReplyTarget(target);
-                    setFocusSignal((n) => n + 1);
-                  }}
-                  onAuthorClick={onAuthorClick}
-                />
+                <ScrollArea
+                  className={styles['comments__list']}
+                  viewportClassName={styles['comments__list-viewport']}
+                >
+                  <CommentList
+                    postId={postId}
+                    onReply={(target) => {
+                      setReplyTarget(target);
+                      setFocusSignal((n) => n + 1);
+                    }}
+                    onAuthorClick={onAuthorClick}
+                  />
+                </ScrollArea>
                 <CommentComposer
                   ref={composerRef}
                   postId={postId}

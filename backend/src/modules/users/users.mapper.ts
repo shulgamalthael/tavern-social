@@ -27,6 +27,7 @@ export function toMeProfile(user: User): MeProfile {
     ...toPublicProfile(user),
     email: user.email,
     role: user.role,
+    isSuperAdmin: user.isSuperAdmin,
     settings: {
       quietHours: user.quietHours,
       showPresence: user.showPresence,

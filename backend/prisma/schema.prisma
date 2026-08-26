@@ -57,33 +57,60 @@ enum UserRole {
   admin
 }
 
+/// Категория бизнеса — влияет только на отображение (иконка/фильтр в
+/// каталоге `/businesses`), никакой другой бизнес-логики на ней не завязано.
+/// `other` — осознанный дефолт, а не отсутствие категории: fallback-иконка
+/// в UI всегда должна быть валидным значением enum, не `null`.
+enum BusinessCategory {
+  restaurant
+  retail
+  services
+  health
+  beauty
+  fitness
+  education
+  technology
+  creative
+  real_estate
+  hospitality
+  nonprofit
+  other
+}
+
 model User {
-  id                   String   @id @default(uuid())
-  email                String   @unique
+  id                   String    @id @default(uuid())
+  email                String    @unique
   passwordHash         String
   name                 String
-  tagline              String   @default("")
+  tagline              String    @default("")
   accent               String?
   city                 String?
   about                String?
-  tags                 String[] @default([])
+  tags                 String[]  @default([])
   avatarUrl            String?
   coverUrl             String?
-  quietHours           Boolean  @default(true)
-  showPresence         Boolean  @default(true)
-  allowStrangerInvites Boolean  @default(false)
-  morningDigest        Boolean  @default(true)
-  role                 UserRole @default(user)
+  quietHours           Boolean   @default(true)
+  showPresence         Boolean   @default(true)
+  allowStrangerInvites Boolean   @default(false)
+  morningDigest        Boolean   @default(true)
+  role                 UserRole  @default(user)
+  /// Защищённый уровень поверх role=admin — суперадмина нельзя ни удалить,
+  /// ни забанить, ни понизить в роли ни одному другому админу (см.
+  /// AdminService.setUserRole/banUser/deleteUser), только другому
+  /// суперадмину, и не самому себе. Инвариант: isSuperAdmin=true всегда
+  /// подразумевает role=admin — выдача суперправ сама выставляет role
+  /// (AdminService.setSuperAdmin), отдельно их развести нельзя через UI.
+  isSuperAdmin         Boolean   @default(false)
   /// Забаненный пользователь не теряет данные (посты и т. п. остаются) —
   /// `SessionAuthGuard` просто отклоняет его запросы (см. `AdminService.banUser`).
   /// Отдельное поле, а не удаление сессий: не разлогинивает мгновенно у
   /// пользователя, который уже открыл вкладку, а честно показывает «вы забанены»
   /// на следующем запросе, вместо молчаливого «сессия истекла».
-  isBanned             Boolean  @default(false)
+  isBanned             Boolean   @default(false)
   bannedAt             DateTime?
   bannedReason         String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   posts                Post[]                @relation("PostAuthor")
   wallPosts            Post[]                @relation("PostWallOwner")
@@ -104,6 +131,8 @@ model User {
 
   notificationsReceived Notification[] @relation("NotificationRecipient")
   notificationsActedIn  Notification[] @relation("NotificationActor")
+
+  businesses Business[]
 
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("users")
@@ -271,16 +300,67 @@ model ThreadParticipant {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  threadId  String
-  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  senderId  String
-  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  text      String
+  id              String    @id @default(uuid())
+  threadId        String
+  thread          Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId        String
+  sender          User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  /// Текст сейчас всегда обычный (не HTML, в отличие от Post.text) — ссылки
+  /// распознаются на frontend (см. shared/lib/linkify-text.tsx), сюда
+  /// приходит как есть. Может быть пустым, если у сообщения есть вложения
+  /// (см. attachments) — проверка «текст или вложение» на уровне сервиса.
+  text            String
+  /// Заполнено, если сообщение редактировали — момент последнего изменения
+  /// текста (frontend показывает «изменено», как в Telegram).
+  editedAt        DateTime?
+  /// Заполнено, если сообщение закреплено в треде — момент закрепления,
+  /// используется и как флаг, и для сортировки нескольких закреплённых.
+  pinnedAt        DateTime?
+  /// Пересылка — отдельная запись Message со своим id, ссылающаяся на
+  /// оригинал (тот же принцип, что Post.repostOfId у репостов), а не копия
+  /// без следа источника. SetNull, не Cascade: если оригинал когда-нибудь
+  /// станет удаляемым, пересланная копия не должна пропадать вместе с ним
+  /// (тот же выбор, что у Post.groupId/communityId).
+  forwardedFromId String?
+  forwardedFrom   Message?  @relation("MessageForward", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwards        Message[] @relation("MessageForward")
+
+  /// Ответ на сообщение в том же треде — тот же принцип SetNull, что у
+  /// forwardedFromId: если оригинал когда-нибудь станет удаляемым (см.
+  /// deleteMessage), ответ не должен пропадать вместе с ним, просто теряет
+  /// цитату. В отличие от пересылки, это не копия — ответ живёт своей
+  /// обычной жизнью в этом же треде, просто дополнительно ссылается на то,
+  /// на что отвечает.
+  replyToId String?
+  replyTo   Message?  @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReply")
+
+  attachments MessageAttachment[]
+
   createdAt DateTime @default(now())
 
   @@index([threadId, createdAt])
+  @@index([threadId, pinnedAt])
   @@map("messages")
+}
+
+/// Вложение к сообщению — картинка или файл (до 5 МБ, см. common/lib/upload.ts
+/// createChatAttachmentMulterOptions). Тот же принцип учётной строки, что
+/// PostImage у постов: URL/метаданные для рендера и очистки диска, порядок
+/// показа — order, как и там.
+model MessageAttachment {
+  id        String   @id @default(uuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  url       String
+  mimeType  String
+  fileName  String
+  sizeBytes Int
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([messageId, order])
+  @@map("message_attachments")
 }
 
 /// Симметричная связь дружбы — итог принятой FriendRequest (см. ниже).
@@ -445,4 +525,650 @@ model GroupJoinRequest {
   @@unique([groupId, userId])
   @@index([groupId])
   @@map("group_join_requests")
+}
+
+/// Бизнес — профиль/карточка, независимая от билдера сайта (см. `Website`
+/// ниже). Один пользователь может владеть сколь угодно бизнесами
+/// (`ownerId`, без промежуточной таблицы участников — в отличие от `Group`,
+/// здесь ровно один владелец, передачи владения нет, см. фронтенд
+/// `widgets/businesses`). Ровно один `Website` на бизнес — `onDelete:
+/// Cascade` у обеих сторон удаляет сайт вместе с бизнесом, не оставляя
+/// сирот в БД.
+model Business {
+  id             String           @id @default(uuid())
+  ownerId        String
+  owner          User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String           @unique
+  description    String           @default("")
+  category       BusinessCategory @default(other)
+  logoUrl        String?
+  faviconUrl     String?
+  email          String?
+  phone          String?
+  address        String?
+  /// `[{ "platform": "instagram", "url": "https://..." }, ...]` — свободный
+  /// список, не enum платформ: у бизнеса может быть любая соцсеть, а новый
+  /// enum-вариант на каждую новую платформу означал бы миграцию схемы ради
+  /// косметики.
+  socialLinks    Json             @default("[]")
+  seoTitle       String?
+  seoDescription String?
+  /// Какие капабилити (§3.3 ROADMAP.md — Commerce/Booking/Content/...)
+  /// включены для этого бизнеса, помимо базового конструктора сайта —
+  /// определяет, что показывает Dashboard (например, раздел «Товары») и
+  /// какие блоки видны в библиотеке компонентов билдера. Пока единственное
+  /// реальное значение — `"commerce"` (см. `Product` ниже); список — не
+  /// enum, потому что каждая новая капабилити не должна требовать миграции
+  /// схемы (та же причина, что у `socialLinks.platform` выше), допустимые
+  /// значения валидируются на уровне DTO (`UpdateBusinessDto`), не здесь.
+  /// НЕ выводится автоматически из `category` — категория лишь подсказывает
+  /// стартовый набор при создании (см. `BusinessesService.create`), но
+  /// бизнес может включить/выключить капабилити независимо от неё в любой
+  /// момент (ровно то поведение, которого требует ROADMAP.md §3.3, пример
+  /// «ресторан + доставка + бронирование + блог»).
+  capabilities   String[]         @default([])
+  /// Единственная и единая валюта бизнеса — Currency System (ROADMAP.md §8,
+  /// Phase Currency System): "Один Business/Website → одна основная валюта
+  /// для MVP". `Product`/`Service` намеренно НЕ имеют собственного поля
+  /// `currency` (см. их комментарии) — их цена всегда в валюте бизнеса,
+  /// читаемой отсюда join'ом в `toDto`, а не хранимой отдельно на каждой
+  /// строке: независимое поле на каждом товаре/услуге создавало бы риск,
+  /// прямо названный источником задачи — "Product A → USD, Product B →
+  /// EUR" по случайности порядка создания, а не осознанным решением. `Order`/
+  /// `Appointment`, наоборот, СОХРАНЯЮТ собственный `currency` — это
+  /// исторический снэпшот на момент покупки/записи, который не должен
+  /// меняться, даже если бизнес позже сменит основную валюту (см. их
+  /// комментарии). Список допустимых кодов и `@default` — см.
+  /// `backend/src/modules/currencies/currencies.ts`
+  /// (`SUPPORTED_CURRENCY_CODES`/`DEFAULT_BUSINESS_CURRENCY`), не enum —
+  /// та же причина, что у `capabilities` выше (новая валюта в списке не
+  /// должна требовать миграции схемы).
+  currency       String           @default("RUB")
+  /// Единая налоговая ставка бизнеса в базисных пунктах (2000 = 20.00%,
+  /// 825 = 8.25%) — целое число, не `Float`, по той же причине, что и
+  /// деньги (см. `Order.taxCents`): накопление погрешности округления на
+  /// повторном умножении. `PRICING_ARCHITECTURE.md` §3 — один плоский
+  /// тариф на бизнес, не multi-region таблица ставок: в чекауте нет ни
+  /// одного поля адреса, к которому можно было бы привязать регион, а
+  /// заводить таблицу ставок ни для чего было бы тем же самым anti-
+  /// pattern, что уже избегался для `ProductVariant`/`Category` (ROADMAP.md).
+  taxRateBps     Int              @default(0)
+  /// `none` (по умолчанию) — налог не считается вообще, поведение всех
+  /// существующих бизнесов после миграции не меняется. `exclusive` — налог
+  /// добавляется сверху цены. `inclusive` — налог уже включён в цену,
+  /// считается только для отображения в разбивке заказа (см.
+  /// `PricingService`/`PRICING_ARCHITECTURE.md` §4).
+  taxMode        TaxMode          @default(none)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  website         Website?
+  products        Product[]
+  orders          Order[]
+  services        Service[]
+  appointments    Appointment[]
+  blogPosts       BlogPost[]
+  formSubmissions FormSubmission[]
+  mediaAssets     MediaAsset[]
+  analyticsEvents AnalyticsEvent[]
+  discounts       Discount[]
+
+  @@index([ownerId])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("businesses")
+}
+
+/// Первая реальная капабилити-сущность (Commerce, см. ROADMAP.md §2.2/§5) —
+/// сознательно узкий v1: без вариантов/SKU (`ProductVariant`), категорий
+/// (`Category`/`Collection`), скидок и отзывов — тех, что ROADMAP относит к
+/// полной матрице Commerce, но для которых сегодня нет ни одного реального
+/// использующего их UI (тот же принцип, что уже применялся к `Business.
+/// capabilities`/data-source полям в Phase 3-4: не строить впрок то, что
+/// нечем сейчас проверить). Достаточно для витрины «каталог с ценами и
+/// фото, без чекаута» — следующий инкремент (Cart/Order/Stripe) идёt поверх
+/// этой же таблицы, не меняя её форму.
+///
+/// Раньше здесь БЫЛО собственное поле `currency` — убрано в Currency System
+/// (ROADMAP.md §8): у товара нет и не должно быть своей валюты, она всегда
+/// берётся из `Business.currency` (см. её комментарий) и подставляется в
+/// `ProductDto` join'ом в сервисе, а не хранится отдельно на каждой строке —
+/// иначе смена валюты бизнеса ПОСЛЕ создания части товаров тихо оставляла
+/// бы старые товары в другой валюте, чем новые, без единого явного решения
+/// кого-либо это сделать.
+model Product {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String
+  description String   @default("")
+  /// Целое число минимальных единиц ВАЛЮТЫ БИЗНЕСА (`Business.currency`) —
+  /// не `Float`, чтобы не ловить погрешность округления денег. Несмотря на
+  /// название, для валюты с `minorUnit: 0` (например, `JPY`) это не буквально
+  /// центы, а целая сумма без домножения — см. комментарий `CurrencyMetadata`
+  /// в `backend/src/modules/currencies/currencies.ts`.
+  priceCents  Int
+  images      String[] @default([])
+  /// `null` — учёт остатков не ведётся (услуга/на заказ/не важно для этого
+  /// товара); число — реальный остаток, уменьшать при заказе будет Phase 5b
+  /// (Order), сейчас только хранится и показывается.
+  stock       Int?
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+
+  @@unique([businessId, slug])
+  @@index([businessId, order])
+  @@map("products")
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  completed
+  cancelled
+}
+
+/// Заказ с анонимной витрины (см. `PublicSitesController.createOrder`) — без
+/// оплаты (Stripe/`PaymentProvider` — следующий инкремент, см. ROADMAP.md
+/// §8 Phase 5): это «заявка на заказ», которую владелец подтверждает и
+/// выполняет сам (звонок/мессенджер), тот же паттерн, что уже был в MVP-виде
+/// у форм (`FormBlock`, «ни одна реально никуда не отправляет данные») —
+/// только заказ реально попадает в БД и виден в Dashboard, а не просто
+/// декоративная форма. Нет отдельной модели `Customer` — покупатель анонимен
+/// (нет аккаунта Таверны), его контакты — просто поля этого заказа, не
+/// отдельная сущность со своим CRUD (для этого нет ни одного реального
+/// сценария — "личный кабинет покупателя" не в этом инкременте).
+/// Отдельно от `OrderStatus` (это про ВЫПОЛНЕНИЕ заказа продавцом — принял/
+/// сделал/отменил), а `PaymentStatus` — про ДЕНЬГИ: ортогональные оси, заказ
+/// может быть `status: pending` (продавец ещё не смотрел) и одновременно
+/// `paymentStatus: paid` (покупатель уже оплатил через Stripe). `unpaid` —
+/// значение по умолчанию для ЛЮБОГО заказа, включая созданные до подключения
+/// Stripe (см. ROADMAP.md §8 Phase 5/6 — «заявка», не транзакция) и заказы,
+/// оформленные пока Stripe не настроен у бизнеса (`StripeAdapter` тогда
+/// просто не создаёт `PaymentIntent`, см. `OrdersService.createFromCart`).
+enum PaymentStatus {
+  unpaid
+  paid
+  refunded
+}
+
+/// Единая ставка налога бизнеса (`Business.taxRateBps`) — см. её комментарий
+/// и `PRICING_ARCHITECTURE.md` §3.
+enum TaxMode {
+  none
+  inclusive
+  exclusive
+}
+
+enum DiscountType {
+  percentage
+  fixed
+}
+
+/// Pricing Engine (`PRICING_ARCHITECTURE.md`, Phase 17) — единственная
+/// сущность скидок в этом MVP: спецификация просила разделить Discount
+/// (правило) и Coupon (код активации) на две таблицы, но пока единственный
+/// поддерживаемый scope скидки — «весь заказ» (нет `Category` у `Product`,
+/// чтобы скидка могла быть per-category — см. §2/§8 документа), поэтому
+/// правило и его код естественно схлопываются в одну строку: `code: null`
+/// — автоматическая скидка, применяется к каждому подходящему заказу без
+/// ввода чего-либо; `code: "SAVE20"` — требует этот код на чекауте.
+model Discount {
+  id         String       @id @default(uuid())
+  businessId String
+  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  /// Нормализован в верхний регистр при записи и при сравнении на чекауте
+  /// (см. `DiscountsService`/`OrdersService`) — `save20` должен совпасть с
+  /// сохранённым `SAVE20`.
+  code       String?
+  type       DiscountType
+  /// percentage: 1-100. fixed: минимальные единицы `Business.currency` НА
+  /// МОМЕНТ ПРИМЕНЕНИЯ, не хранится отдельно на скидке — тот же trade-off,
+  /// что уже принят для `Product.priceCents` в Currency System (см.
+  /// `PRICING_ARCHITECTURE.md` §7, «Currency change after a fixed-type
+  /// discount»).
+  value                Int
+  /// Заказ должен достичь этой суммы (ДО скидки), чтобы скидка сработала.
+  /// `null` — без минимума.
+  minOrderAmountCents Int?
+  startsAt            DateTime?
+  endsAt              DateTime?
+  /// `null` — без ограничения. Атомарно проверяется и инкрементируется тем
+  /// же паттерном `updateMany`-с-условием, что и `Product.stock` (см.
+  /// `OrdersService.createFromCart`), в одной транзакции с созданием заказа.
+  usageLimit Int?
+  usageCount Int          @default(0)
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@map("discounts")
+}
+
+model Order {
+  id                    String        @id @default(uuid())
+  businessId            String
+  business              Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  status                OrderStatus   @default(pending)
+  customerName          String
+  customerEmail         String?
+  customerPhone         String?
+  customerNote          String        @default("")
+  /// Сумма товаров ДО скидки и налога (Pricing Engine, `PRICING_ARCHITECTURE.md`
+  /// §6) — сумма `priceCents * quantity` по всем позициям.
+  subtotalCents         Int          @default(0)
+  /// Сколько реально вычтено скидкой (0, если скидка не применялась).
+  discountCents         Int          @default(0)
+  /// Снэпшот `Discount.name` НА МОМЕНТ заказа — переживает редактирование
+  /// или удаление самой скидки (нет FK на `Discount`, как и `OrderItem` не
+  /// каскадируется удалением `Product`, см. её комментарий). `null` — скидка
+  /// не применялась.
+  discountName          String?
+  /// Код, который ввёл покупатель, если применял (для показа в истории
+  /// заказов — не FK, снэпшот).
+  couponCode            String?
+  /// Сколько налога включено/добавлено — 0 при `Business.taxMode: 'none'`.
+  taxCents              Int          @default(0)
+  /// Сумма пересчитывается и сохраняется на backend (см. `OrdersService.
+  /// createFromCart`) — НИКОГДА не берётся из тела запроса анонимного
+  /// клиента, иначе покупатель мог бы прислать любую цену на любой товар.
+  /// `subtotalCents - discountCents + (taxMode === 'exclusive' ? taxCents : 0)`.
+  totalCents            Int
+  /// Снэпшот `Business.currency` НА МОМЕНТ оформления заказа (Currency
+  /// System, ROADMAP.md §8) — не читается заново из бизнеса при показе:
+  /// если бизнес позже сменит основную валюту, старые заказы обязаны
+  /// продолжать показывать ТУ валюту, в которой их реально оплатили,
+  /// иначе история заказов задним числом переписалась бы в другую валюту.
+  currency              String        @default("RUB")
+  paymentStatus         PaymentStatus @default(unpaid)
+  /// `null`, пока Stripe не настроен ИЛИ заказ создан до появления оплаты
+  /// (см. `PaymentStatus`). Уникален — один `PaymentIntent` относится ровно
+  /// к одному заказу. Индекс — `StripeWebhookController` ищет заказ именно
+  /// по этому полю на каждое входящее событие Stripe.
+  stripePaymentIntentId String?       @unique
+  items                 OrderItem[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([businessId, createdAt])
+  @@map("orders")
+}
+
+/// Снимок товара НА МОМЕНТ заказа (`name`/`priceCents` скопированы, не
+/// читаются заново из `Product` при показе) — переименование/изменение
+/// цены/удаление товара после оформления заказа не должно задним числом
+/// переписывать историю уже оформленных заказов. `productId` — просто
+/// necessary для аналитики/повторного заказа, опционален и обнуляется при
+/// удалении товара (`onDelete: SetNull`), а не блокирует и не каскадирует
+/// удаление — заказ обязан пережить удаление товара, на который ссылается.
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name       String
+  priceCents Int
+  quantity   Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+/// Вторая реальная капабилити (Booking, см. ROADMAP.md §2.2/§8 Phase 6) —
+/// такой же узкий v1, как `Product` был для Commerce: без `Employee`
+/// (мульти-сотрудник — реальная сложность, которую сегодня некому
+/// проверить: соло-специалист сам себе единственный «сотрудник»), без
+/// `ServiceCategory`/`Location`. Форма почти зеркальна `Product`
+/// (`priceCents`, не `Float`, — см. её комментарий) с одной заменой:
+/// вместо `stock` — `durationMinutes` (сколько длится услуга, нужно чтобы
+/// когда-нибудь считать реальную доступность слотов — сейчас просто
+/// показывается клиенту). Как и `Product` — без собственного `currency`
+/// (см. её комментарий про Currency System, ROADMAP.md §8): цена услуги
+/// всегда в валюте бизнеса.
+model Service {
+  id              String   @id @default(uuid())
+  businessId      String
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String
+  description     String   @default("")
+  durationMinutes Int
+  priceCents      Int
+  images          String[] @default([])
+  isActive        Boolean  @default(true)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@unique([businessId, slug])
+  @@index([businessId, order])
+  @@map("services")
+}
+
+enum AppointmentStatus {
+  pending
+  confirmed
+  completed
+  cancelled
+}
+
+/// Заявка на запись с анонимной витрины (см. `PublicSitesController.
+/// createAppointment`) — без реального движка доступности (пересечение с
+/// рабочими часами/другими записями — следующий инкремент, тот же принцип
+/// отложенного усложнения, что и у Stripe для Commerce, см. ROADMAP.md §8):
+/// клиент присылает ЖЕЛАЕМОЕ время, а не выбирает из уже посчитанных
+/// свободных слотов, владелец подтверждает/переносит вручную (звонок/
+/// мессенджер) — тот же честный MVP-паттерн, что и у `Order` (запрос, не
+/// автоматическая транзакция). `name`/`priceCents`/`durationMinutes`
+/// снимаются с `Service` в момент записи (см. `startsAt`/`endsAt` — конец
+/// считается на backend по снимку длительности, не по живой `Service`),
+/// чтобы более позднее изменение услуги не переписывало историю уже
+/// оформленных записей — тот же принцип, что и у `OrderItem`.
+model Appointment {
+  id              String            @id @default(uuid())
+  businessId      String
+  business        Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  serviceId       String?
+  service         Service?          @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  serviceName     String
+  priceCents      Int
+  /// Снэпшот `Business.currency` НА МОМЕНТ записи (Currency System,
+  /// ROADMAP.md §8) — та же причина, что у `Order.currency`: услуга больше
+  /// не хранит собственную валюту (см. `Service`), а бизнес мог сменить
+  /// свою уже после этой записи.
+  currency        String            @default("RUB")
+  durationMinutes Int
+  status          AppointmentStatus @default(pending)
+  startsAt        DateTime
+  customerName    String
+  customerEmail   String?
+  customerPhone   String?
+  customerNote    String            @default("")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([businessId, startsAt])
+  @@map("appointments")
+}
+
+/// Третья капабилити (Content, см. ROADMAP.md §2.2/§8 Phase 7) — узкий v1,
+/// тем же принципом, что и `Product`/`Service` до неё: без `Author`
+/// (отдельная модель автора — соло-владелец бизнеса пишет от имени самого
+/// бизнеса, см. `BlockBusinessContext`, нет сценария с несколькими авторами
+/// сегодня), без `Category`/`Tag`/`Comment` (модерация и связи — реальная
+/// сложность без единого экрана, который её использует). Названа `BlogPost`,
+/// не `Post` — в схеме уже есть `Post` (лента/стена социальной части
+/// приложения, см. выше) — совпадение имён создало бы путаницу и на уровне
+/// backend-модулей, и в Prisma Client (`prisma.post` vs `prisma.blogPost`).
+/// `content` — обычный текст с пустой строкой между абзацами (`\n\n`), не
+/// HTML: полноценный WYSIWYG-редактор (TipTap уже есть в `features/
+/// publish-post` для социальных постов) сознательно не переиспользован
+/// здесь для v1 — его загрузка картинок/плейсхолдеры вложений завязаны на
+/// `PostsService` социальной части, адаптация "на скорую руку" рисковала бы
+/// смешать два независимых конвейера контента ради экономии времени, не
+/// ради качества. Тот же уровень, что уже был у блока `richtext` в самом
+/// Website Builder (`entities/website/blocks/typography`) — там тоже просто
+/// текст с абзацами, не HTML.
+model BlogPost {
+  id             String   @id @default(uuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  title          String
+  slug           String
+  excerpt        String   @default("")
+  content        String   @default("")
+  coverImage     String?
+  isPublished    Boolean  @default(false)
+  order          Int      @default(0)
+  /// Необязательное переопределение заголовка/описания для `generateMetadata`
+  /// страницы чтения (`/site/[businessId]/blog/[postSlug]`, см. ROADMAP.md
+  /// §3.11/§8 Phase 10) — если не задано, метаданные строятся из `title`/
+  /// `excerpt`. В отличие от `Product`/`Service`, у которых своего
+  /// публичного маршрута со `generateMetadata` нет вообще (они существуют
+  /// только внутри `productgrid`/`servicegrid`-блоков на чужой странице),
+  /// у поста блога есть настоящий адресуемый URL — переопределение здесь
+  /// имеет реального потребителя, у `Product`/`Service` его сознательно нет.
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([businessId, slug])
+  @@index([businessId, order])
+  @@map("blog_posts")
+}
+
+/// Заявка, отправленная одной из форм сайта (`contactform`/`newsletterform`/
+/// `simpleform` — см. `entities/website/blocks/forms` на frontend, единый
+/// движок `FormBlock`). Не связана с самим блоком по ID: блоки живут внутри
+/// JSON-документа `Website.draft`/`published`, а не отдельными строками —
+/// ссылаться там не на что, и блок мог быть удалён/переименован к моменту,
+/// когда владелец читает заявки. Вместо этого — `formType`/`formLabel`
+/// сняты (snapshot) на момент отправки, тот же приём, что `Order`/
+/// `Appointment` уже применяют к цене/названию товара/услуги: история
+/// заявок не должна задним числом меняться из-за более поздней правки
+/// формы в билдере. `data` — значения полей как есть (`{подпись: значение}`),
+/// не фиксированная схема колонок, потому что набор полей произвольный и
+/// настраивается владельцем (см. `FormFieldConfig`). Единственная
+/// капабилити-независимая сущность в проекте — Forms доступны любому
+/// бизнесу без включения `Business.capabilities` (см. ROADMAP.md §2.1:
+/// "Forms (cross-cutting, not vertical-specific)").
+model FormSubmission {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  formType   String
+  formLabel  String
+  data       Json
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@map("form_submissions")
+}
+
+/// Событие реального действия на сайте бизнеса (ROADMAP.md §3.8/§8 Phase
+/// 10) — намеренно узкий v1: только запись + чтение агрегированных счётчиков
+/// (`AnalyticsService.summary`), без полноценного дашборда с графиками —
+/// "Full analytics dashboard UI ... downstream of having enough real events
+/// flowing" (см. §6). `type` — свободная строка (`'page_view'`/
+/// `'order_created'`/`'appointment_created'`/`'form_submission'` сегодня),
+/// не enum — та же причина, что у `Business.capabilities`: новый тип
+/// события не должен требовать миграции схемы. `metadata` — контекст события
+/// (например, `{ path }` для `page_view`), опционален. `record()` вызывается
+/// из настоящих мест действия — `PublicSitesController.getPublicSite`
+/// (только анонимный вход, не внутренний preview владельца через
+/// `WebsitesController.getPublic`, иначе просмотры сайта владельцем во
+/// время редактирования считались бы визитами), `OrdersService.
+/// createFromCart`, `AppointmentsService.createFromRequest`,
+/// `FormSubmissionsService.createFromRequest` (только настоящие отправки —
+/// не «успех» honeypot-заглушки, см. её комментарий). Никогда не бросает
+/// исключение наружу (см. `AnalyticsService.record`) — событие статистики
+/// не должно провалить настоящее действие пользователя.
+model AnalyticsEvent {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  type       String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, type, createdAt])
+  @@map("analytics_events")
+}
+
+/// "Медиатека" бизнеса — ровно то, что описано в ROADMAP.md §3.10: каждая
+/// уже существующая бизнес-загрузка картинки
+/// (`WebsitesController.uploadAsset`, `ProductsController.uploadImage`,
+/// `ServicesController.uploadImage`, `BlogPostsController.uploadImage` —
+/// НЕ `businesses.controller.ts` upload лого/favicon, у тех нет истории
+/// «прошлых логотипов», это разные подмены одного поля) дополнительно
+/// пишет сюда строку, а `ImageField` в инспекторе Builder'а (единственный
+/// потребитель — см. фронтенд) даёт выбрать уже загруженную картинку вместо
+/// повторной загрузки того же файла. Аналог `GalleryImage` у социальной
+/// части приложения, но без её склейки с `Post` — здесь картинка не
+/// является постом, а бизнес, не пользователь, владелец. Нет `width`/
+/// `height` — на upload-пути нет шага декодирования изображения (`sharp`/
+/// `image-size` не подключены), а сетка миниатюр не нуждается в размерах
+/// заранее (`object-fit: cover` работает с любым соотношением сторон);
+/// заводить эту инфраструктуру ради поля, которое сейчас нечем использовать,
+/// было бы той же спекулятивной работой, от которой в проекте всюду
+/// отказываются. Без `remove` в этом инкременте — Библиотека только
+/// пополняется и читается (см. `MediaAssetsService`), управление/чистка не
+/// строится, пока нет экрана, которому она нужна.
+model MediaAsset {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  url        String
+  mimeType   String
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@map("media_assets")
+}
+
+/// Билдер-контент сайта бизнеса — отдельная модель от `Business` (не поля на
+/// ней), потому что растёт независимо: большой JSON-документ (тема,
+/// SEO-настройки сайта), который редактируется билдером намного чаще, чем
+/// метаданные бизнеса (имя/контакты/категория). Страницы (`WebsitePage`)
+/// раньше жили внутри этого же JSON массивом — теперь отдельная таблица (см.
+/// её комментарий), поэтому `draft`/`published` держат только `{theme,
+/// settings}`, БЕЗ `pages` — полный `WebsiteDocument` (с массивом страниц)
+/// собирается на лету в `WebsitesService` из этих полей + строк
+/// `WebsitePage`. `draft`/`published` — два снимка одной и той же формы,
+/// публикация — копирование `draft` → `published` плюс пересборка
+/// `published`-снимка каждой страницы из её текущего `content` (см.
+/// `WebsitesService.publish`), без риска рассинхронизировать тему с
+/// контентом при частичном сохранении. `published: null` — сайт ещё ни разу
+/// не публиковался, публичная страница в этом случае показывает заглушку
+/// «сайт пока не опубликован» вместо пустого сайта (см.
+/// `WebsitesService.getPublic`).
+model Website {
+  id          String    @id @default(uuid())
+  businessId  String    @unique
+  business    Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  draft       Json
+  published   Json?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  domains Domain[]
+  pages   WebsitePage[]
+
+  @@map("websites")
+}
+
+/// Тип страницы — `custom` редактируется билдером как обычное дерево блоков
+/// (`content`). `system` зарезервирован под будущие capability-страницы
+/// (каталог товаров, страница товара, корзина — см. ROADMAP.md, «Website как
+/// приложение») — сейчас ни одна ещё не создаётся, поле существует, чтобы не
+/// потребовалась ещё одна миграция, когда появится первая.
+enum PageType {
+  custom
+  system
+}
+
+/// Одна страница сайта — раньше была элементом JSON-массива внутри
+/// `Website.draft.pages` (см. её комментарий), теперь отдельная таблица:
+/// у страницы есть собственный URL (`slug`), собственные SEO-поля и
+/// собственный жизненный цикл (создание/переименование/удаление/порядок),
+/// не связанный с тем, как часто редактируется контент ДРУГИХ страниц того
+/// же сайта — то, ради чего вообще нужна была эта миграция (см. ROADMAP.md,
+/// Phase 1/2 — «нет multi-page роутинга вообще»).
+///
+/// `content` — черновик дерева блоков этой страницы (та же форма, что раньше
+/// лежала в `WebsiteDocument.pages[].blocks`, см. frontend `entities/website/
+/// model/types.ts`, `WebsiteBlock[]`). Опубликованная версия ЭТОЙ страницы
+/// отдельно не хранится — она пересобирается в `Website.published.pages[]`
+/// целиком при каждой публикации (см. `WebsitesService.publish`), тем же
+/// принципом «снимок всего сайта одним полем», что и раньше, просто теперь
+/// собранным из нескольких строк вместо одного JSON-массива.
+///
+/// Первая страница сайта по возрастанию `order` — всегда домашняя,
+/// открывается по `/site/[businessId]` без хвоста в пути; остальные — по
+/// `/site/[businessId]/[slug]` (см. ROADMAP.md, §3.2) — `slug` домашней
+/// страницы поэтому не участвует в роутинге и существует только для
+/// единообразия формы редактирования.
+model WebsitePage {
+  id             String   @id @default(uuid())
+  websiteId      String
+  website        Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  slug           String
+  title          String
+  type           PageType @default(custom)
+  systemKey      String?
+  content        Json
+  seoTitle       String?
+  seoDescription String?
+  /// Картинка Open Graph конкретной страницы (см. ROADMAP.md §3.11/§8 Phase
+  /// 10) — до этого инкремента столбец существовал только для `seoTitle`/
+  /// `seoDescription`, ни то ни другое не было доведено дальше самой БД
+  /// (не было ни в `WebsitePageDto`, ни в `assembleDocument`/`validatePages`,
+  /// ни во frontend-типе `WebsitePage`) — теперь все три поля реально
+  /// читаются/пишутся и используются в `generateMetadata` (`/site/
+  /// [businessId]/[[...slug]]`). `null` — используется дефолт сайта
+  /// (`Website.settings.seoTitle`/`seoDescription`) или `Business.logoUrl`
+  /// как OG-картинка.
+  ogImage        String?
+  isHidden       Boolean  @default(false)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([websiteId, slug])
+  @@index([websiteId, order])
+  @@map("website_pages")
+}
+
+/// Домен ссылается на `Website`, не на `Business` — намеренно (см. корневой
+/// план фичи «multi-tenant domains»): один сайт со временем может обзавестись
+/// несколькими адресами (системный сабдомен + свой домен + www-алиас), и все
+/// они — просто строки этой таблицы с одним и тем же `websiteId`, без нужды
+/// трогать `Business`/`Website` при добавлении домена. `hostname` уникален
+/// глобально (не в паре с `websiteId`) — один и тот же хост физически не
+/// может вести на два разных сайта одновременно, это и есть смысл домена.
+enum DomainType {
+  SYSTEM_SUBDOMAIN
+  CUSTOM_DOMAIN
+}
+
+/// `isPrimary` — какой из адресов сайта показывать как канонический в UI
+/// (см. `widgets/business-settings` — раздел «Domains») и постить в
+/// SEO/шаринг; не влияет на то, резолвится ли hostname (резолвятся все
+/// домены сайта одинаково, `DomainResolverService` не различает primary/не
+/// primary). Ровно один `isPrimary = true` на `websiteId` — обеспечивается
+/// в `DomainsService`, не на уровне схемы (частичный уникальный индекс на
+/// json/boolean-условие усложнил бы миграцию без реальной выгоды для MVP).
+model Domain {
+  id                String     @id @default(uuid())
+  websiteId         String
+  website           Website    @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  hostname          String     @unique
+  type              DomainType
+  isPrimary         Boolean    @default(false)
+  /// Системный сабдомен создаётся уже подтверждённым (мы сами его выдали —
+  /// нечего верифицировать), `CUSTOM_DOMAIN` стартует неподтверждённым, пока
+  /// пользователь не настроит DNS (см. `DomainVerificationService`).
+  isVerified        Boolean    @default(false)
+  /// Только для `CUSTOM_DOMAIN` — значение, которое пользователь должен
+  /// положить в TXT-запись для подтверждения владения доменом (см. `DNS
+  /// instructions` в UI). `null` у системных доменов — им нечего подтверждать.
+  verificationToken String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([websiteId])
+  @@map("domains")
 }

@@ -15,9 +15,39 @@ const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
   'image/webp': '.webp',
 };
 
+/** Вложения чата — шире, чем чистые картинки (см. `createChatAttachmentMulterOptions`
+ * ниже): картинки + самые частые «безопасные» типы документов. Осознанно
+ * НЕТ svg (может нести скрипт, поэтому его нет и у обычных картинок выше) и
+ * никаких исполняемых/скриптовых MIME — только то, что само по себе не
+ * выполняется браузером/ОС при открытии. */
+const CHAT_ATTACHMENT_MIME_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'application/pdf': '.pdf',
+  'application/zip': '.zip',
+  'text/plain': '.txt',
+  'application/msword': '.doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.ms-excel': '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+};
+
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-export type ImageUploadSubdir = 'avatars' | 'covers' | 'gallery' | 'posts' | 'groups';
+export type ImageUploadSubdir =
+  | 'avatars'
+  | 'covers'
+  | 'gallery'
+  | 'posts'
+  | 'groups'
+  | 'messages'
+  | 'businesses'
+  | 'website'
+  | 'products'
+  | 'services'
+  | 'blog-posts';
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -52,6 +82,42 @@ export function createImageMulterOptions(subdir: ImageUploadSubdir): MulterOptio
     fileFilter: (_req, file, callback) => {
       if (!IMAGE_MIME_EXTENSIONS[file.mimetype]) {
         callback(new BadRequestException('Допустимы только JPEG, PNG и WebP'), false);
+        return;
+      }
+      callback(null, true);
+    },
+    limits: { fileSize: MAX_IMAGE_BYTES },
+  };
+}
+
+/**
+ * Тот же принцип, что и `createImageMulterOptions` (случайное имя на диске,
+ * список MIME — единственная защита), только шире список допустимых типов
+ * (`CHAT_ATTACHMENT_MIME_EXTENSIONS`) и всегда `uploads/messages/` — вложения
+ * чата не привязаны к конкретной сущности заранее, как аватар/пост.
+ * Оригинальное имя файла для отображения в UI (не для диска) остаётся в
+ * `file.originalname` — multer сохраняет его независимо от того, что мы
+ * подставили в `filename` здесь, отдельно прокидывать не нужно.
+ */
+export function createChatAttachmentMulterOptions(): MulterOptions {
+  const destination = join(UPLOADS_ROOT, 'messages');
+  ensureDir(destination);
+
+  return {
+    storage: diskStorage({
+      destination,
+      filename: (_req, file, callback) => {
+        const ext = CHAT_ATTACHMENT_MIME_EXTENSIONS[file.mimetype];
+        if (!ext) {
+          callback(new BadRequestException('Недопустимый тип файла'), '');
+          return;
+        }
+        callback(null, `${randomUUID()}${ext}`);
+      },
+    }),
+    fileFilter: (_req, file, callback) => {
+      if (!CHAT_ATTACHMENT_MIME_EXTENSIONS[file.mimetype]) {
+        callback(new BadRequestException('Недопустимый тип файла'), false);
         return;
       }
       callback(null, true);

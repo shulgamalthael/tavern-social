@@ -9,6 +9,7 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { IdBadge } from '@/shared/ui/IdBadge';
 import { Loader } from '@/shared/ui/Loader';
 import { Modal } from '@/shared/ui/Modal';
 import styles from './AdminTable.module.scss';
@@ -133,7 +134,7 @@ export function AdminCommunitiesPanel() {
         <div className={styles['admin-table__list']}>
           {communities.map((community) => (
             <div key={community.id} className={styles['admin-table__record']}>
-              <code className={styles['admin-table__id']}>{community.id}</code>
+              <IdBadge id={community.id} label="Сообщество" className={styles['admin-table__id']} />
               <div className={styles['admin-table__record-row']}>
                 <Avatar initials={community.initials} size="md" />
                 <div className={styles['admin-table__cell']}>

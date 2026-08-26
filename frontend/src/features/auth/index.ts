@@ -8,8 +8,8 @@ export {
   getSocketTicket,
   loginToAccount,
   registerAccount,
-  updateProfile,
   updateSettings,
 } from './api/actions';
-export type { AuthFormState, UpdateProfileState, UpdateSettingsInput } from './api/actions';
+export type { AuthFormState, UpdateSettingsInput } from './api/actions';
 export { AuthForm } from './ui/AuthForm';
+export { BannedNotice } from './ui/BannedNotice';

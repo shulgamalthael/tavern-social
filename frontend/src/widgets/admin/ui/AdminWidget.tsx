@@ -57,6 +57,10 @@ export function AdminWidget() {
 
   useEffect(() => {
     const hash = window.location.hash.slice(1);
+    // Синхронизация с внешней системой (URL), не производное от пропа/состояния —
+    // читать location.hash негде, кроме эффекта на клиенте (см. комментарий выше
+    // компонента про гидратацию), поэтому `setState` здесь легитимен, а не антипаттерн.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (isAdminTab(hash)) setTab(hash);
   }, []);
 

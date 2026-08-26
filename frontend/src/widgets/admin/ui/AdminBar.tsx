@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useCurrentUser } from '@/entities/user';
 import { ShieldIcon } from '@/shared/ui/icons';
 import styles from './AdminBar.module.scss';
 
@@ -21,19 +24,34 @@ const QUICK_LINKS: { hash: string; label: string }[] = [
  * не сливаться с ним визуально, как отдельный системный слой поверх темы
  * сайта, а не ещё один ряд той же шапки. Ссылки — на `/admin#tab`, хэш
  * читает `AdminWidget` при монтировании и сразу открывает нужную вкладку.
+ *
+ * Супер-админ получает свою пилюлю рядом с брендом — у него больше прав
+ * (например, только он может выдавать супер-права другим, см.
+ * `AdminUsersPanel`/`SuperAdminGuard` на backend), и это должно быть видно
+ * с любой страницы сайта, а не только внутри самой `/admin`
+ * (`AdminSidebar` показывает тот же бейдж в подписи пользователя).
  */
 export function AdminBar() {
+  const { currentUser } = useCurrentUser();
+
   return (
     <div className={styles['admin-bar']}>
       <div className={styles['admin-bar__inner']}>
         <Link href="/admin" className={styles['admin-bar__brand']}>
           <ShieldIcon className={styles['admin-bar__brand-icon']} />
           <span className={styles['admin-bar__brand-label']}>Режим администратора</span>
+          {currentUser.isSuperAdmin && (
+            <span className={styles['admin-bar__super-badge']}>супер-админ</span>
+          )}
         </Link>
 
         <nav className={styles['admin-bar__links']} aria-label="Быстрые ссылки админки">
           {QUICK_LINKS.map((link) => (
-            <Link key={link.hash} href={`/admin#${link.hash}`} className={styles['admin-bar__link']}>
+            <Link
+              key={link.hash}
+              href={`/admin#${link.hash}`}
+              className={styles['admin-bar__link']}
+            >
               {link.label}
             </Link>
           ))}

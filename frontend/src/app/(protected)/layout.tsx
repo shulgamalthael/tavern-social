@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 // компонентов, и server-only код в его графе сломает сборку. Импортируется
 // по прямому пути только из Server Component.
 // eslint-disable-next-line no-restricted-imports
-import { getSessionUser } from '@/features/auth/api/session.server';
+import { BannedError, getSessionUser } from '@/features/auth/api/session.server';
+import { BannedNotice } from '@/features/auth';
 import { CurrentUserProvider } from '@/entities/user';
 
 /**
@@ -17,7 +18,19 @@ import { CurrentUserProvider } from '@/entities/user';
  * следующий, более узкий рубеж внутри конкретной страницы, не здесь.
  */
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const currentUser = await getSessionUser();
+  let currentUser;
+  try {
+    currentUser = await getSessionUser();
+  } catch (error) {
+    // Забанен — не «сессии нет»: редирект на /auth только вернул бы его на
+    // форму входа тем же аккаунтом без единого объяснения (см. `BannedError`
+    // в `session.server.ts`). Cookie/сессию не трогаем — `BannedNotice`
+    // сама предлагает выйти явной кнопкой.
+    if (error instanceof BannedError) {
+      return <BannedNotice message={error.message} />;
+    }
+    throw error;
+  }
 
   if (!currentUser) {
     // Не `redirect('/auth')` напрямую: cookie может присутствовать, но быть

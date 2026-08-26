@@ -54,9 +54,20 @@
 .comments {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 10px 6px 4px;
   border-top: 1px solid var(--tavern-line);
-  max-height: 240px;
-  overflow-y: auto;
+}
+
+// Список комментариев скроллится сам по себе (`ScrollArea`, см.
+// GalleryLightbox.tsx) — composer под ним всегда виден, а не уезжает вниз
+// вместе со списком.
+.comments__list {
+  max-height: 190px;
+}
+
+.comments__list-viewport {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }

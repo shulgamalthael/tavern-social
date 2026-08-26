@@ -15,14 +15,18 @@
     "format": "prettier --write \"src/**/*.ts\" \"prisma/**/*.ts\" \"*.config.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"prisma/**/*.ts\" \"*.config.ts\"",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run format:check && npm run typecheck",
+    "test": "vitest run",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test",
     "fix": "npm run lint:fix && npm run format && npm run check",
     "prisma:generate": "prisma generate",
     "migration:dev": "prisma migrate dev",
     "migration:deploy": "prisma migrate deploy",
     "migration:create": "prisma migrate dev --create-only",
     "seed": "ts-node prisma/seed.ts",
-    "promote-admin": "ts-node prisma/promote-admin.ts"
+    "promote-admin": "ts-node prisma/promote-admin.ts",
+    "promote-super-admin": "ts-node prisma/promote-super-admin.ts",
+    "migrate-pages-to-table": "ts-node prisma/migrate-pages-to-table.ts",
+    "migrate-legacy-link-props": "ts-node prisma/migrate-legacy-link-props.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
@@ -41,7 +45,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sanitize-html": "^2.17.7",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "stripe": "^22.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
@@ -67,7 +72,8 @@
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.4"
+    "typescript-eslint": "^8.46.4",
+    "vitest": "^4.1.11"
   },
   "allowScripts": {
     "@prisma/client@6.19.3": true,

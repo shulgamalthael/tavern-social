@@ -38,6 +38,24 @@
   color: var(--tavern-accent);
 }
 
+// Заливка, не контур — та же логика, что у `.admin-table__super-admin-badge`
+// в `AdminTable.module.scss`: супер-админ на ступень выше обычного, сплошной
+// акцентный чип это подчёркивает. Свой цвет (не `currentColor`), потому что
+// в отличие от заливки читается одинаково и на светлом брендовом тексте, и
+// при hover-затемнении `.admin-bar__brand`.
+.admin-bar__super-badge {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
 .admin-bar__links {
   display: flex;
   flex-shrink: 0;

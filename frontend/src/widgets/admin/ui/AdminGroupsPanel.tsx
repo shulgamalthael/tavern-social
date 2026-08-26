@@ -9,6 +9,7 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { IdBadge } from '@/shared/ui/IdBadge';
 import { Loader } from '@/shared/ui/Loader';
 import { Modal } from '@/shared/ui/Modal';
 import styles from './AdminTable.module.scss';
@@ -137,7 +138,7 @@ export function AdminGroupsPanel() {
         <div className={styles['admin-table__list']}>
           {groups.map((group) => (
             <div key={group.id} className={styles['admin-table__record']}>
-              <code className={styles['admin-table__id']}>{group.id}</code>
+              <IdBadge id={group.id} label="Группа" className={styles['admin-table__id']} />
               <div className={styles['admin-table__record-row']}>
                 <Avatar initials={group.initials} src={group.avatarUrl} size="md" />
                 <div className={styles['admin-table__cell']}>

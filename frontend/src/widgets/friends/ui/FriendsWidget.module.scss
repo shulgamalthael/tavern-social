@@ -1,19 +1,40 @@
-.friends__list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 780px;
-}
-
 .friends__requests {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
+  margin-bottom: 26px;
+  padding-bottom: 22px;
   border-bottom: 1px solid var(--tavern-line);
 }
 
 .friends__requests-title {
-  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 14px;
   font-family: var(--font-display), Georgia, serif;
   font-size: 16px;
   font-weight: 500;
+}
+
+.friends__requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+// Карточки друзей — сетка, а не список: у карточки теперь своя «личность»
+// (крупный аватар + имя по центру сверху, см. `entities/friend/ui/
+// FriendCard.module.scss`), и в сетке из нескольких колонок это читается
+// как витрина знакомых, а не как таблица строк. `auto-fit`, не `auto-fill` —
+// с `auto-fill` пустые «фантомные» колонки резервируются даже тогда, когда
+// реальных карточек меньше, чем помещается в строку: последняя неполная
+// строка оставалась у левого края шириной в минимум (240px) с пустым
+// местом справа, вместо того чтобы разъехаться на всю ширину. `auto-fit`
+// схлопывает пустые колонки, и `1fr` перераспределяет освободившееся место
+// между уже существующими карточками — они растягиваются до общего
+// максимума (320px) вместо того чтобы остаться на минимуме, и вся плитка
+// (в т.ч. неполная последняя строка) выглядит одинаково плотно набранной.
+.friends__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+  gap: 14px;
+  margin-top: 4px;
 }

@@ -29,7 +29,7 @@ export function FriendRequestCard({
         className={styles['request__avatar-trigger']}
         onClick={() => onAuthorClick?.(request.id)}
       >
-        <Avatar initials={request.initials} src={request.avatarUrl} />
+        <Avatar initials={request.initials} src={request.avatarUrl} size="lg" />
       </button>
       <div className={styles.request__body}>
         <div className={styles.request__top}>

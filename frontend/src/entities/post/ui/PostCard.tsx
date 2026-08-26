@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useCurrentUser } from '@/entities/user';
 import { cn } from '@/shared/lib/cn';
+import { findClickedImageIndex } from '@/shared/lib/find-clicked-image-index';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Card } from '@/shared/ui/Card';
+import { IdBadge, IdBadgeGroup } from '@/shared/ui/IdBadge';
 import { ImageLightbox } from '@/shared/ui/ImageLightbox';
 import type { Post } from '../model/types';
 import { CommentComposer, type CommentComposerHandle } from './CommentComposer';
@@ -51,17 +54,6 @@ export interface PostCardProps {
   onEdit?: () => void;
 }
 
-/** Клик по инлайн-картинке внутри уже отрендеренного HTML-контента (см.
- * `dangerouslySetInnerHTML` ниже) открывает лайтбокс с полным списком
- * картинок этого блока — `src` сравнивается как атрибут (относительный
- * путь `/uploads/posts/...`), а не `element.src` (резолвится в абсолютный
- * URL текущего origin и не совпал бы напрямую). */
-function findClickedImageIndex(event: React.MouseEvent<HTMLDivElement>, images: string[]): number {
-  const target = event.target;
-  if (!(target instanceof HTMLImageElement)) return -1;
-  return images.indexOf(target.getAttribute('src') ?? '');
-}
-
 export function PostCard({
   post,
   isLiked = false,
@@ -75,6 +67,8 @@ export function PostCard({
   onDelete,
   onEdit,
 }: PostCardProps) {
+  const { currentUser } = useCurrentUser();
+  const isAdmin = currentUser.role === 'admin';
   const [isCommentsOpen, setCommentsOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [lightbox, setLightbox] = useState<LightboxTarget | null>(null);
@@ -138,6 +132,12 @@ export function PostCard({
           >
             <span className={styles.post__author}>{post.author}</span>
           </button>
+          {isAdmin && (
+            <IdBadgeGroup className={styles['post__id-badges']}>
+              <IdBadge id={post.authorId} label="Автор" />
+              <IdBadge id={post.id} label="Запись" />
+            </IdBadgeGroup>
+          )}
           <span className={styles.post__meta}>
             {post.meta}
             {groupId && (

@@ -1,14 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getMySettings, type PrivacySettings } from '@/entities/user';
-import { useCurrentUser } from '@/entities/user';
-import {
-  endSession,
-  updateProfile,
-  updateSettings,
-  type UpdateProfileState,
-} from '@/features/auth';
+import { endSession, updateSettings } from '@/features/auth';
 import { useNavigationStore } from '@/features/section-navigation';
 import { cn } from '@/shared/lib/cn';
 import { useAsyncData } from '@/shared/lib/use-async-data';
@@ -22,23 +16,13 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { SETTINGS_TOGGLES } from '../config/settings-toggles';
 import styles from './SettingsWidget.module.scss';
 
-const INITIAL_STATE: UpdateProfileState = {};
-
 export function SettingsWidget() {
-  const { currentUser, applyProfileUpdate } = useCurrentUser();
   const goToSection = useNavigationStore((state) => state.goToSection);
-  const [state, formAction, isPending] = useActionState(updateProfile, INITIAL_STATE);
   const { status, data: settings, error, refetch } = useAsyncData(getMySettings);
   // Локальные правки поверх загруженных настроек — так переключение тумблера
   // не требует setState внутри эффекта синхронизации с `settings`.
   const [overrides, setOverrides] = useState<Partial<PrivacySettings>>({});
   const toggles: PrivacySettings | null = settings ? { ...settings, ...overrides } : null;
-
-  useEffect(() => {
-    if (state.user) {
-      applyProfileUpdate(state.user);
-    }
-  }, [state.user, applyProfileUpdate]);
 
   const toggle = (id: keyof PrivacySettings) => {
     if (!toggles) return;
@@ -50,35 +34,6 @@ export function SettingsWidget() {
   return (
     <SectionContainer narrow>
       <PageHead title="Настройки" />
-
-      <Card>
-        <h2 className={styles['settings__card-title']}>Как вас видят в зале</h2>
-        <form className={styles['settings__form']} action={formAction}>
-          <label className={styles['settings__field']}>
-            <span className={styles['settings__field-label']}>Имя</span>
-            <input
-              name="name"
-              defaultValue={currentUser.name}
-              required
-              minLength={2}
-              maxLength={60}
-            />
-          </label>
-          <label className={styles['settings__field']}>
-            <span className={styles['settings__field-label']}>Подпись у имени</span>
-            <input
-              name="tagline"
-              defaultValue={currentUser.tagline}
-              maxLength={120}
-              placeholder="Например: держу стол книжных разговоров"
-            />
-          </label>
-          {state.error && <p className={styles['settings__error']}>{state.error}</p>}
-          <Button type="submit" disabled={isPending} className={styles['settings__submit']}>
-            {isPending ? 'Сохраняем…' : 'Сохранить'}
-          </Button>
-        </form>
-      </Card>
 
       <Card>
         <h2 className={styles['settings__card-title']}>Тишина и приватность</h2>

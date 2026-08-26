@@ -1,10 +1,39 @@
 import { getInitials } from '@/shared/lib/get-initials';
-import type { ChatMessage, Thread, ThreadParticipant } from '../model/types';
+import type {
+  ChatMessage,
+  ForwardedFrom,
+  MessageAttachment,
+  ReplyTo,
+  Thread,
+  ThreadParticipant,
+} from '../model/types';
 
 export interface ThreadParticipantResponse {
   id: string;
   name: string;
   avatarUrl: string | null;
+}
+
+export interface MessageAttachmentResponse {
+  id: string;
+  url: string;
+  mimeType: string;
+  fileName: string;
+  sizeBytes: number;
+}
+
+export interface ForwardedFromResponse {
+  id: string;
+  senderId: string;
+  senderName: string;
+}
+
+export interface ReplyToResponse {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  hasAttachment: boolean;
 }
 
 export interface MessageResponse {
@@ -13,6 +42,11 @@ export interface MessageResponse {
   senderId: string;
   text: string;
   createdAt: string;
+  editedAt: string | null;
+  pinnedAt: string | null;
+  attachments: MessageAttachmentResponse[];
+  forwardedFrom: ForwardedFromResponse | null;
+  replyTo: ReplyToResponse | null;
 }
 
 export interface ThreadResponse {
@@ -22,14 +56,51 @@ export interface ThreadResponse {
   status: string;
   unreadCount: number;
   messages: MessageResponse[];
+  pinnedMessages: MessageResponse[];
+}
+
+function mapAttachment(attachment: MessageAttachmentResponse): MessageAttachment {
+  return {
+    id: attachment.id,
+    url: attachment.url,
+    mimeType: attachment.mimeType,
+    fileName: attachment.fileName,
+    sizeBytes: attachment.sizeBytes,
+  };
+}
+
+function mapForwardedFrom(forwardedFrom: ForwardedFromResponse | null): ForwardedFrom | null {
+  if (!forwardedFrom) return null;
+  return {
+    id: forwardedFrom.id,
+    senderId: forwardedFrom.senderId,
+    senderName: forwardedFrom.senderName,
+  };
+}
+
+function mapReplyTo(replyTo: ReplyToResponse | null): ReplyTo | null {
+  if (!replyTo) return null;
+  return {
+    id: replyTo.id,
+    senderId: replyTo.senderId,
+    senderName: replyTo.senderName,
+    text: replyTo.text,
+    hasAttachment: replyTo.hasAttachment,
+  };
 }
 
 export function mapMessage(message: MessageResponse, currentUserId: string): ChatMessage {
   return {
     id: message.id,
     mine: message.senderId === currentUserId,
+    senderId: message.senderId,
     text: message.text,
     createdAt: message.createdAt,
+    editedAt: message.editedAt,
+    pinnedAt: message.pinnedAt,
+    attachments: message.attachments.map(mapAttachment),
+    forwardedFrom: mapForwardedFrom(message.forwardedFrom),
+    replyTo: mapReplyTo(message.replyTo),
   };
 }
 
@@ -65,5 +136,6 @@ export function mapThread(thread: ThreadResponse, currentUserId: string): Thread
     status: thread.status,
     unread: thread.unreadCount || undefined,
     messages: thread.messages.map((message) => mapMessage(message, currentUserId)),
+    pinnedMessages: thread.pinnedMessages.map((message) => mapMessage(message, currentUserId)),
   };
 }

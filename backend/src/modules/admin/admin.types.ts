@@ -6,6 +6,10 @@ export interface AdminUserDto {
   email: string;
   avatarUrl: string | null;
   role: UserRole;
+  /** Защищённый уровень поверх role=admin — см. `User.isSuperAdmin` в
+   * схеме. Выдаётся/снимается отдельным маршрутом
+   * (`PATCH /admin/users/:id/super-admin`, только другим супер-админам). */
+  isSuperAdmin: boolean;
   isBanned: boolean;
   bannedAt: string | null;
   bannedReason: string | null;
@@ -20,13 +24,12 @@ export interface AdminPostDto {
    * оригинала с пометкой репоста, см. `AdminService.toPostDto`. */
   text: string;
   isRepost: boolean;
-  /** URL картинок в контенте (см. `extractImageUrls`) — для репоста уже
-   * из текста оригинала, тем же принципом, что и `text` выше. Нужен
-   * админке, чтобы показать превью, когда `text` пуст или содержит только
-   * картинку (типичный случай для загрузок в галерею). */
+  /** URL картинок в контенте (см. `extractImageUrls`), в порядке появления —
+   * для репоста уже из текста оригинала, тем же принципом, что и `text`
+   * выше. `text` рендерится в админке как есть (см. `AdminPostsPanel.tsx`),
+   * этот список нужен только для `ImageLightbox` при клике по инлайн-
+   * картинке — не отдельное представление контента. */
   images: string[];
-  hasTable: boolean;
-  hasLink: boolean;
   authorId: string;
   authorName: string;
   authorAvatarUrl: string | null;

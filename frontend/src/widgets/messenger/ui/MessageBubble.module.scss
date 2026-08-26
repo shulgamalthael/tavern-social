@@ -1,3 +1,123 @@
+.bubble-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  // На всю ширину чата, не по размеру содержимого — иначе подсветке ниже
+  // буквально нечего заливать за пределами баблов+кнопки меню. Сам бабл
+  // при этом продолжает жаться к своему краю (см. `.bubble-row--mine`
+  // ниже) — flex ничего не растягивает без `flex-grow` у детей, только
+  // родительский `<div>` стал шире.
+  width: 100%;
+  border-radius: 12px;
+  transition: background-color 0.6s ease;
+}
+
+.bubble-row--mine {
+  flex-direction: row-reverse;
+}
+
+// Кратковременная подсветка после перехода к сообщению (клик по цитате
+// ответа, закреплённому, результату поиска — см. `scrollToMessage` в
+// `MessengerWidget.tsx`) — на всю ширину строки (см. `width: 100%` выше),
+// а не узкой полоской вокруг бабла, чтобы взгляд сразу цеплялся за нужное
+// сообщение, даже если сам бабл маленький. Обычный HTML-атрибут, не
+// CSS-модульный класс: подсвечивающая функция общая для нескольких мест и
+// не привязана к конкретному компоненту, чтобы дёргать здешний
+// хешированный className.
+.bubble-row[data-highlighted='true'] {
+  background-color: color-mix(in srgb, var(--tavern-accent) 16%, transparent);
+}
+
+.bubble-row__menu {
+  position: relative;
+  align-self: center;
+}
+
+.bubble-row__menu-trigger {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 1px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    background: var(--tavern-sunk);
+  }
+}
+
+.bubble-row__menu-popover {
+  position: absolute;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: max-content;
+  min-width: 170px;
+  padding: 6px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 22%);
+}
+
+.bubble-row--mine .bubble-row__menu-popover {
+  right: 0;
+}
+
+.bubble-row:not(.bubble-row--mine) .bubble-row__menu-popover {
+  left: 0;
+}
+
+.bubble-row__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: calc(var(--tavern-radius-control) - 3px);
+  background: none;
+  color: var(--tavern-ink);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+
+  svg {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+    color: var(--tavern-muted);
+  }
+}
+
+.bubble-row__menu-item--danger {
+  color: var(--tavern-danger);
+
+  svg {
+    color: var(--tavern-danger);
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+  }
+}
+
 .bubble {
   max-width: 68%;
   width: fit-content;
@@ -37,8 +157,190 @@
   border-bottom-right-radius: 4px;
 }
 
+// Цитата сообщения, на которое отвечают — тонкая полоска слева (тот же
+// приём, что мессенджеры обычно используют для цитат) с именем автора
+// оригинала и обрезанным до одной строки текстом; клик скроллит к
+// оригиналу (см. `onReplyQuoteClick` в `MessageBubble.tsx`).
+.bubble__reply-quote {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  margin-bottom: 5px;
+  padding: 3px 0 3px 8px;
+  border: 0;
+  border-left: 2px solid var(--tavern-accent);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.bubble--mine .bubble__reply-quote {
+  border-left-color: currentColor;
+}
+
+.bubble__reply-quote-author {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tavern-accent);
+}
+
+.bubble--mine .bubble__reply-quote-author {
+  color: inherit;
+}
+
+.bubble__reply-quote-text {
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble--mine .bubble__reply-quote-text {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.bubble__forwarded {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.8;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  svg {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.bubble__images {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+// Одна картинка — без сетки и без принудительного квадратного кропа: сама
+// вписывается в допустимые размеры и держит те пропорции, в которых её
+// загрузили (у 2+ картинок кроп в ровную сетку по-прежнему оправдан —
+// единой раскладке нескольких превью разной формы иначе не за что
+// зацепиться, а у одной картинки такого компромисса не нужно).
+.bubble__images--single {
+  display: block;
+}
+
+.bubble__image-trigger {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.bubble__image-trigger--single {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.bubble__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.bubble__image--single {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 320px;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
+.bubble__files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.bubble__file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  background: rgb(0 0 0 / 12%);
+  color: inherit;
+  text-decoration: none;
+}
+
+.bubble--mine .bubble__file {
+  background: rgb(0 0 0 / 15%);
+}
+
+.bubble__file-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.bubble__file-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.bubble__file-name {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble__file-size {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
 .bubble__text {
   white-space: pre-wrap;
+
+  // `color: inherit`, а не акцентный синий: на `.bubble--mine` (см. выше)
+  // фон уже акцентный — акцентная ссылка на нём слилась бы с фоном почти
+  // до нечитаемости, подчёркивания достаточно, чтобы её опознать как ссылку
+  // в обоих вариантах пузыря.
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
 }
 
 /** float — классический приём: короткая последняя строка текста сама
@@ -55,4 +357,30 @@
 .bubble--mine .bubble__time {
   color: inherit;
   opacity: 0.75;
+}
+
+.bubble__edited-mark {
+  opacity: 0.85;
+}
+
+.sticker {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.sticker--mine {
+  align-items: flex-end;
+}
+
+.sticker__emoji {
+  font-size: 42px;
+  line-height: 1.2;
+}
+
+.sticker__time {
+  margin-top: -2px;
+  font-size: 11px;
+  color: var(--tavern-muted);
+  user-select: none;
 }

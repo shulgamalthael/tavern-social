@@ -50,6 +50,14 @@
   color: var(--tavern-muted);
 }
 
+// Автор + сама запись рядом одним блоком — видны только админу (см.
+// `PostCard.tsx`, `isAdmin`) — небольшой отступ сверху отличает их от
+// плотного `gap: 2px` строк над именем/датой, это уже не текст, а отдельная
+// деталь интерфейса.
+.post__id-badges {
+  margin-top: 2px;
+}
+
 .post__wall-owner {
   color: var(--tavern-accent);
   font-weight: 500;

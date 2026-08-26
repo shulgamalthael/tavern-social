@@ -71,7 +71,12 @@ export function AdminSidebar({ tabs, activeTab, onTabChange }: AdminSidebarProps
 
       <span className={styles['admin-sidebar__user']} title={`Вы вошли как ${currentUser.name}`}>
         <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} size="sm" />
-        <span className={styles['admin-sidebar__user-name']}>{currentUser.name}</span>
+        <span className={styles['admin-sidebar__user-info']}>
+          <span className={styles['admin-sidebar__user-name']}>{currentUser.name}</span>
+          {currentUser.isSuperAdmin && (
+            <span className={styles['admin-sidebar__user-badge']}>супер-админ</span>
+          )}
+        </span>
       </span>
     </aside>
   );

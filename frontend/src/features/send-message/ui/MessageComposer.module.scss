@@ -2,17 +2,208 @@
 
 .composer {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--tavern-line);
 }
 
-.composer__input {
+.composer__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}
+
+.composer__banner-cancel {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  color: var(--tavern-accent);
+  font-size: 12.5px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+// Ответ — своя раскладка (иконка + двухстрочный текст) поверх общего
+// `.composer__banner`, в отличие от простого однострочного баннера
+// редактирования.
+.composer__banner--reply {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.composer__banner-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--tavern-accent);
+}
+
+.composer__banner-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.composer__banner-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--tavern-accent);
+}
+
+.composer__banner-preview {
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer__error {
+  font-size: 12.5px;
+  color: var(--tavern-danger);
+}
+
+.composer__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.composer__attachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 5px 6px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.composer__attachment-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.composer__attachment-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--tavern-muted);
+}
+
+.composer__attachment-name {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer__attachment-size {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--tavern-muted);
+}
+
+.composer__attachment-remove {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-line);
+  }
+
+  svg {
+    width: 11px;
+    height: 11px;
+  }
+}
+
+.composer__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.composer__icon-button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+
+    &:hover {
+      background: none;
+    }
+  }
+}
+
+.composer__file-input {
+  display: none;
+}
+
+.composer__field {
   @include control;
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+  padding: 0 4px 0 14px;
+  background: var(--tavern-sunk);
+}
+
+.composer__input {
   flex: 1;
   min-width: 0;
-  background: var(--tavern-sunk);
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 14.5px;
   outline: none;
 }

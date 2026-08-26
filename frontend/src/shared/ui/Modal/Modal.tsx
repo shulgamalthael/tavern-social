@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/shared/lib/cn';
+import { ScrollArea } from '@/shared/ui/ScrollArea';
 import styles from './Modal.module.scss';
 
 export interface ModalProps {
@@ -41,12 +42,13 @@ export function Modal({ onClose, children, label, className }: ModalProps) {
       aria-label={label}
       onClick={onClose}
     >
-      <div
+      <ScrollArea
         className={cn(styles['modal__card'], className)}
+        viewportClassName={styles['modal__viewport']}
         onClick={(event) => event.stopPropagation()}
       >
         {children}
-      </div>
+      </ScrollArea>
     </div>,
     document.body,
   );

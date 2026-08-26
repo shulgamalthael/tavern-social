@@ -13,6 +13,10 @@ export interface AdminUser {
   email: string;
   avatarUrl: string | null;
   role: UserRole;
+  /** Защищённый уровень поверх role='admin' — нельзя забанить/удалить/
+   * понизить в роли никому, кроме другого супер-админа (см.
+   * `widgets/admin/ui/AdminUsersPanel.tsx`, `setSuperAdmin`). */
+  isSuperAdmin: boolean;
   isBanned: boolean;
   bannedAt: string | null;
   bannedReason: string | null;
@@ -31,12 +35,12 @@ export interface AdminPost {
    * своего текста у карточки-обёртки нет. */
   text: string;
   isRepost: boolean;
-  /** URL картинок в контенте, для репоста — уже из оригинала (тем же
-   * принципом, что и `text`). Позволяет показать превью, когда текста нет
-   * (загрузка в галерею) или он не описывает суть поста. */
+  /** URL картинок в контенте, в порядке появления, для репоста — уже из
+   * оригинала (тем же принципом, что и `text`). `text` рендерится в
+   * `AdminPostsPanel` как есть — этот список нужен только для
+   * `ImageLightbox` при клике по инлайн-картинке, тем же приёмом, что и
+   * `Post.images`/`PostCard` на основном сайте. */
   images: string[];
-  hasTable: boolean;
-  hasLink: boolean;
   authorId: string;
   authorName: string;
   authorInitials: string;

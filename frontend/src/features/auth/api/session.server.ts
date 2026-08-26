@@ -16,6 +16,7 @@ interface MeProfileResponse {
   avatarUrl: string | null;
   coverUrl: string | null;
   role: 'user' | 'admin';
+  isSuperAdmin: boolean;
 }
 
 function toCurrentUser(profile: MeProfileResponse): CurrentUser {
@@ -31,8 +32,18 @@ function toCurrentUser(profile: MeProfileResponse): CurrentUser {
     avatarUrl: profile.avatarUrl,
     coverUrl: profile.coverUrl,
     role: profile.role,
+    isSuperAdmin: profile.isSuperAdmin,
   };
 }
+
+/**
+ * Бросается вместо обычного `null`, когда backend отказал именно из-за бана
+ * (403 у `SessionAuthGuard`) — в отличие от «сессии нет», это не должно
+ * тихо превращаться в редирект на `/auth`: вызывающий (`(protected)/layout.tsx`)
+ * ловит её отдельно и показывает `BannedNotice` с этим же текстом (уже
+ * включает причину бана, если админ её указал — см. `session-auth.guard.ts`).
+ */
+export class BannedError extends Error {}
 
 /**
  * DAL: единственное место, которое резолвит сессию в профиль пользователя.
@@ -49,6 +60,9 @@ export const getSessionUser = cache(async (): Promise<CurrentUser | null> => {
     const profile = await backendFetch<MeProfileResponse>('/users/me', { token });
     return toCurrentUser(profile);
   } catch (error) {
+    if (error instanceof BackendError && error.status === 403) {
+      throw new BannedError(error.message);
+    }
     if (error instanceof BackendError && error.status === 401) return null;
     // Backend недоступен или вернул неожиданную ошибку — не считаем это
     // «пользователь не вошёл», просто честно нет сессии для рендера страницы.

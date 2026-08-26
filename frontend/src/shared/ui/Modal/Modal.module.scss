@@ -13,14 +13,20 @@
   background: rgba(10, 14, 22, 0.55);
 }
 
+// `ScrollArea` (см. Modal.tsx) сама раскладывает себя в flex-колонку и
+// ограничивает высоту `.modal__viewport` своей — здесь только «чехол»:
+// размеры и внешний вид карточки, без overflow/padding (те — на viewport
+// ниже, чтобы кастомный скроллбар/затухание стояли у самого края карточки).
 .modal__card {
+  width: min(480px, 100%);
+  max-height: min(85vh, 640px);
+  @include card;
+  box-shadow: var(--tavern-shadow-card);
+}
+
+.modal__viewport {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  overflow-y: auto;
-  width: min(480px, 100%);
-  max-height: min(85vh, 640px);
   padding: 16px;
-  @include card;
-  box-shadow: var(--tavern-shadow-card);
 }
