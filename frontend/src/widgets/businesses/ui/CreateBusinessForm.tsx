@@ -20,7 +20,7 @@ import styles from './CreateBusinessForm.module.scss';
  * Валюта (Currency System, ROADMAP.md §8) — обязательное поле здесь, не
  * "необязательно, поправите потом", как описание: это единственная точка
  * входа, где бизнес ещё не существует, поэтому нечему "молча подставить
- * RUB, пока не заметили" — выбор явный с самого начала, дефолт `RUB`
+ * UAH, пока не заметили" — выбор явный с самого начала, дефолт `UAH`
  * только предзаполняет select, не скрывает решение.
  *
  * Не владеет заголовком/шапкой раздела — это делает `NewBusinessFlow`
@@ -68,7 +68,7 @@ export function CreateBusinessForm() {
           type="text"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Например, «Кофейня на Ленина»"
+          placeholder="Например, «Кофейня на Хрещатику»"
           maxLength={80}
           autoFocus
         />

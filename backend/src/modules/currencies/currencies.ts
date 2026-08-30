@@ -10,10 +10,10 @@
  * принимает Stripe API (https://docs.stripe.com/currencies) — намеренно
  * курируемый набор реальных, часто используемых валют, среди которых есть
  * минимум один пример валюты с нулевым minor unit (`JPY`, `KRW`) и минимум
- * одна валюта с наибольшей практической значимостью для проекта (`RUB`,
- * исторический дефолт — Stripe документирует минимальную сумму платежа в
- * RUB, `0.50 RUB`, то есть код валюты API-совместим). Расширение списка —
- * это одна новая строка здесь, не архитектурное изменение.
+ * одна валюта с наибольшей практической значимостью для проекта (`UAH`,
+ * дефолт — Stripe документирует минимальную сумму платежа в UAH, `0.50
+ * UAH`, то есть код валюты API-совместим). Расширение списка — это одна
+ * новая строка здесь, не архитектурное изменение.
  *
  * `minorUnit` — количество знаков после запятой в МЕНЬШЕЙ единице валюты
  * (ISO 4217), ровно то же значение, которого требует Stripe API для поля
@@ -40,7 +40,6 @@ export interface CurrencyMetadata {
 }
 
 export const SUPPORTED_CURRENCIES: CurrencyMetadata[] = [
-  { code: 'RUB', name: 'Российский рубль', symbol: '₽', minorUnit: 2 },
   { code: 'USD', name: 'Доллар США', symbol: '$', minorUnit: 2 },
   { code: 'EUR', name: 'Евро', symbol: '€', minorUnit: 2 },
   { code: 'GBP', name: 'Фунт стерлингов', symbol: '£', minorUnit: 2 },
@@ -74,4 +73,4 @@ export function getCurrencyMetadata(code: string): CurrencyMetadata {
   return currency;
 }
 
-export const DEFAULT_BUSINESS_CURRENCY = 'RUB';
+export const DEFAULT_BUSINESS_CURRENCY = 'UAH';

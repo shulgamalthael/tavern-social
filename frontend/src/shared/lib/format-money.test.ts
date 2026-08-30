@@ -31,7 +31,7 @@ describe('formatMoney', () => {
 
   it('formats zero amounts and falls back gracefully for an unknown code', () => {
     expect(formatMoney(0, 'USD')).toBe('0,00 $');
-    // Неизвестный код -> фолбэк на RUB-метаданные (см. `getCurrencyMetadata`),
+    // Неизвестный код -> фолбэк на UAH-метаданные (см. `getCurrencyMetadata`),
     // не исключение — сумма на экране важнее идеальной валидации кода,
     // который в любом случае уже провалидирован на backend при сохранении.
     expect(() => formatMoney(1000, 'ZZZ')).not.toThrow();

@@ -53,7 +53,7 @@ export class CreateBusinessTool implements OnModuleInit {
         properties: {
           name: {
             type: 'string',
-            description: 'Название бизнеса, например "Кофейня на Ленина"',
+            description: 'Название бизнеса, например "Кофейня на Хрещатику"',
           },
           category: {
             type: 'string',

@@ -15,10 +15,9 @@
  * Список НЕ исчерпывает 135+ валют, которые в принципе принимает Stripe API
  * — курируемый набор: минимум одна валюта с нулевым `minorUnit` (`JPY`/
  * `KRW`, чтобы код зон, зависящих от precision, реально проверялся не
- * только на 2-decimal случае) и `RUB` как исторический дефолт проекта
- * (Stripe документирует минимальную сумму платежа в RUB, значит код
- * API-совместим). Расширение — одна новая строка, не архитектурное
- * изменение.
+ * только на 2-decimal случае) и `UAH` как дефолт проекта (Stripe
+ * документирует минимальную сумму платежа в UAH, значит код API-совместим).
+ * Расширение — одна новая строка, не архитектурное изменение.
  */
 export interface CurrencyMetadata {
   code: string;
@@ -28,7 +27,6 @@ export interface CurrencyMetadata {
 }
 
 export const SUPPORTED_CURRENCIES: CurrencyMetadata[] = [
-  { code: 'RUB', name: 'Российский рубль', symbol: '₽', minorUnit: 2 },
   { code: 'USD', name: 'Доллар США', symbol: '$', minorUnit: 2 },
   { code: 'EUR', name: 'Евро', symbol: '€', minorUnit: 2 },
   { code: 'GBP', name: 'Фунт стерлингов', symbol: '£', minorUnit: 2 },
@@ -60,14 +58,14 @@ export function isSupportedCurrencyCode(code: string): boolean {
   return CURRENCY_BY_CODE.has(code);
 }
 
-/** Фолбэк на `RUB`-метаданные при неизвестном коде — например, пока
+/** Фолбэк на `UAH`-метаданные при неизвестном коде — например, пока
  * `Business`/`Product` ещё грузится и currency временно `undefined`, или
  * если когда-нибудь встретится код, изъятый из `SUPPORTED_CURRENCIES`
  * позже. `formatMoney`/`toMinorUnits` не должны падать на этом — сумма
  * денег на экране важнее идеальной валидации кода валюты, который в любом
  * случае уже провалидирован на backend при сохранении. */
 export function getCurrencyMetadata(code: string): CurrencyMetadata {
-  return CURRENCY_BY_CODE.get(code) ?? CURRENCY_BY_CODE.get('RUB')!;
+  return CURRENCY_BY_CODE.get(code) ?? CURRENCY_BY_CODE.get('UAH')!;
 }
 
-export const DEFAULT_BUSINESS_CURRENCY = 'RUB';
+export const DEFAULT_BUSINESS_CURRENCY = 'UAH';

@@ -120,8 +120,9 @@ export function AiOnboardingChat({ className, onBusinessCreated }: AiOnboardingC
           <div className={styles.empty}>
             <SparkleIcon className={styles.empty__icon} />
             <p className={styles.empty__text}>
-              Расскажите, какой бизнес хотите открыть — например, «кофейня на Ленина» или «студия
-              маникюра». Спросим название и категорию и сразу создадим сайт-заготовку.
+              Расскажите, какой бизнес хотите открыть — например, «обменник криптовалют на
+              Крещатике» или «студия маникюра». Спросим название и категорию и сразу создадим
+              сайт-заготовку.
             </p>
           </div>
         )}
@@ -171,7 +172,7 @@ export function AiOnboardingChat({ className, onBusinessCreated }: AiOnboardingC
           className={styles.input}
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="Например, «Открываю кофейню на Ленина»…"
+          placeholder="Например, «Открываю обменник криптовалют»…"
           disabled={isSending || isRedirecting}
           aria-label="Сообщение AI-ассистенту"
         />

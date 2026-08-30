@@ -585,7 +585,7 @@ model Business {
   /// (`SUPPORTED_CURRENCY_CODES`/`DEFAULT_BUSINESS_CURRENCY`), не enum —
   /// та же причина, что у `capabilities` выше (новая валюта в списке не
   /// должна требовать миграции схемы).
-  currency       String           @default("RUB")
+  currency       String           @default("UAH")
   /// Единая налоговая ставка бизнеса в базисных пунктах (2000 = 20.00%,
   /// 825 = 8.25%) — целое число, не `Float`, по той же причине, что и
   /// деньги (см. `Order.taxCents`): накопление погрешности округления на
@@ -801,7 +801,7 @@ model Order {
   /// если бизнес позже сменит основную валюту, старые заказы обязаны
   /// продолжать показывать ТУ валюту, в которой их реально оплатили,
   /// иначе история заказов задним числом переписалась бы в другую валюту.
-  currency              String        @default("RUB")
+  currency              String        @default("UAH")
   paymentStatus         PaymentStatus @default(unpaid)
   /// `null`, пока Stripe не настроен ИЛИ заказ создан до появления оплаты
   /// (см. `PaymentStatus`). Уникален — один `PaymentIntent` относится ровно
@@ -901,7 +901,7 @@ model Appointment {
   /// ROADMAP.md §8) — та же причина, что у `Order.currency`: услуга больше
   /// не хранит собственную валюту (см. `Service`), а бизнес мог сменить
   /// свою уже после этой записи.
-  currency              String            @default("RUB")
+  currency              String            @default("UAH")
   durationMinutes       Int
   status                AppointmentStatus @default(pending)
   startsAt              DateTime

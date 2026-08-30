@@ -384,7 +384,7 @@ function PricingRenderer({ props, pages }: BlockRendererProps<PricingProps>) {
   );
 }
 
-/** `plan.price` — свободный текст (владелец печатает «₽990» сам, как и
+/** `plan.price` — свободный текст (владелец печатает «₴990» сам, как и
  * `plan.name`/`plan.period`), НЕ структурированное `{amountMinor, currency}`
  * — сознательно вне Currency System (ROADMAP.md §8): этот блок не привязан
  * ни к одному `Product`/`Service`, у него нет данных, которые Currency
@@ -406,7 +406,7 @@ registerBlock<PricingProps>({
     plans: [
       {
         name: 'Базовый',
-        price: '₽990',
+        price: '₴990',
         period: 'мес',
         features: [{ text: 'Основные возможности' }, { text: 'Поддержка по email' }],
         highlighted: false,
@@ -415,7 +415,7 @@ registerBlock<PricingProps>({
       },
       {
         name: 'Продвинутый',
-        price: '₽2 490',
+        price: '₴2 490',
         period: 'мес',
         features: [
           { text: 'Всё из «Базового»' },
