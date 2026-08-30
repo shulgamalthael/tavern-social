@@ -20,6 +20,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { BackIcon, PlusIcon } from '@/shared/ui/icons';
 import { BusinessCurrencySection } from './BusinessCurrencySection';
 import { BusinessSeoSection } from './BusinessSeoSection';
+import { BusinessWorkingHoursSection } from './BusinessWorkingHoursSection';
 import { ConnectDomainModal } from './ConnectDomainModal';
 import { DomainRow } from './DomainRow';
 import styles from './BusinessSettingsWidget.module.scss';
@@ -128,6 +129,15 @@ export function BusinessSettingsWidget({ businessId }: BusinessSettingsWidgetPro
       {business.status === 'success' && business.data && (
         <BusinessSeoSection business={business.data} onSaved={() => void business.refetch()} />
       )}
+
+      {business.status === 'success' &&
+        business.data &&
+        business.data.capabilities.includes('booking') && (
+          <BusinessWorkingHoursSection
+            business={business.data}
+            onSaved={() => void business.refetch()}
+          />
+        )}
 
       <section className={styles.section}>
         <div className={styles['section__head']}>

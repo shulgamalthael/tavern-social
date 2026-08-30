@@ -18,4 +18,5 @@ export type {
   CreateOrderResult,
 } from './api/create-order';
 export { getOrders } from './api/get-orders';
+export { refundOrder } from './api/refund-order';
 export { updateOrderStatus } from './api/update-order-status';

@@ -30,7 +30,14 @@ export class BlogPostsService {
     return posts.map((post) => this.toDto(post));
   }
 
+  /** Проверяет существование бизнеса, а не только фильтрует по нему — без
+   * этого несуществующий/удалённый `businessId` тихо отдавал бы `200 []`
+   * вместо `404`, как у `ProductsService.listPublic`/`ServicesService.
+   * listPublic` (обе зовут `getBusiness`, которая падает `NotFoundException`).
+   * Найдено crash-тестированием Phase 13 — до этого поведение молча
+   * расходилось с остальными витринами. */
   async listPublic(businessId: string): Promise<PublicBlogPostDto[]> {
+    await this.assertBusinessExists(businessId);
     const posts = await this.prisma.blogPost.findMany({
       where: { businessId, isPublished: true },
       orderBy: { order: 'asc' },
@@ -117,6 +124,14 @@ export class BlogPostsService {
     });
     if (!business) throw new NotFoundException('Бизнес не найден');
     if (business.ownerId !== ownerId) throw new ForbiddenException('Это не ваш бизнес');
+  }
+
+  private async assertBusinessExists(businessId: string): Promise<void> {
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: { id: true },
+    });
+    if (!business) throw new NotFoundException('Бизнес не найден');
   }
 
   private async findOwnedPost(businessId: string, postId: string): Promise<BlogPost> {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import type { RequestUser } from '@/common/types/authenticated-request';
@@ -31,5 +31,14 @@ export class OrdersController {
     @Body() dto: UpdateOrderStatusDto,
   ): Promise<OrderDto> {
     return this.ordersService.updateStatus(businessId, orderId, currentUser.id, dto.status);
+  }
+
+  @Post(':orderId/refund')
+  refund(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('businessId') businessId: string,
+    @Param('orderId') orderId: string,
+  ): Promise<OrderDto> {
+    return this.ordersService.refund(businessId, orderId, currentUser.id);
   }
 }

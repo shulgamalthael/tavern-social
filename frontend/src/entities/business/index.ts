@@ -14,9 +14,12 @@ export type {
   BusinessCapability,
   BusinessCategory,
   BusinessStatus,
+  DayHours,
   SocialLink,
   TaxMode,
+  Weekday,
+  WorkingHours,
 } from './model/types';
-export { TAX_MODE_LABELS } from './model/types';
+export { TAX_MODE_LABELS, WEEKDAYS, WEEKDAY_LABELS } from './model/types';
 export { BusinessCard } from './ui/BusinessCard';
 export { BusinessCardSkeleton } from './ui/BusinessCardSkeleton';

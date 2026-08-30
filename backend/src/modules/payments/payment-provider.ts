@@ -21,6 +21,14 @@ export abstract class PaymentProvider {
 
   abstract createPaymentIntent(input: CreatePaymentIntentInput): Promise<PaymentIntentResult>;
 
+  /** Возвращает деньги покупателю целиком — частичные возвраты не нужны
+   * сегодня (нет UI, который позволил бы владельцу выбрать сумму/позиции),
+   * тот же принцип narrow-v1, что и у остального Commerce. Вызывающий код
+   * (`OrdersService.refund`) сам решает, когда это уместно (заказ
+   * `paymentStatus: paid`) — этот метод только исполняет операцию у
+   * провайдера и не трогает `Order` в БД. */
+  abstract refundPayment(paymentIntentId: string): Promise<void>;
+
   /** `null`, если подпись неверна ИЛИ событие провайдера не входит в
    * `PaymentWebhookEventType` (например, Stripe шлёт десятки типов событий,
    * которые нам не нужны — `StripeWebhookController` должен их тихо

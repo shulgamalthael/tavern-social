@@ -1,0 +1,274 @@
+# Tavern AI-Native Platform Layer: Roadmap
+
+> **Relationship to other project docs — read this first.** This repo already has a working persistent-context system: `frontend/AGENTS.md` (how to work), `frontend/PROJECT_CONTEXT.md` (what exists on the frontend today), and the root `ROADMAP.md` (the capability-building plan — Commerce/Booking/Content/SEO/Analytics/Currency/Pricing, Phases 0–17, most of it shipped). None of those three files are about AI. This document is a **new, separate initiative**: giving the existing platform an AI orchestration layer that can operate it through safe, typed tools, per the owner's 2026-08-30 "MASTER MISSION" brief (150 numbered requirements, summarized and re-grounded against real code below). It does not replace `ROADMAP.md` — it assumes `ROADMAP.md`'s capabilities (Commerce, Booking, Content, Forms, Media, SEO, Analytics, Currency/Pricing, multi-page routing) as the **surface the AI layer will call into**, and it does not duplicate `.agent/*`-style files the mission template suggested — this project's convention is `AGENTS.md` (rules) + `PROJECT_CONTEXT.md` (state) + a root `*_ROADMAP.md` (plan for one initiative), so this file follows that pattern instead of inventing a parallel one. When AI-layer code starts landing, update `frontend/PROJECT_CONTEXT.md`/`AGENTS.md` and (once one exists) `backend/PROJECT_CONTEXT.md`/`AGENTS.md` the same way every other phase in `ROADMAP.md` already does — this file stays the plan-of-record for the AI initiative specifically, not a fourth parallel context system.
+
+**Status: AI-1 shipped and verified — see §6. AI-2 done and verified (all 4 tools + chat UI, see §7-§9), with one explicitly agreed exception (image/button blocks — see §9). AI-3 through AI-9 not started.**
+
+---
+
+## 0. Audit — what exists today, and what it means for an AI layer
+
+### 0.1 The one fact that reframes the whole mission
+
+**There is no multi-tenant "workspace" concept, and no AI/LLM integration of any kind, anywhere in this codebase.** Confirmed by direct inspection, not inference:
+
+- `grep`-ing both `frontend/src` and `backend/src` for `openai|anthropic|claude|chatbot|ai-chat` returns nothing. Neither `package.json` lists any LLM SDK.
+- `Business { ownerId → User, onDelete: Cascade }` — one owner, full stop (`backend/prisma/schema.prisma:537`). No `Team`, `Member`, `Role`-on-`Business`, or `Workspace` model exists. `ROADMAP.md §0.1` already documents this: *"a Business belongs to exactly one `User.ownerId`, full stop."*
+- The mission's vocabulary (§53–54: "tenant", "workspace") maps onto exactly one real boundary in this codebase: **`Business.ownerId === request.user.id`**, checked per-controller via a `findOwned(businessId, ownerId)`-style method (see `WebsitesService.getDraft`, and the identical pattern in `products.service.ts`/`orders.service.ts`/etc.). There is no separate "tenant" entity to isolate against — the AI layer's tenant-isolation requirement (§53/§142) is really "every tool call must re-derive and enforce `ownerId` server-side, never trust a client-supplied `businessId` alone." That's a narrower, more tractable problem than the mission's language implies, and the existing controllers already do it correctly today — the AI tool layer needs to reuse that pattern, not invent a new one.
+
+### 0.2 What already exists that the AI layer can build directly on top of
+
+- **A declarative, typed block-tree** (`WebsiteBlock { id, type, props, style?, hidden?, children? }`, `frontend/src/entities/website/model/types.ts`) — this is *already* the "flat, AI-generatable" shape the mission asks for in §7/§45/§49, down to the doc-comment on `WebsiteBlock` explicitly calling out AI-generation as the reason for the flat shape. `ROADMAP.md §3.13` ("AI-readiness") independently reached the same conclusion and deliberately deferred writing AI code until now.
+- **A real component-schema registry** (`registry.ts`, `BlockDefinition<P>` + `FieldSchema` union: `text/textarea/richtext/number/select/color/toggle/image/url/link/dataSource/list`, each with a `key`/`label`/optional `responsive`) — this is mission §49's `ComponentDefinition` almost verbatim, already shipped, already covers most of §7's tool surface (`set_style` → `style` field, `bind_data` → the `dataSource` control, `set_visibility_condition` → `hidden`). A `create_component`/`update_component_props`/`set_style` tool set can be built as a thin, validated wrapper around the *existing* Zustand builder store actions (`insertBlock`, `moveBlock`, `updateBlockProps`, etc. in `website-store.ts`) rather than a new execution path.
+- **A capability system** (`Business.capabilities: String[]`, e.g. `"commerce"`) already gates which Dashboard sections and Builder blocks a business sees — a real precedent for scoping what an AI tool is *allowed* to do per business, though today it's a feature flag, not a permission/capability-token system in the mission's sense (§22–23). Extending it into the widget-capability model (§22) is additive, not a rewrite.
+- **A provider-abstraction pattern already proven twice**: `PaymentProvider` (abstract class, `StripeAdapter` the only implementation, `backend/src/modules/payments/payment-provider.ts`) and `DomainVerificationProvider` (`modules/domains`). This is exactly the shape the mission asks for Web3/RPC/crypto-price providers in §24/§26 — copy this pattern, don't invent a new one.
+- **A real security substrate, already in production use**: `SessionAuthGuard` (resolves opaque Redis session tokens, attaches `role`/`isBanned`/`isSuperAdmin` to every request), per-route `@Throttle()` rate limits (already applied to every anonymous write endpoint — orders, appointments, form submissions), `sanitize-html` already a backend dependency (used on `Post.text`), ownership checks returning 403/404 rather than leaking existence. This is the raw material for the mission's "policy engine" (§99–100) — there is no policy engine as a distinct abstraction yet, but the primitives it would compose exist and are already battle-tested (`ROADMAP.md §13` documents a real crash-testing pass against exactly these paths).
+
+### 0.3 The real gaps — confirmed, not assumed
+
+1. **No LLM integration exists at all.** No provider chosen, no API key configured, no SDK installed, no streaming infrastructure, no chat UI. Everything in mission §35–46 (chat UX, streaming, live canvas updates) starts from zero.
+2. **Backend validation of website documents is deliberately shallow** (`UpdateWebsiteDocumentDto`: `pages: unknown[]`, `theme: object`, `settings: object` — no per-block-type schema check). The doc-comment explains this is intentional: adding a block type shouldn't require a backend deploy. This is a *reasonable* tradeoff when the only writer is a human in the Builder UI clicking pre-built inspector controls that can only ever produce valid `props` shapes. **It stops being reasonable the moment an AI tool call becomes a write path**, because AI-generated `props`/`style` is untrusted input by the mission's own §20/§97 principle, and the shallow DTO would let a malformed or malicious block tree straight into the database with no server-side shape check. This is the single most concrete, immediate security gap the AI layer introduces — see §3 below for the fix (validate at the tool layer, using the same `BlockDefinition.fields` schema the Builder inspector already reads, before calling the existing shallow-validated save endpoint).
+3. **No widget "authoring" system — only a developer-maintained component registry.** Every block type (`registry-index.ts` → `blocks/{layout,typography,media,actions,business,navigation,content,commerce,booking,blog,forms,utility}`) is a hand-written React component, compiled into the frontend bundle at build time. There is no concept of a *stored*, *dynamically loaded*, *business-scoped* widget (mission §16–19, §55–56). This is the biggest architectural decision the mission requires and the codebase doesn't have a shape for yet — see §4 below for the recommended design (a constrained declarative widget schema, not arbitrary runtime code).
+4. **No sandboxing infrastructure of any kind** — no VM/isolate/worker execution environment, nothing resembling "custom business logic" (§13–15) beyond what a developer hand-writes into a NestJS service. Mission §15's "advanced custom logic... sandboxed, isolated, resource-limited" has zero starting infrastructure.
+5. **No Web3/blockchain code, dependency, or abstraction anywhere.** A clean slate — no wrong assumptions to unwind, but also nothing to reuse beyond the `PaymentProvider` pattern shape.
+6. **No audit log table.** `AnalyticsEvent` exists (`backend/prisma/schema.prisma:1019`) but it's a product-analytics table (page views, form submits), not a security/action audit trail (§102). A distinct `AuditLog` model is needed before any AI tool executes a real mutation.
+7. **No `backend/AGENTS.md` or `backend/PROJECT_CONTEXT.md`.** `frontend/PROJECT_CONTEXT.md` repeatedly references "`AGENTS.md` backend" for auth/realtime/DB details that must live somewhere backend-side, but no such file exists in this repo today (`find backend -iname "AGENTS.md"` — nothing). This is a pre-existing gap, not something the AI mission created, but the AI layer's backend module will need backend-side conventions documented somewhere — worth flagging to the owner, not silently fixing by inventing a new doc format.
+8. **The "Create Business" flow is a single static form** (`widgets/businesses/ui/CreateBusinessForm.tsx`), not conversational — confirmed by the file existing and no `onboarding`/`chat` slice existing anywhere in `frontend/src`. Mission §29–34's "Create Business with AI" is 0% built, but the form's fields (name, category, description) map cleanly onto the first few turns of a conversational onboarding — nothing about the current form needs to be destroyed, only supplemented with an AI-driven alternative entry point (mission §125's own instruction: audit before replacing).
+
+### 0.4 What this means for scope
+
+The mission (150 sections) describes a destination, not a sprint. Given this codebase's actual size (a working, tested, single-owner-per-business builder with Commerce/Booking/Content already live) and the owner's instruction to avoid endless non-terminating iteration, the right posture is: **build the AI orchestration substrate first — tool registry, policy/validation layer, one real LLM-backed chat that can safely call a handful of LOW/MEDIUM-risk tools end-to-end** — and prove the whole pipe (chat → intent → tool call → validated write → live canvas update) before expanding tool coverage. This mirrors exactly how `ROADMAP.md` itself was built (Commerce first, proven, then Booking reused the same shape) rather than trying to stand up all 150 sections' worth of subsystems simultaneously.
+
+---
+
+## 1. Target architecture (mapped onto real modules, not abstract boxes)
+
+```
+User (existing Tavern session, SessionAuthGuard)
+  ↓
+AI Chat UI (new: frontend/src/widgets/ai-chat or entities/ai-chat — FSD slice, streaming)
+  ↓
+POST /ai/chat (new: backend/src/modules/ai — NestJS module, SSE or chunked stream)
+  ↓
+AI Orchestration Service
+  ├─ builds context: Business + capabilities + current page/selection (from client)
+  ├─ calls LLM provider (abstraction, see §2.3) with a fixed tool schema
+  └─ receives tool_call(s) from the model — never raw code, never raw SQL
+  ↓
+Tool Registry (new: backend/src/modules/ai/tools/*.ts — one file per tool, small & composable, mission §59)
+  ↓
+Per-tool pipeline (mission §60, concretely):
+  1. Zod/class-validator schema check of the tool's own input shape
+  2. SessionAuthGuard's request.user already resolved upstream — reuse it, don't re-auth
+  3. Ownership check: reuse each domain module's existing findOwned(businessId, ownerId)
+  4. Risk-level check (LOW/MEDIUM/HIGH/CRITICAL, mission §100) — HIGH+ requires a
+     confirmation round-trip to the chat UI before executing, not silent execution
+  5. Domain-specific validation — for website-document tools, validate `props`/`style`
+     against BlockDefinition.fields BEFORE calling the (deliberately shallow) save
+     endpoint, closing gap §0.3.2 above
+  6. Execute via the EXISTING service methods (ProductsService.create, WebsitesService.saveDraft,
+     etc.) — the tool layer is a new caller of old code, not a new code path
+  7. Write an AuditLog row (new model, §3 below)
+  8. Return a structured result to the orchestration service
+  ↓
+Frontend receives the tool result over the stream → applies it to the live
+Zustand builder store the same way a human action would (dispatch the same
+store actions the Builder's own UI calls) → canvas re-renders via the existing
+BlockRenderer, no separate "AI preview" renderer (mission §36/§40's own principle,
+already true of this codebase's Preview vs. Builder vs. public site — reuse it a third time)
+```
+
+Nothing above requires rewriting `ROADMAP.md`'s work. The AI layer is a new caller sitting in front of existing, tested services.
+
+---
+
+## 2. Concrete gap analysis against the mission's own sections, grouped
+
+### 2.1 AI orchestration layer & tool registry (mission §6–9, §58–62)
+**Status: 0%.** Needs: a new `backend/src/modules/ai` NestJS module; an LLM provider abstraction (see §2.3); a tool registry (plain object/array of typed tool definitions, each with a Zod input schema, a risk level, and a handler that calls into an *existing* domain service); a planner/orchestration loop (call model → get tool_calls → execute → feed results back → repeat until the model returns a final message, with a max-iteration guard against runaway loops — mission has no explicit iteration cap language but §61/§103 imply one is needed for safety).
+
+### 2.2 AI ↔ frontend / AI ↔ backend / AI ↔ database tool surfaces (mission §7–10)
+**Status: substrate exists, tools don't.** The website block-tree + registry (§0.2) covers most of §7's list already at the *data model* level; what's missing is the actual typed tool functions (`create_page`, `update_component_props`, etc.) as callable, validated units, plus a small number of genuinely new ones (`create_entity`/`add_field` for the custom-database-builder use case in mission §10, which has **no equivalent today** — Product/Service/Order/etc. are all hand-coded Prisma models, not a dynamic user-defined-entity system). Recommend: don't build a generic dynamic-entity engine in the first iteration — it's the highest-complexity, highest-risk item in the whole mission (arbitrary user-defined schema + migrations, mission §11 "migration safety"). Sequence it after the tool-registry substrate and the widget engine are proven.
+
+### 2.3 LLM provider choice — **open decision, needs the owner**
+No provider is configured. The mission is provider-agnostic in spirit (§24 "approved connectors", not naming a vendor) but a real key is needed to write and test any of this. This blocks all further work in this initiative until decided — flagging per mission §137's own stop condition ("нужны credentials/secrets/external configuration"). Needs from the owner: which provider (Anthropic/OpenAI/other), an API key set as a backend env var (never committed, added to `env.validation.ts` the same way `STRIPE_SECRET_KEY` already is), and a rough cost-tolerance signal for §123's model-routing tiers.
+
+### 2.4 Custom widget engine (mission §16–23, §55–57)
+**Status: 0%, and the highest architectural-decision item in this whole initiative.** Recommend against arbitrary-JS widgets entirely, in favor of a **constrained declarative widget schema**: a widget is a JSON document (layout of existing primitive blocks + a typed `dataBindings` array pointing at approved data sources + a typed `capabilities` array from a fixed enum) rather than executable code. This satisfies mission §21's "allowlist > blocklist" and §14's "prefer structured rules over arbitrary code" directly, and reuses the *exact* `WebsiteBlock`/`BlockDefinition` machinery that already exists — a "custom widget" becomes a saved, business-scoped **composition** of existing blocks plus data bindings, stored as a new `CustomWidget` Prisma model (`id, businessId, name, schema: Json, status: WidgetStatus, ...`), not a new rendering/execution engine. A crypto-price widget or a loyalty-dashboard widget becomes: existing card/stat blocks + a `dataSource` binding to a new approved connector (§2.6) — no new sandbox needed for the common case. True arbitrary-code widgets (mission §15's "advanced custom logic") should stay explicitly out of scope until there's a real user request for something the declarative system can't express — same anti-speculation discipline `ROADMAP.md §6` already applies to Marketplace/multi-vendor.
+
+### 2.5 Business logic engine (mission §13–15)
+**Status: 0%.** Recommend a `Rule { trigger: DomainEvent, condition: JsonLogic-style expression, actions: TypedAction[] }` model, evaluated by a NestJS listener on the *existing* domain events this codebase already has natural hook points for (`OrdersController` already emits after `OrdersService.create` completes — the same "Controller decides, Service doesn't know" pattern documented in `frontend/PROJECT_CONTEXT.md`'s real-time section applies here too: emit a `RuleEngineService.evaluate('order.completed', order)` call from controllers, after the service call, not inside services). No arbitrary code execution — actions are a small, versioned enum (`addLoyaltyPoints`, `setMembershipTier`, `sendNotification`, ...), each its own tiny typed handler, composable per mission §59.
+
+### 2.6 Web3 (mission §25–28)
+**Status: 0%, clean slate.** Follow the `PaymentProvider` pattern exactly: `Web3Provider` abstract class (wallet connection, balance read, NFT read, tx status — all read/display operations first), one real adapter (a public RPC provider or a service like Alchemy/Infura), financial transactions always require an explicit client-side wallet-signed confirmation (never AI-initiated signing, mission §27) — this is a UI/UX flow (`wagmi`/`viem` on the frontend talking to the user's own wallet extension), not something the backend or the AI tool layer can or should perform on the user's behalf. Sequence this after Commerce-equivalent tool coverage is proven, since it's genuinely new infrastructure with no existing analog in this codebase (unlike Commerce/Booking's price-in-cents pattern, which Web3 can't reuse).
+
+### 2.7 Conversational onboarding (mission §29–34)
+**Status: 0% as AI, but the target UI shell exists.** `CreateBusinessForm.tsx` already collects name/category/description — the AI onboarding is a superset (more turns, dynamic questions) that should **replace the entry point**, not sit beside it as a second disconnected flow (mission §124's "must be one system"). Concretely: `/businesses/new` becomes a chat surface; on completion, the AI's structured output (name, category, capabilities, starter content) gets fed through the *same* `createBusiness`/`saveWebsiteDraft` calls the current form already uses — so the manual form's code isn't wasted, it becomes the deterministic "fallback"/"advanced" path for a user who skips the chat (mission §127's progressive disclosure).
+
+### 2.8 Security policy engine, risk levels, audit log (mission §99–103)
+**Status: primitives exist (§0.2), the composed engine doesn't.** First iteration needs: an `AuditLog` Prisma model (`actorId, businessId, tool, riskLevel, argsSummary (no secrets), result, createdAt`); a `RiskLevel` enum used by every tool definition; a rule that any `HIGH`/`CRITICAL` tool call returns a "confirm?" step to the chat UI instead of executing immediately (mission §100, §43's change-preview). This is small, well-scoped, and should ship in the very first AI iteration — retrofitting audit logging after tools already exist is exactly the kind of rework the mission's own "quality gate before publish" discipline (§67) warns against.
+
+---
+
+## 3. Immediate, codebase-specific security note (not hypothetical — verified above)
+
+`UpdateWebsiteDocumentDto` (`backend/src/modules/websites/dto/update-website-document.dto.ts`) validates only `pages: unknown[]` / `theme: object` / `settings: object` — no per-block shape check, by design, for a human-only Builder. **Any AI tool that writes to a website document must run its own validation against `BlockDefinition.fields` (the frontend registry) before the payload reaches this endpoint** — either by porting the field-schema validation to a shared/backend-callable form, or by having the tool layer construct blocks only through a small set of pre-validated helper functions per block type, never by handing the model's raw JSON straight to `saveDraft`. This is the concrete instance of mission §97 ("generated schema... untrusted input") for this specific codebase, not a generic warning — call it out explicitly in the first AI-tools implementation PR.
+
+---
+
+## 4. Phased plan for this initiative
+
+| Phase | Scope | Depends on | Status |
+|---|---|---|---|
+| **AI-0** | This audit | — | ✅ done (this document) |
+| **AI-1** | LLM provider decision + `backend/src/modules/ai` module skeleton, `AuditLog` model, `ToolRiskLevel` enum, tool-registry pattern, one real read-only tool (`get_project_tree`) | Owner picks provider (§2.3) | ✅ **done, VERIFIED — see §6** |
+| **AI-2** | 4–6 real LOW/MEDIUM-risk website-editing tools (`update_block_props`, `set_style`, `create_page`, `add_block`) with block-schema validation per §3, wired to a minimal chat UI (no streaming polish yet) in a new `widgets/ai-chat` slice | AI-1 | **✅ done+verified — all 4 tools shipped (see §7-§9) plus a real chat panel in the website builder (`features/ai-chat`, see §9). One scope exception agreed with the owner: `image`/`button` blocks stay out of `add_block`'s allowlist (need `LinkTarget` + media upload, neither built yet).** |
+| **AI-3** | Streaming chat UX (SSE), live-canvas apply-on-tool-result, activity timeline (mission §39–42) | AI-2 | Not started |
+| **AI-4** | Conversational onboarding replacing/augmenting `CreateBusinessForm` (§2.7), reusing AI-2/3's tool pipe for the generation step | AI-2, AI-3 | Not started |
+| **AI-5** | Business logic engine v1 (Rule/Trigger/Condition/Action, §2.5), 3–4 built-in action types | AI-1 | Not started |
+| **AI-6** | Custom widget engine v1 — declarative composition schema, `CustomWidget` model, business-scoped, capability-gated (§2.4) | AI-2 | Not started |
+| **AI-7** | Web3 provider abstraction + read-only wallet/balance/NFT display widgets (§2.6) | AI-6 | Not started |
+| **AI-8** | Custom database builder (`create_entity`/`add_field`, §2.2) — deliberately last: highest schema-safety risk, needs AI-1's audit/risk-level machinery proven first | AI-1, AI-5 | Not started |
+| **AI-9** | HIGH/CRITICAL-risk tools requiring confirmation flows; full quality-gate pass (§67) across all shipped tools | All above | Not started |
+
+Sections of the mission not mapped to a phase above (agency/white-label mode §122, multi-site §120, i18n §119, GEO/AI-search structuring §91) are real but strictly lower-priority than getting one working AI-tool pipe live — deliberately deferred, same anti-speculation discipline as `ROADMAP.md §6`.
+
+---
+
+## 5. What's needed from the owner before AI-1 can start
+
+Per mission §137's own stop conditions (external config/credentials required):
+
+1. **LLM provider + API key.** Which provider, and the key itself (set as a backend env var, never pasted into chat/committed).
+2. **Confirmation that `backend/AGENTS.md`/`backend/PROJECT_CONTEXT.md` should be created** as part of AI-1 (currently missing, referenced by the frontend docs but absent — see §0.3.7) — reasonable to bundle since the new `ai` module needs backend-side conventions documented somewhere, but flagging rather than assuming, since it's outside this initiative's original scope.
+3. **A one-time decision on tenant model scope**: does this initiative need to build multi-user/team `Business` access (mission §53/§121 "collaboration") before AI tools go further than a single owner, or is single-owner-per-business (today's reality) acceptable for the AI layer's first several phases? Recommend: **defer** — AI-1 through AI-6 work identically under single-ownership, and team/collaboration is its own large initiative `ROADMAP.md §6` already explicitly deferred for the non-AI platform too.
+
+Once (1) is answered, AI-1 can start immediately without further clarification.
+
+---
+
+## 6. What actually shipped in AI-1 (2026-08-29/30) — verified, not assumed
+
+Everything below was tested against the real, running dev stack (Docker Compose: `backend`, `postgres`, `redis`) and the real Gemini API with the owner's own key — no mocks, per mission §115.
+
+**Backend — `backend/src/modules/ai/`:**
+- `LlmProvider` abstract class (`llm-provider.ts`) — the same provider-abstraction shape already proven in this codebase by `PaymentProvider`. `AiService` depends only on this abstraction.
+- `GeminiAdapter` (`providers/gemini-adapter.service.ts`) — implements `LlmProvider` via direct REST calls to `generateContent` (no SDK dependency added). Handles Gemini's `thoughtSignature` requirement for multi-turn function calling on Gemini 3.x "thinking" models — **this was not in the original plan and was only discovered by testing against the real API**: the first real request failed with `400 "missing thought_signature"`, which is undocumented behavior discovered live, not predictable from the API reference alone. Fixed via a provider-agnostic `LlmToolCall.providerMetadata` escape hatch (opaque to `AiService`, round-tripped verbatim) rather than leaking Gemini-specific concepts into the shared types.
+- `ToolRegistryService` — a typed, composable registry (mission §59); tools self-register via `OnModuleInit`, no central file needs editing to add a new one.
+- `AuditLogService` + `AuditLog` Prisma model (migration `20260830020000_add_ai_audit_log`, applied to the real dev DB) — every tool call, success or failure, gets a row: actor, business, tool, risk level, args, result, status. Verified with a direct `psql` query after a real chat call, not just by reading the code.
+- `AiService.chat` — the orchestration loop (mission §63-64, simplified for AI-1: no separate Reviewer/Fixer yet, nothing to review before a write exists). Re-derives `businessId` ownership itself on every call (same `findUnique` + `ownerId` check pattern as every other module in this codebase — see AI_PLATFORM_ROADMAP.md §0.1) — **verified a second test user gets a real 403 on the first user's business**, not just asserted by reading the code.
+- `AiController` — `POST /businesses/:businessId/ai/chat`, behind the existing `SessionAuthGuard`, `@Throttle`d (15/min — a real LLM call with a tool loop, not a cheap read).
+- `get_project_tree` — the one real tool. Read-only (`low` risk), calls the *existing* `WebsitesService.getDraft` rather than querying Prisma directly — proves the "tool layer is a new caller of old code" principle from §1 for real, not just on paper.
+
+**What was actually verified end-to-end** (real HTTP requests against the running stack, real Gemini API, real Postgres — commands and output are not reproduced here, but every claim below was directly observed, not inferred):
+- A real chat message ("Сколько страниц на моём сайте?") correctly triggers `get_project_tree`, the tool reads the real database, and the model's final answer reflects the real data (correctly reported "1 страница: Главная" for a freshly created business).
+- A message needing no tool ("Привет! Кто ты?") returns a plain-text answer with an empty `toolExecutions` list — the loop correctly short-circuits without a wasted tool round-trip.
+- The `AuditLog` table has real rows after real calls (checked via `psql`, not the API response).
+- A second user calling the endpoint against the first user's `businessId` gets `403 {"message":"Это не ваш бизнес"}` — tenant isolation holds through the full AI pipe, not just in the plain REST controllers.
+- An unowned/nonexistent `businessId` gets `404`, not a silent empty result.
+- Missing/empty `message` is rejected by DTO validation (`400`) before the LLM is ever called.
+- Missing session token gets `401` from the pre-existing `SessionAuthGuard` — the AI route didn't accidentally bypass it.
+- `npm run check` (lint + format + typecheck + vitest, all 29 pre-existing backend tests) passes clean with the new module in place.
+
+**One correctness fix made during verification, not left as a known issue:** the first version of the system prompt hardcoded an aspirational capability list ("I can edit pages, manage SEO, handle orders...") that didn't match reality — only one read-only tool exists. A real test asking "what can you do?" surfaced the model repeating that fabricated list. Fixed by instructing the model to only describe capabilities it actually has a tool for, right now — re-verified the same question afterward and got an honest, accurate answer. This is the concrete version of mission §116/§117 ("no dead features", "no placeholders") applied to AI-generated claims specifically, not just to UI buttons.
+
+**Explicitly NOT done in AI-1** (by design — see §4's phase boundaries, not oversights):
+- No streaming (AI-3). Current endpoint is request/response.
+- No frontend chat UI at all yet (AI-2/AI-3). This is a backend-only, curl-verified slice.
+- No write-capable tools yet, so no HIGH/CRITICAL risk-level confirmation flow has been exercised for real (AI-2/AI-9) — the risk-level plumbing exists (`ToolRiskLevel`, `AuditLog.riskLevel`) but only `low` has been exercised.
+- `backend/AGENTS.md`/`backend/PROJECT_CONTEXT.md` were **not** created — §5 flagged this as needing the owner's confirmation first, which hasn't been given; the gap remains as documented, not silently fixed.
+
+---
+
+## 7. AI-2 progress (2026-08-30) — `create_page`, first write-capable tool, VERIFIED
+
+Per the standing instruction to keep iterations bounded (finish and verify one narrow slice before widening scope), this update ships exactly **one** of AI-2's four planned tools — `create_page` — end-to-end, rather than starting all four in parallel. The other three (`update_block_props`, `set_style`, `add_block`) are deliberately deferred, see "Why these three specifically wait" below.
+
+**What shipped — `backend/src/modules/ai/tools/create-page.tool.ts`:**
+- `create_page(title: string)` — `medium` risk. Reads the current draft via the existing `WebsitesService.getDraft`, derives a URL slug from the title via the existing `slugify()` util (already used by `BusinessesService`/`ServicesService`/`ProductsService`, reused rather than reinvented), de-duplicates against the site's current slugs (`o-nas` → `o-nas-2` on collision), and appends a new page with `blocks: []` through the existing `WebsitesService.saveDraft` — no new data-access path.
+- Registered in `AiModule` next to `GetProjectTreeTool`, same self-registering `OnModuleInit` pattern.
+- **Deliberately sidesteps §3's validation gap, not a workaround of it**: a new page has `blocks: []`, so there is no block `props`/`style` shape to validate against `BlockDefinition.fields` yet. `update_block_props`/`set_style`/`add_block` are the tools that actually need that shared validator — see below.
+
+**Verified against the real running dev stack (Docker Compose backend+postgres+redis) and the real Gemini API, not mocked:**
+- `npm run check` (lint + format + typecheck + all 29 backend tests) passes clean. (Also had to run `npx prisma generate` — the `AuditLog` model from AI-1 hadn't been regenerated into the local Prisma client, which was failing lint with "unsafe access" errors unrelated to this change; fixed as a prerequisite, not left broken.)
+- Real chat flow, real business, real Postgres: "Сколько страниц на моём сайте?" → 1 (Главная) → "Создай новую страницу с заголовком «О нас»" → tool call `create_page` (medium risk) → "Сколько страниц?" → 2 (Главная, О нас, slug `o-nas`) — confirmed both via the chat's own answer and directly via `psql` against `website_pages`.
+- `audit_logs` row confirmed via direct `psql` query (not just the API response): `tool=create_page, riskLevel=medium, status=success, argsSummary={"title":"О нас"}, resultSummary` with the real new page id.
+- Slug-collision handling verified for real: asking to create a second "О нас" page produced `o-nas-2`, confirmed directly in `website_pages` (the wrapping chat response for that specific call surfaced a 500 — see below, a pre-existing gap, not a `create_page` bug).
+- Tenant isolation verified for real on this new tool specifically: a second seeded user (`mark@tavern.local`) calling the same business's `/ai/chat` asking to create a page got `403 "Это не ваш бизнес"` before the tool ever ran — `AiService.assertOwnership` covers new tools automatically, nothing tool-specific to add.
+- Test business created and deleted via the real API as part of this verification — no leftover test data in the dev DB.
+
+**One pre-existing gap surfaced by this testing, not introduced by it, and deliberately NOT fixed in this slice (scope discipline, not oversight):** `AiService.chat`'s tool loop calls the LLM again after a successful tool execution to produce the final natural-language reply; if *that* follow-up call fails (observed here: Gemini free-tier quota, `429`), the whole request surfaces as a bare `500` to the caller even though the tool's mutation already committed successfully. The user sees an opaque error with no indication the page was actually created. This is an orchestration-loop robustness gap that predates `create_page` (would affect `get_project_tree` too, just less consequentially since it's read-only) — flagging for **AI-3** ("streaming chat UX... activity timeline", §4), which is where the loop's error-handling shape naturally gets revisited, rather than patching it ad hoc here.
+
+**Why the other three AI-2 tools specifically wait, not started this slice:** `update_block_props`/`set_style`/`add_block` all write into a block's `props`/`style`, which is exactly the untrusted-input gap §3 already called out — they need a shared, backend-callable version of the frontend's `BlockDefinition.fields` schema (or an equivalent) to validate against *before* those tools are safe to ship, per this project's own stated principle (AI-generated block shape is untrusted input, §3/§0.3.2). That's real, non-trivial, cross-cutting work (porting or sharing schema between `frontend/src/entities/website/model/registry.ts` and the backend) — building it well deserves its own bounded slice rather than being rushed alongside `create_page` in this one.
+
+**Next bounded slice for AI-2 (not started, proposed — not started without checking in first, per the standing instruction):** design and land the shared block-schema validator, then `add_block` as the second write tool (simplest of the remaining three — appends a new block with fully-model-authored `props`, i.e. no "read existing, patch a field" complexity that `update_block_props`/`set_style` add). The minimal chat UI (`widgets/ai-chat`) stays last in AI-2, once ≥2-3 tools exist to make a UI worth building.
+
+---
+
+## 8. AI-2 progress (2026-08-30, continued) — `add_block`, second write-capable tool, VERIFIED
+
+Landed the "simpler" half of the deferred plan from §7 above — `add_block` — but via a **curated allowlist**, not the full shared `BlockDefinition.fields` port: building a backend-callable validator for all 12 block categories (including `control: 'link'`'s `LinkTarget` union and `control: 'dataSource'`'s entity-binding) is real, non-trivial, cross-cutting work on its own, and the standing instruction is to keep slices bounded — so this slice ships a narrow, safe subset instead of blocking on the large validator.
+
+**What shipped:**
+- `backend/src/modules/ai/tools/lib/add-block-schemas.ts` — a pure, NestJS-free module (same shape as `modules/appointments/lib/availability.ts`) defining a **4-type allowlist**: `heading`, `text`, `quote`, `spacer`. Each schema was checked field-by-field against the real `defaultProps`/`fields` in `frontend/src/entities/website/blocks/{typography,layout}/index.tsx`, not guessed. `buildValidatedProps()` rejects (throws, doesn't silently drop) any prop key outside the schema, any non-matching enum value, any non-string where a string is required, and any string over its `maxLength` — merging only what's provided over real defaults.
+- `backend/src/modules/ai/tools/add-block.tool.ts` — `add_block(pageId, blockType, props?)`, `medium` risk, same self-registering pattern as the other two tools. Reads the draft, finds the target page, validates `props` via the schema above, appends the new block to the end of that page's `blocks`, writes back through the existing `WebsitesService.saveDraft` — no new data-access path, same as `create_page`.
+- **Deliberately excluded from the allowlist, not an oversight**: `image`/`gallery`/`button`/any data-bound block (`productgrid` etc.) — `image`/`button` need `LinkTarget` (a structural union, not a scalar) and/or media upload, neither of which the AI layer has yet; extending the allowlist to them should happen alongside those capabilities landing, not before.
+- 9 new unit tests (`add-block-schemas.test.ts`, plain vitest, no DI/mocking needed — exactly why the validator was extracted to a pure lib function) covering: defaulting when no props given, partial-override merge, unknown-field rejection, bad-enum rejection, wrong-type rejection, over-length rejection, and the exact-maxLength boundary. `npm run check` (lint+format+typecheck+all tests, now 38) passes clean.
+
+**Verified against the real running dev stack and the real Gemini API, not mocked:** a single chat message — "Найди id главной страницы и добавь на неё заголовок «Добро пожаловать» и текстовый абзац «Мы рады видеть вас у нас в гостях.» под ним" — correctly drove a 3-tool chain in one turn (`get_project_tree` → `add_block` × 2) within the existing `MAX_TOOL_ITERATIONS` loop, with no code changes needed to support multi-tool turns (the orchestration loop already handled it, per §6's original design). Confirmed directly via `psql` against `website_pages.content` that the resulting JSON exactly matches the shape `BlockDefinition<HeadingProps>`/`BlockDefinition<TextProps>` expect (`{"type":"heading","props":{"size":"md","text":"Добро пожаловать","color":"default","level":"h2"}}` etc.) — a block added this way is indistinguishable from one added by hand in the Builder. `audit_logs` rows confirmed for both calls (`tool=add_block, riskLevel=medium, status=success`). Test business created and deleted via the real API afterward, no dev-DB leftovers.
+
+**AI-2 remaining after this slice:** `update_block_props`/`set_style` (need the full shared validator, or their own narrower curated approach — open question, not decided yet) and the minimal chat UI. Not starting either without checking in first, per the standing instruction to keep the current iteration closed and confirmed before opening the next.
+
+---
+
+## 9. AI-2 completed (2026-08-30, continued) — orchestration fix, `set_style`, `update_block_props`, chat UI — ALL VERIFIED
+
+The owner explicitly asked to close out AI-2 fully in this session rather than defer further ("залатать все дыры... не должно быть отложенных фич"), with two scope decisions made explicitly, not assumed:
+1. **Full scope = AI-2 backend gaps + a real (not stripped-down) chat UI** — not AI-3 through AI-9, which stay deferred (still need owner decisions per §5: Web3 provider, tenant model, etc.).
+2. **`image`/`button` blocks stay explicitly out of scope** — the owner agreed these need a new capability (media upload, `LinkTarget` validation) that shouldn't be rushed in just to "close a hole"; extending `add_block`'s allowlist to them is a future slice, not a gap in this one.
+
+### 9.1 Orchestration-loop fix — the §7-flagged bug
+
+`AiService.chat` (`backend/src/modules/ai/ai.service.ts`) now distinguishes two failure shapes when a call to `LlmProvider.chat` throws mid-loop:
+- **No tool executed yet this turn** (`executions.length === 0`) — unchanged behavior, rethrows, surfaces as the usual error response. Nothing happened, there's nothing to report as partially done.
+- **At least one tool already executed successfully this turn** — the mutation is already committed in Postgres; the failure is only in getting the model's follow-up natural-language reply. Now returns a normal `200`-range `ChatResult` with a message telling the user the action succeeded but the final reply failed, plus the real `toolExecutions` list — not a bare `500` that hides a successful mutation.
+
+**Verified for real, not just by code reading**: this path was hit organically twice during this session's own testing (Gemini free-tier quota, `429`, exactly the scenario §7 flagged) — both times the API returned the graceful message instead of `500`, and `psql` confirmed the tool's mutation had, in fact, already committed. Also verified the *non*-regression case: firing 5 rapid tool-using messages to deliberately exhaust the quota, all 5 failed on their first LLM call (before any tool ran) and correctly still returned `500` — the fix narrows the fix to exactly the intended case, doesn't swallow all failures.
+
+### 9.2 `set_style` — works on any block, no per-type allowlist needed
+
+Unlike `props`, a block's `style` is structurally identical for every block type (`BlockStyle` in `frontend/src/entities/website/model/types.ts`) — so `set_style` doesn't need the curated-allowlist approach `add_block`/`update_block_props` use. `backend/src/modules/ai/tools/lib/block-style-schema.ts` validates the "simple" subset of `BlockStyle` (`background`/`paddingY`/`paddingX`/`marginTop`/`marginBottom`/`textAlign`/`maxWidth` — flat values, not `ResponsiveValue`) against its real enum values; the "Advanced" independent-per-side padding mode (`customPadding` + 4 side fields) is deliberately excluded — toggling it via AI without an explicit ask seemed more likely to confuse than help, not a technical limitation. `null` on a field removes it (revert to renderer default) rather than being treated as a value, since `BlockStyle`/`computeBlockWrapperStyle` have no "explicit null" state of their own.
+
+`backend/src/modules/ai/tools/lib/block-tree.ts` — new shared utility (`findBlockInPages`/`replaceBlockInPages`), recursively searches/replaces a block by id anywhere in the document tree, not just top-level page blocks (blocks nest inside `section`/`container`/`columns`/`column`). Both `set_style` and `update_block_props` use it.
+
+### 9.3 `update_block_props` — same curated allowlist as `add_block`, now patchable
+
+Restricted to the same 4 types `add_block` supports (`heading`/`text`/`quote`/`spacer`) for the same reason `add_block` was scoped that way (§8) — `props` differs per block type, and the backend still can't read the full frontend `BlockDefinition.fields` registry. `buildValidatedProps` (`lib/add-block-schemas.ts`) was extended with an optional `base` parameter (defaults to `schema.defaultProps` for `add_block`'s case) so `update_block_props` can merge onto the block's **current** props instead of resetting untouched fields back to schema defaults — verified directly: updating only `text` on a heading left its `level`/`size`/`color` exactly as they were.
+
+### 9.4 New unit tests
+
+18 new tests across 3 files (`block-tree.test.ts`, `block-style-schema.test.ts`, plus one added to `add-block-schemas.test.ts` for the new `base` parameter) — same pure-function, no-DI style as the project's existing `lib/*.test.ts` convention. Backend total: **55 tests, all passing**, plus `npm run check` (lint/format/typecheck) clean.
+
+### 9.5 Chat UI — `features/ai-chat`, wired into the website builder
+
+A real, usable chat panel — not a stub — scoped small per the owner's clarification ("мини — если это про размер, а не про функционал"):
+- `frontend/src/features/ai-chat/` (FSD `features` layer — a user-facing scenario, not a domain entity) — `api/send-ai-chat-message.ts` (Server Action calling the existing `POST /businesses/:businessId/ai/chat`), `model/types.ts` (frontend mirror of backend `ChatResult`/`ToolExecutionSummary`, same "two independent copies of one contract" pattern already used for `WebsiteDocument`), `ui/AiChatPanel.tsx` + its `.module.scss` (BEM, existing `--tavern-*` design tokens, no new ones invented).
+- **Local `useState`, not a Zustand store** — the conversation history is read by exactly one component instance, matching `frontend/AGENTS.md` §4's rule against stores for non-shared state.
+- **Revised after first review**: initially wired as a 5th tab in the panel-bar (sharing screen space with the canvas the same way `Страницы`/`Блоки`/`Настройки` do); the owner asked for a floating mini-chat bubble instead, so the canvas is never shared with it at all. Now a `position: fixed` bubble button (bottom-right) that opens a small floating chat window over the canvas — same size/offset/shape convention as the existing cart bubble (`.fab` in `entities/cart/ui/CartWidget.module.scss`, 52px/20px/`border-radius: 999px`), not a new visual pattern invented from scratch. The two bubbles never actually coexist on screen today (cart lives on the public site/dashboard, this one only in the builder, and the builder's own Preview renders `WebsiteRenderer` directly rather than the public-site widget that carries the cart) — traced through every route/component to confirm this (`(protected)/layout.tsx`, `home-app.tsx`, `PreviewModal.tsx`) after the owner flagged a possible overlap; kept the same numbers anyway for visual consistency, not because a collision needed solving. On mobile/tablet, offset upward to clear the builder's own bottom tab bar (`.panelBarBottom`), which the cart bubble doesn't have to worry about since the public site has no such bar.
+- **Self-QA pass against `frontend/AGENTS.md` §9's checklist found two more real bugs, both fixed, no browser needed to catch either**:
+  1. The chat window was conditionally rendered (`{isAiChatOpen && <AiChatPanel/>}`), so `AiChatPanel` unmounted on every close — its own doc comment claimed history "survives" reopening, which was simply false (true even back when this was a tab, not just after the bubble rewrite). Fixed by always rendering the window and toggling visibility with a `.aiWindow--hidden { display: none; }` class instead of conditional mounting — `AiChatPanel` now takes an `isOpen` prop (used only to re-focus the input on each open) and its conversation state genuinely persists across close/reopen for the life of the builder session.
+  2. The click-outside/Escape-to-close effect used bare `document.addEventListener(...)` — but `WebsiteBuilderWidget` already has a local `const document = useWebsiteBuilderStore((state) => state.document)` (the site's JSON document) shadowing the global DOM `document` for the whole component. This would have thrown at runtime the first time the chat was opened (`WebsiteDocument` has no `.addEventListener`). ESLint's `react-hooks/exhaustive-deps` flagged it (misread as "missing dep `document`", but pointed at the real shadowing) — fixed by using `globalThis.document` explicitly. A reminder that this specific file's existing naming choice (`document` for the store value) is a sharp edge for any new code added to it.
+  - Also added while at it: `role="dialog"`/`aria-label`/`aria-hidden` on the floating window, keyboard Escape-to-close, click-outside-to-close — matching the UX/a11y bar `frontend/AGENTS.md` §9 asks for on every feature, not extras.
+  - `npm run check` and a real `npm run build` both clean after every fix in this pass.
+- **Canvas sync after an AI mutation**: AI tools write straight to the backend (`WebsitesService.saveDraft`), bypassing the builder's Zustand store entirely — so after a response containing a real mutation (`status: 'success'` and `riskLevel !== 'low'`), the widget re-fetches the draft and calls the store's `loadDocument` to reflect it. Gated on `!isDirty`: if the user has unsaved local edits in the builder, the refresh is skipped rather than either silently destroying the AI's server-side change (if autosave fired) or the user's in-progress local edit (if it force-reloaded) — the panel shows an explicit message telling the user to save/reload instead of updating silently either way.
+- Handles the "AI not configured" (`503`) case with a specific message, not a generic error.
+
+**Verified**: `npm run check` (lint + format + typecheck + tests) clean on the frontend, plus a real `npm run build` (`next build`, production build, not just `tsc --noEmit`) — both backend and frontend. No new lint errors introduced (the only lint warnings present are pre-existing, in unrelated files). An SSR smoke-test (real login, real business, `curl` against the actual running `next dev` server at the builder route) returned `200` with no error-boundary markers — confirms the new import graph (`WebsiteBuilderWidget` → `features/ai-chat` → `shared/ui`/`shared/lib`) compiles and server-renders cleanly. **Not independently verified**: interactive browser testing of the chat panel itself (typing a message, seeing the bubble, watching the canvas refresh) — no browser-automation tool was available in this session (`claude-in-chrome` not connected). This is a real gap in verification depth, flagged rather than silently assumed away; worth a manual click-through before calling AI-2 fully closed in practice.
+
+**One real bug the first pass of "verified" above missed, caught by the owner, not by this session's own checks**: `npm run check` (lint+format+typecheck+tests) passed clean, but a real `next build` did not — it failed with `'server-only' cannot be imported from a Client Component module`. `AiChatPanel.tsx` (`'use client'`) imported `BackendError` from `shared/lib/backend-client.ts` (which starts with `import 'server-only'`) to special-case the "AI not configured" `503` response — just importing that class for an `instanceof` check pulled the whole server-only module into the client bundle, which `tsc --noEmit`/ESLint have no way to catch (it's a bundler-level, not type-level, constraint) but `next build` enforces directly. Fixed by moving the `BackendError` handling into `send-ai-chat-message.ts` (a `'use server'` file, where importing `backend-client.ts` is fine) and having it re-throw a plain `Error` with the friendly message — the exact pattern already used by `features/auth/api/actions.ts` for the same reason, not a new one invented here. **Lesson applied going forward for this project**: `npm run check` is necessary but not sufficient for a Next.js App Router change that touches both a Server Action/Component and a Client Component — a real `npm run build` is required too, and is now run for both frontend and backend before calling any such slice done.
+
+### 9.6 What's genuinely still deferred, and why (not silent gaps)
+
+- **`image`/`button` blocks in `add_block`** — needs `LinkTarget` validation + a media-upload AI capability, neither exists; explicitly agreed with the owner to defer (§9 intro above).
+- **Interactive browser verification of the chat panel** — flagged in §9.5, not silently skipped; needs either a connected browser tool or the owner's own manual check.
+- **Everything in AI-3 through AI-9** (streaming, business logic engine, custom widget engine, Web3, custom DB builder, HIGH/CRITICAL confirmation flow) — explicitly out of scope for this session per the owner's own scoping answer, not a gap in AI-2.

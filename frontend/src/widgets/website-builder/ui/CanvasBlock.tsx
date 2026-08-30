@@ -87,7 +87,7 @@ export function CanvasBlock({ block, theme, viewport, business, pages }: CanvasB
 
   const hidden = isBlockHidden(block, viewport);
   const isSelected = selectedBlockId === block.id;
-  const { outer, inner } = computeBlockWrapperStyle(block.style);
+  const { outer, inner } = computeBlockWrapperStyle(block.style, viewport);
   const Renderer = definition.Renderer;
 
   return (

@@ -122,6 +122,12 @@
   font-weight: 700;
 }
 
+.paymentGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .paymentBadge {
   padding: 3px 8px;
   border-radius: 999px;
@@ -139,4 +145,30 @@
     background: color-mix(in srgb, var(--tavern-danger) 14%, transparent);
     color: var(--tavern-danger);
   }
+}
+
+.refundButton {
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--tavern-danger) 40%, transparent);
+  border-radius: 999px;
+  background: none;
+  color: var(--tavern-danger);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--tavern-danger) 10%, transparent);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+.refundError {
+  color: var(--tavern-danger);
+  font-size: 12px;
 }

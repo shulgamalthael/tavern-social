@@ -2,6 +2,7 @@
 
 import { type ComponentType, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { getBusinesses } from '@/entities/business';
 import { useFriendStore } from '@/entities/friend';
 import {
   type NotificationType,
@@ -16,8 +17,10 @@ import { type SectionId, useNavigationStore } from '@/features/section-navigatio
 import { BACKEND_WS_URL } from '@/shared/config/realtime';
 import { cn } from '@/shared/lib/cn';
 import { getInitials } from '@/shared/lib/get-initials';
+import { useAsyncData } from '@/shared/lib/use-async-data';
 import { usePersistedScroll } from '@/shared/lib/use-persisted-scroll';
 import { AdminBar } from '@/widgets/admin';
+import { BusinessOwnerBar } from '@/widgets/business-owner-bar';
 import { CommunitiesWidget } from '@/widgets/communities';
 import { FeedWidget } from '@/widgets/feed';
 import { FriendsWidget } from '@/widgets/friends';
@@ -128,6 +131,11 @@ export function HomeApp() {
   const { currentUser } = useCurrentUser();
   const appRef = useRef<HTMLDivElement>(null);
   usePersistedScroll(appRef);
+  // Собственные бизнесы текущего пользователя — только для `BusinessOwnerBar`
+  // ниже, больше никто на этом экране их не читает, поэтому обычный
+  // `useAsyncData`, а не отдельный Zustand-стор (тот же принцип, что и у
+  // остальных данных, нужных ровно одному месту, см. AGENTS.md раздел 4).
+  const ownedBusinesses = useAsyncData(getBusinesses).data ?? [];
 
   useEffect(() => {
     loadPosts();
@@ -361,10 +369,20 @@ export function HomeApp() {
   // page.module.scss (без брейкпоинта — теперь безусловно).
   const hideHeader = section === 'messages';
 
+  const hasBusinesses = ownedBusinesses.length > 0;
+
   return (
-    <div className={cn(styles.app, isAdmin && styles['app--with-admin-bar'])} ref={appRef}>
+    <div
+      className={cn(
+        styles.app,
+        isAdmin && styles['app--with-admin-bar'],
+        hasBusinesses && styles['app--with-business-bar'],
+      )}
+      ref={appRef}
+    >
       <div className={cn(styles['app__top'], hideHeader && styles['app__top--collapsed'])}>
         {isAdmin && <AdminBar />}
+        {hasBusinesses && <BusinessOwnerBar businesses={ownedBusinesses} />}
         <Header containerRef={appRef} />
       </div>
       <ActiveSection />

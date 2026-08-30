@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import type { RequestUser } from '@/common/types/authenticated-request';
@@ -36,5 +36,14 @@ export class AppointmentsController {
       currentUser.id,
       dto.status,
     );
+  }
+
+  @Post(':appointmentId/refund')
+  refund(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('businessId') businessId: string,
+    @Param('appointmentId') appointmentId: string,
+  ): Promise<AppointmentDto> {
+    return this.appointmentsService.refund(businessId, appointmentId, currentUser.id);
   }
 }

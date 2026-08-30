@@ -1,5 +1,11 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { Business, Prisma } from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import type { Business } from '@prisma/client';
 import { deleteUploadedFile } from '@/common/lib/upload';
 import { DEFAULT_BUSINESS_CURRENCY } from '@/modules/currencies/currencies';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
@@ -9,6 +15,7 @@ import type { CreateBusinessDto } from './dto/create-business.dto';
 import type { UpdateBusinessDto } from './dto/update-business.dto';
 import type { BusinessDto, SocialLinkDto, TaxMode } from './businesses.types';
 import { slugify } from './lib/slugify';
+import { timeToMinutes, WEEKDAYS, type WorkingHours } from './lib/working-hours';
 
 type BusinessWithWebsite = Business & { website: { publishedAt: Date | null } | null };
 
@@ -94,6 +101,8 @@ export class BusinessesService {
     const slug =
       dto.slug !== undefined ? await this.resolveSlug(dto.slug, dto.slug, id) : undefined;
 
+    if (dto.workingHours) this.assertValidWorkingHours(dto.workingHours);
+
     const updated = await this.prisma.business.update({
       where: { id },
       data: {
@@ -113,6 +122,19 @@ export class BusinessesService {
         ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
         ...(dto.taxRateBps !== undefined ? { taxRateBps: dto.taxRateBps } : {}),
         ...(dto.taxMode !== undefined ? { taxMode: dto.taxMode as TaxMode } : {}),
+        ...(dto.workingHours !== undefined
+          ? {
+              // `Business.workingHours` — единственное nullable `Json` поле
+              // в схеме сегодня: Prisma требует явный `Prisma.JsonNull`
+              // вместо голого `null`, чтобы отличить «записать SQL NULL» от
+              // возможного `null`-значения ВНУТРИ самого JSON (тот же приём,
+              // что документирует сам Prisma для nullable JSON-колонок).
+              workingHours:
+                dto.workingHours === null
+                  ? Prisma.JsonNull
+                  : (dto.workingHours as unknown as Prisma.InputJsonValue),
+            }
+          : {}),
       },
       include: { website: { select: { id: true, publishedAt: true } } },
     });
@@ -260,6 +282,22 @@ export class BusinessesService {
     return business;
   }
 
+  /** `open < close` — не выразимо декоратором `class-validator` на одном
+   * поле (тот же приём, что `DiscountsService.assertPercentageBound` уже
+   * применяет к `type`/`value`), поэтому проверяется здесь, после DTO уже
+   * подтвердил, что каждое отдельное значение — валидное `ЧЧ:ММ`. */
+  private assertValidWorkingHours(workingHours: WorkingHours): void {
+    for (const day of WEEKDAYS) {
+      const hours = workingHours[day];
+      if (!hours) continue;
+      if (timeToMinutes(hours.open) >= timeToMinutes(hours.close)) {
+        throw new BadRequestException(
+          `Время открытия должно быть раньше времени закрытия (${day})`,
+        );
+      }
+    }
+  }
+
   private async resolveSlug(
     desired: string | undefined,
     fallbackSource: string,
@@ -300,6 +338,7 @@ export class BusinessesService {
       currency: business.currency,
       taxRateBps: business.taxRateBps,
       taxMode: business.taxMode,
+      workingHours: (business.workingHours as unknown as WorkingHours | null) ?? null,
       status: business.website?.publishedAt ? 'published' : 'draft',
       createdAt: business.createdAt.toISOString(),
       updatedAt: business.updatedAt.toISOString(),

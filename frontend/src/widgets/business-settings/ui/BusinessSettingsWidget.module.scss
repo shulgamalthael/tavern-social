@@ -177,3 +177,38 @@
   color: var(--tavern-muted);
   font-size: 12.5px;
 }
+
+// --- BusinessWorkingHoursSection --------------------------------------------
+
+.hoursForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.hoursRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hoursDay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.hoursTimes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}

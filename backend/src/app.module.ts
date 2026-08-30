@@ -9,6 +9,7 @@ import { PrismaModule } from './infrastructure/database/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { RealtimeModule } from './infrastructure/websocket/realtime.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
@@ -70,6 +71,7 @@ import { WebsitesModule } from './modules/websites/websites.module';
     MediaAssetsModule,
     AnalyticsModule,
     PublicSitesModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

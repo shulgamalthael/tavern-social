@@ -13,3 +13,44 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+// Переключатель «Просто»/«Дополнительно» — тот же визуальный приём, что и
+// вкладки всей правой панели (`InspectorPanel.module.scss`, `.tab`/
+// `.tab--active`), но меньше и без своей границы снизу — это переключатель
+// ВНУТРИ одной секции, а не смена всей формы.
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.tab {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.tab--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+}
+
+.advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.advanced__hint {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}

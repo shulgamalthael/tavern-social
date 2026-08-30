@@ -1,6 +1,7 @@
 import { BadRequestException, Controller, Headers, Post, Req } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
+import { AppointmentsService } from '@/modules/appointments/appointments.service';
 import { PaymentProvider } from '@/modules/payments/payment-provider';
 import { OrdersService } from './orders.service';
 
@@ -25,6 +26,7 @@ export class StripeWebhookController {
   constructor(
     private readonly paymentProvider: PaymentProvider,
     private readonly ordersService: OrdersService,
+    private readonly appointmentsService: AppointmentsService,
   ) {}
 
   @Post()
@@ -46,7 +48,17 @@ export class StripeWebhookController {
     }
 
     if (event.type === 'payment_intent.succeeded') {
-      await this.ordersService.markPaidByPaymentIntent(event.paymentIntentId);
+      // `metadata` — то, что САМИ мы передали в `createPaymentIntent`
+      // (`OrdersService.createFromCart`/`AppointmentsService.
+      // createFromRequest`), Stripe только возвращает его нетронутым — по
+      // ключу, а не пробным поиском в обеих таблицах подряд, однозначно
+      // известно, кому доставить событие: `orderId` xor `appointmentId`,
+      // никогда оба сразу (у каждого `PaymentIntent` ровно один владелец).
+      if (event.metadata.orderId) {
+        await this.ordersService.markPaidByPaymentIntent(event.paymentIntentId);
+      } else if (event.metadata.appointmentId) {
+        await this.appointmentsService.markPaidByPaymentIntent(event.paymentIntentId);
+      }
     }
     // `payment_intent.payment_failed` — намеренно no-op, см. комментарий
     // `OrdersService.markPaidByPaymentIntent`.

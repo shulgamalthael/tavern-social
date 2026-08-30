@@ -37,7 +37,7 @@ export function BlockRenderer({ block, theme, viewport, business, pages }: Block
   if (!definition) return null;
   if (isBlockHidden(block, viewport)) return null;
 
-  const { outer, inner } = computeBlockWrapperStyle(block.style);
+  const { outer, inner } = computeBlockWrapperStyle(block.style, viewport);
   const Renderer = definition.Renderer;
 
   return (

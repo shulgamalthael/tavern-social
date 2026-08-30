@@ -133,6 +133,7 @@ model User {
   notificationsActedIn  Notification[] @relation("NotificationActor")
 
   businesses Business[]
+  auditLogs  AuditLog[]
 
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("users")
@@ -600,6 +601,19 @@ model Business {
   /// считается только для отображения в разбивке заказа (см.
   /// `PricingService`/`PRICING_ARCHITECTURE.md` §4).
   taxMode        TaxMode          @default(none)
+  /// Часы работы бизнеса (Booking, ROADMAP.md §8 Phase 6 continued) —
+  /// `{ mon?: { open: "09:00", close: "18:00" }, tue?: ..., ... }`, ключ дня
+  /// недели отсутствует или всё поле `null` значит «не ограничено» (все
+  /// существующие бизнесы, ничего не менявшие здесь, продолжают принимать
+  /// заявки на запись в любое время — то же правило обратной совместимости
+  /// «отсутствие значения = старое поведение», что и у `WebsiteTheme.
+  /// cardBorder`/`cardShadow`). Плоский JSON, не отдельная таблица — это
+  /// конфигурация одного бизнеса (единственного «сотрудника», см. `Service`
+  /// про отсутствие `Employee` в этом инкременте), не сущность со своими
+  /// CRUD/связями. Читается `AppointmentsService` при создании записи
+  /// (отклоняет время вне часов работы) и при подсчёте свободных слотов
+  /// (`AppointmentsService.getAvailability`) — единственные два потребителя.
+  workingHours   Json?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -719,21 +733,21 @@ enum DiscountType {
 /// — автоматическая скидка, применяется к каждому подходящему заказу без
 /// ввода чего-либо; `code: "SAVE20"` — требует этот код на чекауте.
 model Discount {
-  id         String       @id @default(uuid())
-  businessId String
-  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  name       String
+  id                  String       @id @default(uuid())
+  businessId          String
+  business            Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name                String
   /// Нормализован в верхний регистр при записи и при сравнении на чекауте
   /// (см. `DiscountsService`/`OrdersService`) — `save20` должен совпасть с
   /// сохранённым `SAVE20`.
-  code       String?
-  type       DiscountType
+  code                String?
+  type                DiscountType
   /// percentage: 1-100. fixed: минимальные единицы `Business.currency` НА
   /// МОМЕНТ ПРИМЕНЕНИЯ, не хранится отдельно на скидке — тот же trade-off,
   /// что уже принят для `Product.priceCents` в Currency System (см.
   /// `PRICING_ARCHITECTURE.md` §7, «Currency change after a fixed-type
   /// discount»).
-  value                Int
+  value               Int
   /// Заказ должен достичь этой суммы (ДО скидки), чтобы скидка сработала.
   /// `null` — без минимума.
   minOrderAmountCents Int?
@@ -742,11 +756,11 @@ model Discount {
   /// `null` — без ограничения. Атомарно проверяется и инкрементируется тем
   /// же паттерном `updateMany`-с-условием, что и `Product.stock` (см.
   /// `OrdersService.createFromCart`), в одной транзакции с созданием заказа.
-  usageLimit Int?
-  usageCount Int          @default(0)
-  isActive   Boolean      @default(true)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  usageLimit          Int?
+  usageCount          Int          @default(0)
+  isActive            Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@unique([businessId, code])
   @@index([businessId])
@@ -764,9 +778,9 @@ model Order {
   customerNote          String        @default("")
   /// Сумма товаров ДО скидки и налога (Pricing Engine, `PRICING_ARCHITECTURE.md`
   /// §6) — сумма `priceCents * quantity` по всем позициям.
-  subtotalCents         Int          @default(0)
+  subtotalCents         Int           @default(0)
   /// Сколько реально вычтено скидкой (0, если скидка не применялась).
-  discountCents         Int          @default(0)
+  discountCents         Int           @default(0)
   /// Снэпшот `Discount.name` НА МОМЕНТ заказа — переживает редактирование
   /// или удаление самой скидки (нет FK на `Discount`, как и `OrderItem` не
   /// каскадируется удалением `Product`, см. её комментарий). `null` — скидка
@@ -776,7 +790,7 @@ model Order {
   /// заказов — не FK, снэпшот).
   couponCode            String?
   /// Сколько налога включено/добавлено — 0 при `Business.taxMode: 'none'`.
-  taxCents              Int          @default(0)
+  taxCents              Int           @default(0)
   /// Сумма пересчитывается и сохраняется на backend (см. `OrdersService.
   /// createFromCart`) — НИКОГДА не берётся из тела запроса анонимного
   /// клиента, иначе покупатель мог бы прислать любую цену на любой товар.
@@ -876,27 +890,35 @@ enum AppointmentStatus {
 /// чтобы более позднее изменение услуги не переписывало историю уже
 /// оформленных записей — тот же принцип, что и у `OrderItem`.
 model Appointment {
-  id              String            @id @default(uuid())
-  businessId      String
-  business        Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  serviceId       String?
-  service         Service?          @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  serviceName     String
-  priceCents      Int
+  id                    String            @id @default(uuid())
+  businessId            String
+  business              Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  serviceId             String?
+  service               Service?          @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  serviceName           String
+  priceCents            Int
   /// Снэпшот `Business.currency` НА МОМЕНТ записи (Currency System,
   /// ROADMAP.md §8) — та же причина, что у `Order.currency`: услуга больше
   /// не хранит собственную валюту (см. `Service`), а бизнес мог сменить
   /// свою уже после этой записи.
-  currency        String            @default("RUB")
-  durationMinutes Int
-  status          AppointmentStatus @default(pending)
-  startsAt        DateTime
-  customerName    String
-  customerEmail   String?
-  customerPhone   String?
-  customerNote    String            @default("")
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  currency              String            @default("RUB")
+  durationMinutes       Int
+  status                AppointmentStatus @default(pending)
+  startsAt              DateTime
+  customerName          String
+  customerEmail         String?
+  customerPhone         String?
+  customerNote          String            @default("")
+  /// Оплата (Booking payment, ROADMAP.md §8 Phase 6 continued) — тот же
+  /// `PaymentStatus` enum, что и `Order.paymentStatus`, и та же причина для
+  /// отдельного `stripePaymentIntentId` ниже (см. их комментарии на
+  /// `Order`): ось "оплачено ли" ортогональна `status` (выполнение записи
+  /// владельцем). `unpaid` — значение по умолчанию для ЛЮБОЙ записи,
+  /// включая все существующие до появления этого поля.
+  paymentStatus         PaymentStatus     @default(unpaid)
+  stripePaymentIntentId String?           @unique
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   @@index([businessId, startsAt])
   @@map("appointments")
@@ -1171,4 +1193,49 @@ model Domain {
 
   @@index([websiteId])
   @@map("domains")
+}
+
+/// Уровень риска AI-инструмента (см. `AI_PLATFORM_ROADMAP.md` §2.8) —
+/// свойство самого инструмента (`ToolDefinition.riskLevel` в
+/// `backend/src/modules/ai`), не бизнеса и не конкретного вызова. `low`/
+/// `medium` выполняются сразу; `high`/`critical` (пока не реализовано ни
+/// одного инструмента с таким уровнем) должны требовать подтверждения
+/// пользователем перед выполнением — это уже проверяется в `AiService`, не
+/// на уровне схемы.
+enum ToolRiskLevel {
+  low
+  medium
+  high
+  critical
+}
+
+/// Аудит-лог вызовов AI-инструментов — одна запись на каждый вызов
+/// инструмента внутри диалога (не на каждое сообщение чата), независимо от
+/// результата (см. `AI_PLATFORM_ROADMAP.md` §2.8, mission §101-102).
+/// НЕ хранит секреты и не хранит сырой ответ LLM-провайдера или системный
+/// промпт — только то, что реально нужно для разбора инцидента: кто, что,
+/// когда, с каким результатом.
+model AuditLog {
+  id      String        @id @default(uuid())
+  actorId String
+  actor   User          @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  /// Без `@relation` намеренно — аудит-лог обязан переживать удаление
+  /// бизнеса (историческая запись «кто что делал», а не рабочая ссылка на
+  /// живую сущность), поэтому здесь просто строка id на момент вызова, не
+  /// FK с каскадным удалением/`SetNull`, как у остальных моделей.
+  businessId    String?
+  tool          String
+  riskLevel     ToolRiskLevel
+  /// Аргументы вызова инструмента, КАК ИХ ПРИСЛАЛА МОДЕЛЬ (после парсинга/
+  /// валидации, до выполнения) — намеренно не включает результат работы
+  /// инструмента (см. `resultSummary` ниже) и не включает историю
+  /// сообщений диалога.
+  argsSummary   Json
+  status        String
+  resultSummary Json?
+  createdAt     DateTime      @default(now())
+
+  @@index([actorId])
+  @@index([businessId])
+  @@map("audit_logs")
 }

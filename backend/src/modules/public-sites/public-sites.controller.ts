@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AnalyticsService } from '@/modules/analytics/analytics.service';
+import { AvailabilityQueryDto } from '@/modules/appointments/dto/availability-query.dto';
 import { CreateAppointmentDto } from '@/modules/appointments/dto/create-appointment.dto';
 import type { AppointmentDto } from '@/modules/appointments/appointments.types';
 import { AppointmentsService } from '@/modules/appointments/appointments.service';
@@ -146,6 +147,32 @@ export class PublicSitesController {
   @Get(':businessId/services')
   getPublicServices(@Param('businessId') businessId: string): Promise<PublicServiceDto[]> {
     return this.servicesService.listPublic(businessId);
+  }
+
+  /** Свободные слоты услуги на дату (Booking, ROADMAP.md §8 Phase 6
+   * continued) — `BookingModal.tsx` вызывает это при выборе даты, чтобы
+   * показать список слотов вместо произвольного ввода времени; `?date=`
+   * распарсен и провалидирован форматом в `AvailabilityQueryDto`, дальше —
+   * `AppointmentsService.getAvailability`/`lib/availability.ts`. Обычный
+   * `@Get`, не более строгий `@Throttle`, что у анонимных `Post` выше —
+   * это чтение, не запись, тот же принцип, что и `getPublicProducts`. */
+  @Get(':businessId/services/:serviceId/availability')
+  getAvailability(
+    @Param('businessId') businessId: string,
+    @Param('serviceId') serviceId: string,
+    @Query() query: AvailabilityQueryDto,
+  ): Promise<string[]> {
+    // Локальный конструктор `Date`, не `new Date("YYYY-MM-DD")` — тот парсит
+    // голую дату как UTC-полночь, а не полночь по времени сервера, и
+    // `getDate()`/`getDay()` ниже по цепочке (`lib/availability.ts`) читают
+    // именно локальные компоненты — на сервере в часовом поясе позади UTC
+    // это был бы сдвиг календарного дня на минус один.
+    const [year, month, day] = query.date.split('-').map(Number);
+    return this.appointmentsService.getAvailability(
+      businessId,
+      serviceId,
+      new Date(year, month - 1, day),
+    );
   }
 
   /** Заявка на запись с анонимной витрины — тот же принцип, что и

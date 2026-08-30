@@ -44,6 +44,14 @@ export function resolveLinkHref(target: LinkTarget | undefined, pages: WebsitePa
       if (index === -1) return '/';
       return index === 0 ? '/' : `/${pages[index].slug}`;
     }
+    // `addToCart`/`bookAppointment` не рендерятся через `<a href>` вообще
+    // (см. `SiteButton` в `blocks/actions/index.tsx`) — этот случай сюда
+    // структурно не должен доходить, `'#'` тут только чтобы `switch`
+    // оставался исчерпывающим по типам, а не потому что путь реально
+    // используется.
+    case 'addToCart':
+    case 'bookAppointment':
+      return '#';
     default:
       return '#';
   }
@@ -66,6 +74,15 @@ export function describeLinkTarget(target: LinkTarget | undefined, pages: Websit
       return target.email;
     case 'page':
       return pages.find((page) => page.id === target.pageId)?.title ?? 'Страница удалена';
+    // Название товара/услуги здесь недоступно (эта функция получает только
+    // `pages`) — вызывающий код, которому нужно человекочитаемое название
+    // (`LinkField.tsx`), уже сам резолвит его отдельно, у него есть список
+    // товаров/услуг. Этот `id`-фолбэк — на случай, если у функции появится
+    // ещё один потребитель без такого списка под рукой.
+    case 'addToCart':
+      return `Товар: ${target.productId}`;
+    case 'bookAppointment':
+      return `Услуга: ${target.serviceId}`;
     default:
       return '';
   }

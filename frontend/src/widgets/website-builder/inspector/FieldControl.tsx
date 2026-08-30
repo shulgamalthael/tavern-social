@@ -191,6 +191,8 @@ export function FieldControl({
           value={value as LinkTarget | undefined}
           onChange={onChange}
           pages={pages ?? []}
+          businessId={businessId}
+          actionsEnabled={field.actionsEnabled}
         />
       )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getBusiness, type Business } from '@/entities/business';
 import {
   getWebsiteDraft,
@@ -10,11 +10,19 @@ import {
   type BlockBusinessContext,
   type Viewport,
 } from '@/entities/website';
+import { AiChatPanel } from '@/features/ai-chat';
 import { cn } from '@/shared/lib/cn';
 import { useAsyncData } from '@/shared/lib/use-async-data';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { Loader } from '@/shared/ui/Loader';
-import { ChevronDownIcon, FileIcon, GridIcon, SettingsIcon } from '@/shared/ui/icons';
+import {
+  ChevronDownIcon,
+  CloseIcon,
+  FileIcon,
+  GridIcon,
+  SettingsIcon,
+  SparkleIcon,
+} from '@/shared/ui/icons';
 import { AddBlockModal } from './AddBlockModal';
 import { BuilderDndProvider } from './BuilderDndProvider';
 import { BuilderToolbar } from './BuilderToolbar';
@@ -116,6 +124,9 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
   const [publishError, setPublishError] = useState<string | null>(null);
   const [templateDismissed, setTemplateDismissed] = useState(false);
   const [activePane, setActivePane] = useState<BuilderPane>('canvas');
+  const [isAiChatOpen, setAiChatOpen] = useState(false);
+  const aiBubbleRef = useRef<HTMLButtonElement | null>(null);
+  const aiWindowRef = useRef<HTMLDivElement | null>(null);
 
   // Выбор блока переключает на вкладку «Настройки» — без эффекта, той же
   // логикой сравнения предыдущего значения прямо во время рендера, что и
@@ -153,6 +164,56 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- сброс/досохранение только при размонтировании самого виджета, `resetStore`/`saveNow` — не обязаны быть в зависимостях по той же причине, что описана в комментарии выше
   }, []);
+
+  // Тот же UX, что и у любого другого плавающего попапа этого приложения
+  // (дропдауны шапки, `NotificationsDropdown`/`SearchDropdown`) — Escape и
+  // клик вне окна закрывают его. Слушатели вешаются ТОЛЬКО пока чат открыт
+  // (эффект перезапускается по `isAiChatOpen`), не постоянно на весь экран.
+  // `globalThis.document`, НЕ голый `document` — в этом компоненте уже есть
+  // локальная переменная `document` (стор, JSON-документ сайта, см. выше),
+  // она затеняет глобальный DOM `document` в области видимости всей функции
+  // компонента; голый `document.addEventListener` здесь попал бы на объект
+  // документа сайта (падение в рантайме — `document.addEventListener` не
+  // существует у `WebsiteDocument`), не на DOM. Ровно это поймал линт
+  // (`react-hooks/exhaustive-deps` пожаловался на «отсутствующую
+  // зависимость `document`» — он думал, что это стор, а не DOM).
+  useEffect(() => {
+    if (!isAiChatOpen) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (aiWindowRef.current?.contains(target)) return;
+      if (aiBubbleRef.current?.contains(target)) return;
+      setAiChatOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setAiChatOpen(false);
+    }
+
+    globalThis.document.addEventListener('mousedown', handlePointerDown);
+    globalThis.document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      globalThis.document.removeEventListener('mousedown', handlePointerDown);
+      globalThis.document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAiChatOpen]);
+
+  // AI-инструменты (`AiChatPanel`) пишут прямо в backend через
+  // `WebsitesService.saveDraft`, минуя стор билдера — стор после этого не
+  // знает о новых блоках/страницах, пока кто-то заново не подгрузит
+  // документ. Перечитываем и кладём в стор ТОЛЬКО если в конструкторе нет
+  // несохранённых локальных правок (`isDirty`) — иначе либо затираем
+  // правки пользователя свежим документом с сервера, либо (если бы вместо
+  // этого сохраняли стор поверх) откатываем то, что только что сделал AI.
+  // `getState()`, не замыкание из рендера — тот же приём, что и у
+  // `saveNow` в cleanup-эффекте ниже, актуальное значение на момент вызова.
+  const handleAiMutation = useCallback(async (): Promise<boolean> => {
+    if (useWebsiteBuilderStore.getState().isDirty) return false;
+    const draft = await getWebsiteDraft(businessId);
+    loadDocument(businessId, draft.document);
+    return true;
+  }, [businessId, loadDocument]);
 
   async function handlePublish() {
     setPublishing(true);
@@ -310,6 +371,40 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
       )}
 
       <AddBlockModal capabilities={data.business.capabilities} />
+
+      {/* Плавающий мини-чат, не вкладка панели — холст должен оставаться
+       * полностью видимым, пока идёт диалог с AI (тот же принцип «холст
+       * всегда на виду», что и у остальной части билдера, см. комментарий
+       * компонента выше), а не делить экран с ним, как «Страницы»/«Блоки»/
+       * «Настройки». `.aiWindow` рендерится ВСЕГДА (не условно) — скрывается
+       * через `.aiWindow--hidden` (CSS `display: none`), а не размонтированием:
+       * `AiChatPanel` внутри держит историю диалога в собственном `useState`,
+       * закрытие/открытие пузыря не должно её терять (см. её комментарий). */}
+      <button
+        ref={aiBubbleRef}
+        type="button"
+        className={styles.aiBubble}
+        onClick={() => setAiChatOpen((open) => !open)}
+        aria-expanded={isAiChatOpen}
+        aria-label={isAiChatOpen ? 'Закрыть AI-ассистента' : 'Открыть AI-ассистента'}
+      >
+        {isAiChatOpen ? <CloseIcon /> : <SparkleIcon />}
+      </button>
+
+      <div
+        ref={aiWindowRef}
+        className={cn(styles.aiWindow, !isAiChatOpen && styles['aiWindow--hidden'])}
+        role="dialog"
+        aria-label="AI-ассистент"
+        aria-hidden={!isAiChatOpen}
+      >
+        <AiChatPanel
+          businessId={businessId}
+          className={styles.aiWindow__panel}
+          isOpen={isAiChatOpen}
+          onMutationApplied={handleAiMutation}
+        />
+      </div>
     </div>
   );
 }

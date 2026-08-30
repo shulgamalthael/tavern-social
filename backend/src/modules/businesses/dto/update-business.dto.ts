@@ -18,6 +18,7 @@ import { LOOSE_PHONE_MESSAGE, LOOSE_PHONE_PATTERN } from '@/common/lib/phone-val
 import { SUPPORTED_CURRENCY_CODES } from '@/modules/currencies/currencies';
 import { BUSINESS_CAPABILITIES, TAX_MODES } from '../businesses.types';
 import { SocialLinkDto } from './social-link.dto';
+import { WorkingHoursDto } from './working-hours.dto';
 
 export class UpdateBusinessDto {
   @IsOptional()
@@ -103,4 +104,12 @@ export class UpdateBusinessDto {
   @IsOptional()
   @IsIn(TAX_MODES, { message: 'Недопустимый режим налога' })
   taxMode?: string;
+
+  /** `null` явно очищает часы (см. `WorkingHoursDto`'s комментарий) —
+   * «часы не заданы» значит «принимаем записи в любое время», то поведение,
+   * которое было единственным до этого поля вообще. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WorkingHoursDto)
+  workingHours?: WorkingHoursDto | null;
 }

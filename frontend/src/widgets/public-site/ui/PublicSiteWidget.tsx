@@ -6,6 +6,7 @@ import {
   WebsiteRenderer,
   getAnonymousPublicSite,
   resolveSitePage,
+  useRealViewport,
   type BlockBusinessContext,
 } from '@/entities/website';
 import { useAsyncData } from '@/shared/lib/use-async-data';
@@ -38,6 +39,7 @@ export interface PublicSiteWidgetProps {
 export function PublicSiteWidget({ businessId, slug }: PublicSiteWidgetProps) {
   const fetcher = useCallback(() => getAnonymousPublicSite(businessId), [businessId]);
   const { status, data, error, refetch } = useAsyncData(fetcher);
+  const viewport = useRealViewport();
 
   if (status === 'loading') {
     return (
@@ -91,7 +93,7 @@ export function PublicSiteWidget({ businessId, slug }: PublicSiteWidgetProps) {
         page={page}
         pages={data.document.pages}
         theme={data.document.theme}
-        viewport="desktop"
+        viewport={viewport}
         business={businessContext}
       />
       {data.business.capabilities.includes('commerce') && (

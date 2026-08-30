@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   getOrders,
+  refundOrder,
   updateOrderStatus,
   ORDER_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
@@ -37,6 +38,15 @@ const STATUS_OPTIONS: OrderStatus[] = ['pending', 'confirmed', 'completed', 'can
 export function OrdersSection({ businessId }: OrdersSectionProps) {
   const fetcher = useCallback(() => getOrders(businessId), [businessId]);
   const { status, data, error, refetch } = useAsyncData(fetcher);
+  // Только для возврата — реальное движение денег, в отличие от смены
+  // `status` ниже, должно явно показать сбой владельцу, а не просто тихо
+  // перечитать старое состояние (см. `handleStatusChange`'s комментарий про
+  // тот же приём для менее чувствительного действия). `refundingId`
+  // блокирует повторный клик по той же заявке, пока запрос ещё летит —
+  // подстраховка поверх идемпотентного `OrdersService.refund` на backend,
+  // не замена ей.
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<{ orderId: string; message: string } | null>(null);
 
   async function handleStatusChange(orderId: string, nextStatus: OrderStatus) {
     try {
@@ -46,6 +56,22 @@ export function OrdersSection({ businessId }: OrdersSectionProps) {
       // `refetch` без изменений покажет актуальное (старое) состояние — тот
       // же принцип, что и у `PagesSection`: перечитываем правду с сервера,
       // а не держим оптимистичное предположение молча провалившимся.
+    }
+  }
+
+  async function handleRefund(orderId: string) {
+    setRefundError(null);
+    setRefundingId(orderId);
+    try {
+      await refundOrder(businessId, orderId);
+      await refetch();
+    } catch (error) {
+      setRefundError({
+        orderId,
+        message: error instanceof Error ? error.message : 'Не удалось выполнить возврат',
+      });
+    } finally {
+      setRefundingId(null);
     }
   }
 
@@ -148,11 +174,27 @@ export function OrdersSection({ businessId }: OrdersSectionProps) {
           )}
 
           <div className={styles.total}>
-            <span className={styles.paymentBadge} data-payment-status={order.paymentStatus}>
-              {PAYMENT_STATUS_LABELS[order.paymentStatus]}
-            </span>
+            <div className={styles.paymentGroup}>
+              <span className={styles.paymentBadge} data-payment-status={order.paymentStatus}>
+                {PAYMENT_STATUS_LABELS[order.paymentStatus]}
+              </span>
+              {order.paymentStatus === 'paid' && (
+                <button
+                  type="button"
+                  className={styles.refundButton}
+                  disabled={refundingId === order.id}
+                  onClick={() => void handleRefund(order.id)}
+                >
+                  {refundingId === order.id ? 'Возврат…' : 'Вернуть деньги'}
+                </button>
+              )}
+            </div>
             <span>Итого: {formatMoney(order.totalCents, order.currency)}</span>
           </div>
+
+          {refundError?.orderId === order.id && (
+            <p className={styles.refundError}>{refundError.message}</p>
+          )}
         </li>
       ))}
     </ul>

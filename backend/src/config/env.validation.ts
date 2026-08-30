@@ -52,6 +52,20 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   STRIPE_WEBHOOK_SECRET?: string;
+
+  /** Необязателен — без него `GeminiAdapter.isConfigured()` возвращает
+   * `false`, `AiController` отвечает 503 вместо падения при старте (тот же
+   * приём, что у `STRIPE_SECRET_KEY` выше). См. `AI_PLATFORM_ROADMAP.md` §5. */
+  @IsOptional()
+  @IsString()
+  GEMINI_API_KEY?: string;
+
+  /** Модель Gemini для tool-calling — вынесена в конфиг, а не захардкожена
+   * в `GeminiAdapter`, чтобы сменить модель (например, при выходе новой
+   * версии) не трогая код. */
+  @IsOptional()
+  @IsString()
+  GEMINI_MODEL?: string;
 }
 
 /** Валидирует process.env один раз при старте — падаем сразу, а не на первом запросе. */

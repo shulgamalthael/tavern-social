@@ -26,6 +26,15 @@ export type TextAlign = 'left' | 'center' | 'right';
 export type ContainerWidth = 'narrow' | 'default' | 'wide' | 'full';
 export type SpacingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
 
+/** Значение поля `BlockStyle`, которое (как и `ResponsiveValue<T>` выше)
+ * может отличаться по вьюпортам — плоское `T` для старых документов и
+ * документов, где responsive-переопределение никогда не задавалось, читается
+ * и пишется через тот же `readResponsiveProp`/`writeResponsiveProp`
+ * (`registry.ts`), что уже используют responsive-поля `props` (см.
+ * `FieldSchema.responsive`) — один и тот же механизм для обоих мест
+ * хранения, без второй параллельной реализации каскада. */
+export type StyleValue<T> = T | ResponsiveValue<T>;
+
 /**
  * Настройки отступов/фона/выравнивания — общие для ЛЮБОГО блока, поэтому
  * живут отдельно от `props` (которые у каждого типа блока свои) и рисуются
@@ -36,14 +45,33 @@ export type SpacingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
  */
 export interface BlockStyle {
   background?: Background;
-  paddingY?: SpacingSize;
-  paddingX?: SpacingSize;
-  marginTop?: SpacingSize;
-  marginBottom?: SpacingSize;
+  paddingY?: StyleValue<SpacingSize>;
+  paddingX?: StyleValue<SpacingSize>;
+  marginTop?: StyleValue<SpacingSize>;
+  marginBottom?: StyleValue<SpacingSize>;
   textAlign?: TextAlign;
   /** Только для контейнерных блоков (`section`/`container`) — насколько
    * широко растягивается содержимое внутри полосы на всю ширину экрана. */
-  maxWidth?: ContainerWidth;
+  maxWidth?: StyleValue<ContainerWidth>;
+  /** Режим «Дополнительно» инспектора (`LayoutSection.tsx`) — независимые
+   * отступы по каждой стороне вместо пары `paddingY`/`paddingX` выше.
+   * `false`/отсутствует (все документы до этого инкремента) не меняет
+   * рендер вообще — `paddingTop..Left` ниже полностью игнорируются, пара
+   * работает ровно как раньше. */
+  customPadding?: boolean;
+  /** `null` (в т. ч. на конкретном вьюпорте внутри `ResponsiveValue`) значит
+   * «наследовать от пары `paddingY`/`paddingX` на этом же вьюпорте», не
+   * «обнулить» — для явного нуля уже есть `SpacingSize: 'none'`. `null`, а
+   * не `undefined`: `ResponsiveValue` различает «объект переопределений» от
+   * «плоское значение» по наличию ключа `desktop` (`readResponsiveProp`), а
+   * `JSON.stringify` молча вырезает ключи со значением `undefined` — после
+   * автосохранения `{ desktop: undefined, mobile: 'sm' }` превратился бы в
+   * `{ mobile: 'sm' }` и обманул бы эту проверку. `null` то же самое место в
+   * JSON переживает без потерь. */
+  paddingTop?: StyleValue<SpacingSize | null>;
+  paddingRight?: StyleValue<SpacingSize | null>;
+  paddingBottom?: StyleValue<SpacingSize | null>;
+  paddingLeft?: StyleValue<SpacingSize | null>;
 }
 
 /**
@@ -98,13 +126,34 @@ export interface WebsitePage {
  * сохранении. Остальные варианты — то, чем раньше был обычный `control:
  * 'url'`/`'text'` (внешняя ссылка, якорь на той же странице, телефон,
  * почта), просто с явным типом вместо угадывания по содержимому строки.
+ *
+ * `addToCart`/`bookAppointment` (ROADMAP.md §3.4/§8 Phase 4, `actionsSchema`/
+ * `useBlockAction()` line item) — не навигация вообще, поле по историческим
+ * причинам называется "ссылка" (`control: 'link'`), но с этими двумя
+ * вариантами это уже "что произойдёт по клику" в более широком смысле:
+ * `SiteButton` (`blocks/actions/index.tsx`) рендерит для них `<button>` с
+ * реальным действием (положить конкретный товар в корзину / открыть
+ * `BookingModal` для конкретной услуги), не `<a href>`. Переименовывать сам
+ * тип/поле не стали — потребовало бы правки во всех местах, которые уже
+ * работают с `control: 'link'`/`LinkTarget` ради чистого именования, без
+ * функциональной разницы. Это ровно те два действия из исходного союза
+ * `navigate | openModal | submitForm | addToCart | bookAppointment | openUrl
+ * | callPhone | sendEmail`, у которых не было готового backend'а на момент,
+ * когда `actionsSchema` был впервые отложен (см. Phase 4 в §8) — остальные
+ * уже покрыты существующими вариантами (`page`≈navigate, `external`≈openUrl,
+ * `phone`≈callPhone, `email`≈sendEmail); `submitForm`/`openModal` остаются
+ * не построены — `FormBlock` уже сам себе выполняет отправку без отдельной
+ * кнопки-действия, а `openModal` не имеет обобщённого модального контента,
+ * который стоило бы открывать (см. §8, тот же комментарий).
  */
 export type LinkTarget =
   | { type: 'external'; url: string }
   | { type: 'page'; pageId: string }
   | { type: 'anchor'; anchor: string }
   | { type: 'phone'; phone: string }
-  | { type: 'email'; email: string };
+  | { type: 'email'; email: string }
+  | { type: 'addToCart'; productId: string }
+  | { type: 'bookAppointment'; serviceId: string };
 
 /** Значение поля `control: 'dataSource'` (см. `FieldSchema` в `registry.ts`)
  * — хранит только ПАРАМЕТРЫ запроса, никогда сами данные (см. её

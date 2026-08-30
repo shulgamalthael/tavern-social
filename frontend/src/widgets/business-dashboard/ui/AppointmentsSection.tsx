@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   getAppointments,
+  refundAppointment,
   updateAppointmentStatus,
   APPOINTMENT_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
   type AppointmentStatus,
 } from '@/entities/appointment';
 import { formatDuration } from '@/entities/service';
@@ -32,6 +34,12 @@ const STATUS_OPTIONS: AppointmentStatus[] = ['pending', 'confirmed', 'completed'
 export function AppointmentsSection({ businessId }: AppointmentsSectionProps) {
   const fetcher = useCallback(() => getAppointments(businessId), [businessId]);
   const { status, data, error, refetch } = useAsyncData(fetcher);
+  // См. `OrdersSection` — реальное движение денег получает свою явную
+  // ошибку, а не молчаливый откат к перечитанному состоянию.
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<{ appointmentId: string; message: string } | null>(
+    null,
+  );
 
   async function handleStatusChange(appointmentId: string, nextStatus: AppointmentStatus) {
     try {
@@ -40,6 +48,22 @@ export function AppointmentsSection({ businessId }: AppointmentsSectionProps) {
     } catch {
       // См. `OrdersSection` — перечитываем правду с сервера, а не держим
       // оптимистичное предположение молча провалившимся.
+    }
+  }
+
+  async function handleRefund(appointmentId: string) {
+    setRefundError(null);
+    setRefundingId(appointmentId);
+    try {
+      await refundAppointment(businessId, appointmentId);
+      await refetch();
+    } catch (error) {
+      setRefundError({
+        appointmentId,
+        message: error instanceof Error ? error.message : 'Не удалось выполнить возврат',
+      });
+    } finally {
+      setRefundingId(null);
     }
   }
 
@@ -117,6 +141,28 @@ export function AppointmentsSection({ businessId }: AppointmentsSectionProps) {
           </div>
 
           {appointment.customerNote && <p className={styles.note}>«{appointment.customerNote}»</p>}
+
+          <div className={styles.total}>
+            <div className={styles.paymentGroup}>
+              <span className={styles.paymentBadge} data-payment-status={appointment.paymentStatus}>
+                {PAYMENT_STATUS_LABELS[appointment.paymentStatus]}
+              </span>
+              {appointment.paymentStatus === 'paid' && (
+                <button
+                  type="button"
+                  className={styles.refundButton}
+                  disabled={refundingId === appointment.id}
+                  onClick={() => void handleRefund(appointment.id)}
+                >
+                  {refundingId === appointment.id ? 'Возврат…' : 'Вернуть деньги'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {refundError?.appointmentId === appointment.id && (
+            <p className={styles.refundError}>{refundError.message}</p>
+          )}
         </li>
       ))}
     </ul>

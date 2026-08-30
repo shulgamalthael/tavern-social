@@ -5,6 +5,7 @@ import type {
   BusinessStatus,
   SocialLink,
   TaxMode,
+  WorkingHours,
 } from '../model/types';
 
 export interface BusinessResponse {
@@ -25,6 +26,7 @@ export interface BusinessResponse {
   currency: string;
   taxRateBps: number;
   taxMode: TaxMode;
+  workingHours: WorkingHours | null;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

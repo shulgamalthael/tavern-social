@@ -100,8 +100,14 @@ export type FieldSchema =
    * `resolveLinkHref` в `resolve-link.ts`. Отдельный контрол от `url`: там
    * значение — голая строка «как есть» (для embed-адресов вроде видео/карты,
    * где ничего, кроме внешнего URL, никогда не имеет смысла), здесь —
-   * структурная форма именно потому, что вариантов реально несколько. */
-  | (FieldBase & { control: 'link' })
+   * структурная форма именно потому, что вариантов реально несколько.
+   * `actionsEnabled` — показывать ли ещё и `addToCart`/`bookAppointment`
+   * (см. `LinkTarget`'s комментарий) в дропдауне `LinkField.tsx`: только у
+   * `button`/`buttongroup`/`cta` (`blocks/actions`), не у простого `link` —
+   * та кнопка визуально и семантически про действие, обычная текстовая
+   * ссылка — нет, ей нечем даже отрендерить эти два варианта (`LinkRenderer`
+   * всегда рисует `<a href>`, а не `<button>`). */
+  | (FieldBase & { control: 'link'; actionsEnabled?: boolean })
   /** Источник данных для data-driven виджетов (см. ROADMAP.md §3.4) —
    * `productgrid` никогда не хранит товары в своих `props`, только ПАРАМЕТРЫ
    * запроса (`limit`/`sort`, см. `DataSourceValue` в `types.ts`); сами

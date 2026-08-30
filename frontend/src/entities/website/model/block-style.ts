@@ -1,6 +1,14 @@
 import type { CSSProperties } from 'react';
+import { readResponsiveProp } from './registry';
 import { SPACING_PX } from './theme-tokens';
-import type { Background, BlockStyle, ContainerWidth } from './types';
+import type {
+  Background,
+  BlockStyle,
+  ContainerWidth,
+  SpacingSize,
+  StyleValue,
+  Viewport,
+} from './types';
 
 const FIXED_CONTAINER_WIDTH: Partial<Record<ContainerWidth, string>> = {
   narrow: '640px',
@@ -42,6 +50,24 @@ export interface BlockWrapperStyle {
   inner: CSSProperties;
 }
 
+/** Сторона отступа в режиме «Дополнительно» (`blockStyle.customPadding`,
+ * см. её комментарий в `types.ts`) — `null` на этом вьюпорте значит
+ * «взять то, во что уже разрешилась пара `paddingY`/`paddingX` НА ЭТОМ ЖЕ
+ * вьюпорте» (`pairValue`), а не константу вроде `'none'`: иначе включение
+ * тумблера «Дополнительно» без единой правки в новых полях внезапно обнулило
+ * бы уже настроенные отступы. Когда тумблер выключен (обычный случай для
+ * всех документов до этого инкремента), сторона всегда равна значению пары
+ * — четыре новых поля просто не читаются вообще. */
+function resolveSide(
+  raw: StyleValue<SpacingSize | null> | undefined,
+  viewport: Viewport,
+  customPadding: boolean | undefined,
+  pairValue: SpacingSize | undefined,
+): SpacingSize | undefined {
+  if (!customPadding) return pairValue;
+  return readResponsiveProp<SpacingSize | null>(raw, viewport, null) ?? pairValue;
+}
+
 /**
  * Универсальные отступы/фон/ширина блока (`BlockStyle`, см. `types.ts`) →
  * инлайн-стили — общая точка для ЛЮБОГО места, которое оборачивает
@@ -51,17 +77,59 @@ export interface BlockWrapperStyle {
  * структура обёртки вокруг того же расчёта стилей (drag-хендл, тулбар
  * выделения) — дублировать саму математику отступов/фона в двух местах
  * означало бы риск, что они разъедутся при следующей правке одной из них.
+ *
+ * `viewport` — реальный вьюпорт посетителя на публичном сайте
+ * (`useRealViewport`) или симулированный вьюпорт канваса/Preview
+ * (`store.viewport`) — тот же параметр, что уже принимает `Renderer`
+ * каждого блока, теперь нужен и здесь: `paddingY`/`paddingX`/`marginTop`/
+ * `marginBottom`/`maxWidth`/`paddingTop..Left` могут быть responsive
+ * (`StyleValue<T>`, см. `types.ts`), разрешаются тем же
+ * `readResponsiveProp`, что и responsive-поля `props` блоков.
  */
-export function computeBlockWrapperStyle(style: BlockStyle | undefined): BlockWrapperStyle {
+export function computeBlockWrapperStyle(
+  style: BlockStyle | undefined,
+  viewport: Viewport,
+): BlockWrapperStyle {
   const blockStyle = style ?? {};
-  const maxWidth = blockStyle.maxWidth ?? 'default';
+
+  const paddingY = readResponsiveProp<SpacingSize | undefined>(
+    blockStyle.paddingY,
+    viewport,
+    undefined,
+  );
+  const paddingX = readResponsiveProp<SpacingSize | undefined>(
+    blockStyle.paddingX,
+    viewport,
+    undefined,
+  );
+  const marginTop = readResponsiveProp<SpacingSize | undefined>(
+    blockStyle.marginTop,
+    viewport,
+    undefined,
+  );
+  const marginBottom = readResponsiveProp<SpacingSize | undefined>(
+    blockStyle.marginBottom,
+    viewport,
+    undefined,
+  );
+  const maxWidth = readResponsiveProp<ContainerWidth>(blockStyle.maxWidth, viewport, 'default');
+
+  const top = resolveSide(blockStyle.paddingTop, viewport, blockStyle.customPadding, paddingY);
+  const right = resolveSide(blockStyle.paddingRight, viewport, blockStyle.customPadding, paddingX);
+  const bottom = resolveSide(
+    blockStyle.paddingBottom,
+    viewport,
+    blockStyle.customPadding,
+    paddingY,
+  );
+  const left = resolveSide(blockStyle.paddingLeft, viewport, blockStyle.customPadding, paddingX);
 
   const outer: CSSProperties = {
     background: backgroundValue(blockStyle.background),
-    paddingTop: blockStyle.paddingY ? SPACING_PX[blockStyle.paddingY] : undefined,
-    paddingBottom: blockStyle.paddingY ? SPACING_PX[blockStyle.paddingY] : undefined,
-    marginTop: blockStyle.marginTop ? SPACING_PX[blockStyle.marginTop] : undefined,
-    marginBottom: blockStyle.marginBottom ? SPACING_PX[blockStyle.marginBottom] : undefined,
+    paddingTop: top ? SPACING_PX[top] : undefined,
+    paddingBottom: bottom ? SPACING_PX[bottom] : undefined,
+    marginTop: marginTop ? SPACING_PX[marginTop] : undefined,
+    marginBottom: marginBottom ? SPACING_PX[marginBottom] : undefined,
     ...contrastOverrides(blockStyle.background),
   };
 
@@ -70,8 +138,8 @@ export function computeBlockWrapperStyle(style: BlockStyle | undefined): BlockWr
       maxWidth === 'default' ? 'var(--site-container-width)' : FIXED_CONTAINER_WIDTH[maxWidth],
     marginLeft: 'auto',
     marginRight: 'auto',
-    paddingLeft: blockStyle.paddingX ? SPACING_PX[blockStyle.paddingX] : undefined,
-    paddingRight: blockStyle.paddingX ? SPACING_PX[blockStyle.paddingX] : undefined,
+    paddingLeft: left ? SPACING_PX[left] : undefined,
+    paddingRight: right ? SPACING_PX[right] : undefined,
     textAlign: blockStyle.textAlign,
   };
 

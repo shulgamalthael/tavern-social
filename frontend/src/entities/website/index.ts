@@ -71,6 +71,7 @@ export type {
   WebsiteThemeColors,
 } from './model/types';
 export { useAutosave } from './model/use-autosave';
+export { useRealViewport } from './model/use-real-viewport';
 export { useWebsiteBuilderStore } from './model/website-store';
 export type { WebsiteBuilderStore } from './model/website-store';
 

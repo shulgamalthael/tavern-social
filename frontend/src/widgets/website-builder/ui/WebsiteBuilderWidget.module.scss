@@ -171,3 +171,85 @@
   background: var(--tavern-soft);
   color: var(--tavern-accent);
 }
+
+// Плавающий мини-чат с AI (см. комментарий на кнопке в `WebsiteBuilderWidget.
+// tsx`) — `position: fixed` относительно вьюпорта, не колонка/панель
+// раскладки: холст никогда не сжимается и не прячется, пока чат открыт.
+// Размер/отступ/форма — те же, что у уже существующего плавающего пузыря
+// корзины (`.fab` в `entities/cart/ui/CartWidget.module.scss`, 52px/20px/
+// `border-radius: 999px`) — тот же визуальный язык «плавающая кнопка
+// действия», не второй с нуля придуманный. Не тот же экран одновременно:
+// корзина живёт на публичном сайте/дашборде (`PublicSiteWidget`/
+// `BusinessPageWidget`/`OrdersSection`), этот — только в билдере (`/business/
+// [id]/edit`), Preview билдера рендерит `WebsiteRenderer` напрямую, без
+// `PublicSiteWidget`, так что корзина внутри Preview тоже не появляется —
+// но держим одинаковые числа на случай, если что-то из этого когда-нибудь
+// изменится, а не для собственно решения коллизии. z-index 45 — тот же
+// уровень, что у постоянных дропдаунов интерфейса (`SearchDropdown`/
+// `EmojiPicker`/`NotificationsDropdown`, все `z-index: 40`, плюс запас в 5),
+// ниже настоящих модалок (`PreviewModal`/`Modal`, 110+) и ниже корзины (120)
+// — открытый Preview или (гипотетически) корзина должны перекрывать чат, не
+// наоборот.
+.aiBubble {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 45;
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tavern-accent);
+  color: #ffffff;
+  box-shadow: var(--tavern-shadow-card);
+  cursor: pointer;
+  transition: filter 0.15s ease;
+
+  &:hover {
+    filter: brightness(1.05);
+  }
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  // На телефоне/планшете снизу уже стоит `.panelBarBottom` (переключатель
+  // «Страницы»/«Блоки»/«Настройки», см. её комментарий выше) — без сдвига
+  // пузырь лежал бы поверх него. Корзине на публичном сайте это не грозит:
+  // там нет такой нижней панели вкладок, только у билдера.
+  @include mobileOrTablet {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.aiWindow {
+  position: fixed;
+  right: 20px;
+  bottom: 84px;
+  z-index: 45;
+  overflow: hidden;
+  width: min(340px, calc(100vw - 32px));
+  height: min(480px, calc(100vh - 140px));
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-surface);
+  box-shadow: var(--tavern-shadow-card);
+
+  @include mobileOrTablet {
+    bottom: calc(136px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+// Скрытие через `display: none`, не размонтирование — `AiChatPanel` внутри
+// должен пережить закрытие/открытие пузыря вместе со своей историей
+// диалога (см. её собственный комментарий про локальный `useState`).
+.aiWindow--hidden {
+  display: none;
+}
+
+.aiWindow__panel {
+  height: 100%;
+}

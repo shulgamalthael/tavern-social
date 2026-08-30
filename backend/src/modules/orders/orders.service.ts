@@ -308,6 +308,46 @@ export class OrdersService {
    * tie-break для случая "несколько автоматических скидок одновременно
    * подходят" (см. `PRICING_ARCHITECTURE.md` §7). `null`, если ни одна не
    * подходит (нет автоматических скидок вообще — самый частый случай). */
+  /** Возврат целиком, владелец-only. `paymentStatus` — единственный признак
+   * "можно ли вернуть" (`paid`, ни `unpaid`, ни уже `refunded`); заказ, у
+   * которого его нет вообще (`unpaid` до какого-либо возврата), никогда не
+   * оплачивался, а значит и возвращать нечего. Stripe вызывается ДО записи в
+   * свою БД, а не наоборот — реальное движение денег происходит там, и если
+   * шаг записи в БД после него упадёт, повторный вызов этого метода дойдёт
+   * до Stripe снова и получит идемпотентный ответ (см. `StripeAdapter.
+   * refundPayment`), а не потеряет уже прошедший возврат.
+   */
+  async refund(businessId: string, orderId: string, ownerId: string): Promise<OrderDto> {
+    await this.assertOwnership(businessId, ownerId);
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order || order.businessId !== businessId) {
+      throw new NotFoundException('Заказ не найден');
+    }
+    if (order.paymentStatus === 'unpaid') {
+      throw new BadRequestException('Заказ ещё не оплачен — возврат невозможен');
+    }
+    if (order.paymentStatus === 'refunded') {
+      throw new BadRequestException('Заказ уже возвращён');
+    }
+    if (!order.stripePaymentIntentId) {
+      // Защита от рассинхронизации инвариантов, а не ожидаемый путь —
+      // `paymentStatus: paid` сегодня выставляется только вебхуком
+      // `payment_intent.succeeded`, который не мог бы найти заказ вообще
+      // без уже сохранённого `stripePaymentIntentId` (см. `markPaidBy
+      // PaymentIntent`).
+      throw new BadRequestException('У заказа нет привязанного платежа Stripe');
+    }
+
+    await this.paymentProvider.refundPayment(order.stripePaymentIntentId);
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: { paymentStatus: 'refunded' },
+      include: { items: true },
+    });
+    return this.toDto(updated);
+  }
+
   private async resolveBestAutomaticDiscount(
     businessId: string,
     subtotalCents: number,

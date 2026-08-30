@@ -1,0 +1,158 @@
+@use '@/shared/styles/mixins' as *;
+
+// Свой кирпично-красный тон, не `--tavern-danger` (см. комментарий
+// `BusinessOwnerBar.tsx` — та переменная означает «ошибка», не «владелец»)
+// и не переиспользует токены `AdminBar`, чтобы обе плашки визуально не
+// сливались друг с другом, даже стоя одна под другой.
+.business-bar {
+  position: sticky;
+  // Садится сразу под `AdminBar`, если она есть (`--admin-bar-h` тогда не
+  // ноль, см. `page.module.scss`) — иначе фолбэк `0px` ставит эту плашку
+  // на самый верх.
+  top: var(--admin-bar-h, 0px);
+  // Выше `Header` (`z-index: 30`) на ту же единицу и по той же причине, что
+  // и у `AdminBar` (см. её комментарий) — эта плашка стоит РАНЬШЕ `Header`
+  // в DOM, и при равном `z-index` более поздний по DOM `Header` красился бы
+  // поверх нашего собственного дропдауна (`.business-bar__panel` ниже),
+  // сколько бы `z-index` тому ни задать — родительский контекст наложения
+  // важнее дочернего. Реальный баг, пойманный вживую пользователем.
+  z-index: 31;
+  background: #7a2a1c;
+  color: #fbe9e1;
+}
+
+.business-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 36px;
+  padding: 0 clamp(14px, 3vw, 24px);
+}
+
+.business-bar__brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.business-bar__brand-icon {
+  flex-shrink: 0;
+  color: #f2b48c;
+}
+
+.business-bar__dropdown {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.business-bar__trigger {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: color-mix(in srgb, #fbe9e1 82%, transparent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, #fbe9e1 14%, transparent);
+    color: #fbe9e1;
+  }
+}
+
+.business-bar__chevron,
+.business-bar__chevron--open {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.15s ease;
+}
+
+.business-bar__chevron--open {
+  transform: rotate(180deg);
+}
+
+.business-bar__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  // Тот же «попап»-уровень, что у остальных дропдаунов проекта
+  // (`SearchDropdown`/`NotificationsDropdown`/`EmojiPicker` — все `z-index: 40`),
+  // не просто «на 1 выше родителя»: сам факт, что `.business-bar` теперь
+  // стоит выше `Header` (см. её комментарий), уже решает исходный баг, это
+  // значение — для согласованности с остальными всплывающими панелями сайта.
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: min(260px, 80vw);
+  padding: 6px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  box-shadow: var(--tavern-shadow-card);
+}
+
+.business-bar__panel-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.business-bar__panel-item-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--tavern-muted);
+}
+
+.business-bar__panel-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-bar__cta {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f2b48c;
+  color: #4a1608;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+}
+
+@include mobile {
+  .business-bar__brand-label {
+    display: none;
+  }
+}

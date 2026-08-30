@@ -7,6 +7,7 @@ import { getBusiness, type Business } from '@/entities/business';
 import {
   WebsiteRenderer,
   getPublicWebsite,
+  useRealViewport,
   type BlockBusinessContext,
   type PublicWebsite,
 } from '@/entities/website';
@@ -76,6 +77,7 @@ export function BusinessPageWidget({ businessId }: BusinessPageWidgetProps) {
   }, [businessId]);
 
   const { status, data, error, refetch } = useAsyncData(fetcher);
+  const viewport = useRealViewport();
 
   if (status === 'loading') {
     return (
@@ -148,7 +150,7 @@ export function BusinessPageWidget({ businessId }: BusinessPageWidgetProps) {
             page={document.pages[0]}
             pages={document.pages}
             theme={document.theme}
-            viewport="desktop"
+            viewport={viewport}
             business={businessContext}
           />
           {capabilities.includes('commerce') && (

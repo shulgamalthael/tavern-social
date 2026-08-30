@@ -6,7 +6,16 @@ import { getAnalyticsSummary } from '@/entities/analytics';
 import type { Business } from '@/entities/business';
 import { useAsyncData } from '@/shared/lib/use-async-data';
 import { Button } from '@/shared/ui/Button';
-import { CheckIcon, EditIcon, EyeIcon, FileIcon, GlobeIcon } from '@/shared/ui/icons';
+import {
+  CalendarIcon,
+  CheckIcon,
+  EditIcon,
+  EyeIcon,
+  FileIcon,
+  GlobeIcon,
+  MailIcon,
+  ShoppingBagIcon,
+} from '@/shared/ui/icons';
 import styles from './OverviewSection.module.scss';
 
 export interface OverviewSectionProps {
@@ -24,12 +33,19 @@ export interface OverviewSectionProps {
  * той же кнопки в тулбаре билдера, а быстрый путь «ничего не меняю, просто
  * хочу опубликовать то, что уже есть», не открывая билдер вообще.
  *
- * «Просмотров за 7 дней» (ROADMAP.md §3.8/§8 Phase 10) — единственный
- * сегодняшний потребитель `entities/analytics`: одна цифра, не полноценный
- * дашборд с графиками (тот явно отложен в §6 корневого плана до появления
- * реального объёма событий) — ровно то, что доказывает, что путь `record()`
- * → `summary()` работает end-to-end, не оставляя таблицу событий висеть
- * совсем без потребителя.
+ * Аналитика (ROADMAP.md §3.8/§8 Phase 10, расширено в Phase 10 continued) —
+ * все четыре типа события, которые сегодня вообще пишет `AnalyticsService.
+ * record()` (`page_view`/`order_created`/`appointment_created`/
+ * `form_submission`), не только просмотры страниц: `AnalyticsSummaryDto`
+ * уже считал их все с самого начала, просто `OverviewSection` раньше читал
+ * только `page_view`. Полноценный график/тренд по дням сознательно НЕ
+ * добавлен здесь — тот остаётся отложенным в §6 корневого плана до
+ * появления реального объёма событий, на который имело бы смысл смотреть
+ * как на тренд; показ уже посчитанных сумм по всем типам — не то же самое
+ * решение, что рисовать график из одной точки данных на бизнес. Заказы/
+ * записи показываются только при включённой соответствующей капабилити (то
+ * же, что делает остальной Dashboard) — заявки форм показываются всегда, у
+ * них нет капабилити-гейта нигде в проекте (см. `FormSubmissionsService`).
  */
 export function OverviewSection({
   business,
@@ -40,7 +56,9 @@ export function OverviewSection({
 }: OverviewSectionProps) {
   const analyticsFetcher = useCallback(() => getAnalyticsSummary(business.id), [business.id]);
   const analytics = useAsyncData(analyticsFetcher);
-  const pageViews7d = analytics.data?.last7Days.page_view ?? 0;
+  const last7Days = analytics.data?.last7Days;
+  const hasCommerce = business.capabilities.includes('commerce');
+  const hasBooking = business.capabilities.includes('booking');
 
   return (
     <div className={styles.root}>
@@ -74,7 +92,47 @@ export function OverviewSection({
           <div>
             <p className={styles.stat__label}>Просмотров за 7 дней</p>
             <p className={styles.stat__value}>
-              {analytics.status === 'success' ? pageViews7d : '—'}
+              {analytics.status === 'success' ? (last7Days?.page_view ?? 0) : '—'}
+            </p>
+          </div>
+        </div>
+
+        {hasCommerce && (
+          <div className={styles.stat}>
+            <span className={styles.stat__icon}>
+              <ShoppingBagIcon />
+            </span>
+            <div>
+              <p className={styles.stat__label}>Заказов за 7 дней</p>
+              <p className={styles.stat__value}>
+                {analytics.status === 'success' ? (last7Days?.order_created ?? 0) : '—'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {hasBooking && (
+          <div className={styles.stat}>
+            <span className={styles.stat__icon}>
+              <CalendarIcon />
+            </span>
+            <div>
+              <p className={styles.stat__label}>Записей за 7 дней</p>
+              <p className={styles.stat__value}>
+                {analytics.status === 'success' ? (last7Days?.appointment_created ?? 0) : '—'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className={styles.stat}>
+          <span className={styles.stat__icon}>
+            <MailIcon />
+          </span>
+          <div>
+            <p className={styles.stat__label}>Заявок с форм за 7 дней</p>
+            <p className={styles.stat__value}>
+              {analytics.status === 'success' ? (last7Days?.form_submission ?? 0) : '—'}
             </p>
           </div>
         </div>

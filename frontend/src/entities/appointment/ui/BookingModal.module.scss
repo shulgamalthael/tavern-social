@@ -85,3 +85,44 @@
   font-size: 12px;
   line-height: 1.5;
 }
+
+// --- Оплата (см. CartWidget.module.scss, тот же приём один в один) --------
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0;
+  color: var(--tavern-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.paymentUnavailable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px dashed var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+}
+
+.paymentUnavailable__badge {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--tavern-line);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.paymentUnavailable__text {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}

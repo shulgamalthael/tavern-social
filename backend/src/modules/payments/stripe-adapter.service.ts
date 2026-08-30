@@ -108,6 +108,31 @@ export class StripeAdapter extends PaymentProvider {
     return { paymentIntentId: paymentIntent.id, clientSecret: paymentIntent.client_secret };
   }
 
+  /** Возврат целиком (см. `PaymentProvider.refundPayment`). Идемпотентно на
+   * стороне Stripe — если возврат уже был сделан (повторный клик владельца,
+   * гонка двух параллельных запросов), Stripe отвечает `charge_already_
+   * refunded`, а не создаёт второй возврат; это ровно то состояние, которого
+   * и добивался вызывающий код, поэтому не пробрасываем это как ошибку. */
+  async refundPayment(paymentIntentId: string): Promise<void> {
+    if (!this.stripe) {
+      throw new Error(
+        'Stripe не настроен — вызывающий код обязан проверить isConfigured() перед вызовом',
+      );
+    }
+
+    try {
+      await this.stripe.refunds.create({ payment_intent: paymentIntentId });
+    } catch (error) {
+      if (
+        error instanceof Stripe.errors.StripeInvalidRequestError &&
+        error.code === 'charge_already_refunded'
+      ) {
+        return;
+      }
+      throw error;
+    }
+  }
+
   verifyWebhookSignature(payload: Buffer, signature: string): PaymentWebhookEvent | null {
     if (!this.stripe || !this.webhookSecret) return null;
 

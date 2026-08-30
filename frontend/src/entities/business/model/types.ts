@@ -56,12 +56,39 @@ export interface Business {
   taxRateBps: number;
   /** `none` — налог не считается вообще (значение по умолчанию). */
   taxMode: TaxMode;
+  workingHours: WorkingHours | null;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;
 }
 
 export type TaxMode = 'none' | 'inclusive' | 'exclusive';
+
+/** Часы работы бизнеса (Booking, ROADMAP.md §8 Phase 6 continued) — ключ дня
+ * недели отсутствует или всё поле `Business.workingHours` — `null` значит
+ * «не ограничено» (см. её комментарий в backend schema.prisma): запись
+ * принимается в любое время, то же поведение, что было единственным до
+ * появления этого поля. `open`/`close` — `"ЧЧ:ММ"`, 24-часовой формат,
+ * ровно то, что отдаёт `<input type="time">` без какой-либо обработки. */
+export const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export type Weekday = (typeof WEEKDAYS)[number];
+
+export const WEEKDAY_LABELS: Record<Weekday, string> = {
+  mon: 'Понедельник',
+  tue: 'Вторник',
+  wed: 'Среда',
+  thu: 'Четверг',
+  fri: 'Пятница',
+  sat: 'Суббота',
+  sun: 'Воскресенье',
+};
+
+export interface DayHours {
+  open: string;
+  close: string;
+}
+
+export type WorkingHours = Partial<Record<Weekday, DayHours>>;
 
 export const TAX_MODE_LABELS: Record<TaxMode, string> = {
   none: 'Не считать налог',

@@ -1,4 +1,5 @@
 import type { BusinessCategory } from '@prisma/client';
+import type { WorkingHours } from './lib/working-hours';
 
 export interface SocialLinkDto {
   platform: string;
@@ -50,6 +51,9 @@ export interface BusinessDto {
   /** `none` — налог не считается (значение по умолчанию для всех
    * существующих бизнесов после миграции). */
   taxMode: TaxMode;
+  /** `null` — часы не заданы, записи принимаются в любое время (см.
+   * комментарий `Business.workingHours` в schema.prisma). */
+  workingHours: WorkingHours | null;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

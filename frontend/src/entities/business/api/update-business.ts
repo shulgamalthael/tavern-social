@@ -8,6 +8,7 @@ import type {
   BusinessCategory,
   SocialLink,
   TaxMode,
+  WorkingHours,
 } from '../model/types';
 import { mapBusiness, type BusinessResponse } from './map-business';
 
@@ -29,6 +30,9 @@ export interface UpdateBusinessInput {
   /** Базисные пункты (2000 = 20.00%) — см. `Business.taxRateBps`. */
   taxRateBps?: number;
   taxMode?: TaxMode;
+  /** `null` очищает часы — «не ограничено» (см. `Business.workingHours`'s
+   * комментарий в `model/types.ts`). */
+  workingHours?: WorkingHours | null;
 }
 
 /** Владелец-only на backend (см. `BusinessesService.update`). */
