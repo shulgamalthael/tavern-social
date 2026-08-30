@@ -1,0 +1,58 @@
+.feed {
+  flex: 1;
+  min-height: 0;
+}
+
+.feed__viewport {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+}
+
+.status {
+  flex: 1;
+  padding: 24px 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item--error {
+  color: #dc2626;
+}
+
+.item__label {
+  color: var(--tavern-ink);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.item--error .item__label {
+  color: #dc2626;
+}
+
+.item__time {
+  flex: 0 0 auto;
+  color: var(--tavern-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}

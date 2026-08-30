@@ -68,3 +68,36 @@ export interface ChatResult {
   message: string;
   toolExecutions: ToolExecutionSummary[];
 }
+
+/**
+ * Один прогресс-эвент цикла `AiService`'s `runToolLoop` (AI-3, стриминг —
+ * см. AI_PLATFORM_ROADMAP.md, фаза AI-3). `chat()` (не-стриминговый,
+ * AI-1/AI-2) сворачивает поток таких эвентов обратно в единый `ChatResult`;
+ * `chatStream()` отдаёт их как есть через SSE (`AiController`), по одному
+ * эвенту на `data:`-фрейм. Ошибки цикла (лимит итераций, сбой LLM без ранее
+ * выполненных инструментов) НЕ моделируются отдельным вариантом здесь — они
+ * пробрасываются как исключение (см. комментарий `runToolLoop`), и для SSE
+ * попадают в стандартный `event: error` Nest'а самостоятельно.
+ */
+export type AiStreamEvent =
+  | { type: 'tool_start'; tool: string; riskLevel: ToolRiskLevel }
+  | { type: 'tool_result'; tool: string; riskLevel: ToolRiskLevel; status: 'success' | 'error' }
+  | { type: 'message'; message: string };
+
+/**
+ * Одна запись "ленты активности" AI для бизнеса (AI-3, третий пункт mission
+ * §39-42 — "activity timeline") — урезанная проекция `AuditLog` для чтения
+ * владельцем бизнеса: только то, что нужно показать "что AI сделал и
+ * когда", БЕЗ `argsSummary`/`resultSummary` (это внутренний диагностический
+ * срез аудит-лога для разработчиков, не пользовательский UI). В отличие от
+ * истории диалога в `AiChatPanel` (живёт в `useState`, теряется при
+ * перезагрузке страницы), эта лента читается из БД и переживает
+ * перезагрузку и смену вкладки/устройства.
+ */
+export interface AuditLogListItem {
+  id: string;
+  tool: string;
+  riskLevel: ToolRiskLevel;
+  status: 'success' | 'error';
+  createdAt: string;
+}

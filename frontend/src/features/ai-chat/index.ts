@@ -1,2 +1,2 @@
-export { AiChatPanel } from './ui/AiChatPanel';
-export type { AiChatPanelProps } from './ui/AiChatPanel';
+export { AiAssistantPanel } from './ui/AiAssistantPanel';
+export type { AiAssistantPanelProps } from './ui/AiAssistantPanel';

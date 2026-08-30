@@ -141,6 +141,10 @@
   color: #dc2626;
 }
 
+.toolBadge--pending {
+  animation: typing-blink 1.1s infinite ease-in-out;
+}
+
 .form {
   display: flex;
   flex: 0 0 auto;

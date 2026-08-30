@@ -3,6 +3,8 @@ import { WebsitesModule } from '@/modules/websites/websites.module';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
 import { AuditLogService } from './audit-log.service';
+import { AiConfiguredGuard } from './guards/ai-configured.guard';
+import { AiOwnershipGuard } from './guards/ai-ownership.guard';
 import { LlmProvider } from './llm-provider';
 import { GeminiAdapter } from './providers/gemini-adapter.service';
 import { AddBlockTool } from './tools/add-block.tool';
@@ -18,6 +20,8 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
   providers: [
     AiService,
     AuditLogService,
+    AiOwnershipGuard,
+    AiConfiguredGuard,
     ToolRegistryService,
     { provide: LlmProvider, useClass: GeminiAdapter },
     // Каждый инструмент — отдельный provider, регистрирующий себя в

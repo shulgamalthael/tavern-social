@@ -5,8 +5,9 @@ import { cn } from '@/shared/lib/cn';
 import { Button } from '@/shared/ui/Button';
 import { ForwardIcon, SparkleIcon } from '@/shared/ui/icons';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
-import { sendAiChatMessage } from '../api/send-ai-chat-message';
-import type { AiChatMessage } from '../model/types';
+import { streamAiChat } from '../api/stream-ai-chat';
+import { toolLabel } from '../lib/tool-labels';
+import type { AiChatMessage, ToolExecutionSummary } from '../model/types';
 import styles from './AiChatPanel.module.scss';
 
 export interface AiChatPanelProps {
@@ -19,45 +20,38 @@ export interface AiChatPanelProps {
    * навести фокус на поле ввода КАЖДЫЙ раз при открытии, не только при
    * первом монтировании. */
   isOpen: boolean;
-  /** Зовётся после ответа, где хотя бы один инструмент реально что-то
-   * поменял на сайте (`status: 'success'` и `riskLevel !== 'low'` — то есть
-   * не `get_project_tree`). Сама панель не умеет перечитать документ
-   * билдера: только родитель (`WebsiteBuilderWidget`) знает, есть ли
-   * несохранённые локальные правки в сторе, которые нельзя молча
-   * затереть. Возвращает `false`, если обновление холста было пропущено
-   * именно по этой причине — панель тогда явно предупреждает об этом в
-   * истории диалога, а не молчит о том, что канвас мог не обновиться. */
+  /** Зовётся СРАЗУ после каждого `tool_result`, где инструмент реально
+   * что-то поменял на сайте (`status: 'success'` и `riskLevel !== 'low'` —
+   * то есть не `get_project_tree`) — не одним блоком в конце хода (AI-3,
+   * "live-canvas apply-on-tool-result"): если ход состоит из нескольких
+   * мутирующих инструментов подряд (см. §8 роадмапа, `add_block` × 2 в один
+   * ход), холст обновляется после КАЖДОГО, а не только после последнего.
+   * Сама панель не умеет перечитать документ билдера: только родитель
+   * (`WebsiteBuilderWidget`) знает, есть ли несохранённые локальные правки в
+   * сторе, которые нельзя молча затереть. Возвращает `false`, если
+   * обновление холста было пропущено именно по этой причине — панель тогда
+   * явно предупреждает об этом в истории диалога (один раз за ход, не на
+   * каждый пропущенный инструмент), а не молчит о том, что канвас мог не
+   * обновиться. */
   onMutationApplied?: () => boolean | Promise<boolean>;
 }
 
-const TOOL_LABELS: Record<string, string> = {
-  get_project_tree: 'Прочитал структуру сайта',
-  create_page: 'Создал страницу',
-  add_block: 'Добавил блок',
-  update_block_props: 'Изменил блок',
-  set_style: 'Изменил оформление блока',
-};
-
-function toolLabel(tool: string): string {
-  return TOOL_LABELS[tool] ?? tool;
-}
-
-/** `sendAiChatMessage` уже разворачивает `BackendError` (в т.ч. «AI не
- * настроен», 503) в обычный `Error` НА СЕРВЕРЕ — этот компонент клиентский
- * и не может импортировать `backend-client.ts` вообще (см. её комментарий:
- * `server-only`, `next build` падает на попытке). */
+/** `AiChatStreamError` уже несёт человекочитаемое сообщение (backend'ская
+ * `BackendError`-подобная обработка сделана внутри `stream-ai-chat.ts`/
+ * `app/api/ai-chat/route.ts`, оба серверные модули) — этому клиентскому
+ * компоненту достаточно просто прочитать `.message`. */
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return 'Не удалось отправить сообщение — попробуйте ещё раз';
 }
 
 /**
- * Мини-чат с AI-ассистентом платформы (AI_PLATFORM_ROADMAP.md, фаза AI-2,
- * последний оставшийся кусок фазы после четырёх backend-инструментов —
- * `get_project_tree`/`create_page`/`add_block`/`set_style`/
- * `update_block_props`). Без стриминга (AI-3) — один запрос-ответ на
- * сообщение, тот же `POST /ai/chat`, что уже curl-верифицирован в §6-§8
- * роадмапа.
+ * Мини-чат с AI-ассистентом платформы (AI_PLATFORM_ROADMAP.md, фаза AI-2 —
+ * инструменты и первая версия панели, фаза AI-3 — стриминг). Сообщение шлётся
+ * через `streamAiChat` (SSE, `POST /businesses/:businessId/ai/chat/stream`),
+ * события хода (начало/результат вызова инструмента, финальный текст)
+ * применяются к истории по мере прихода, а не одним блоком в конце — тул-
+ * баджи и текст ответа появляются в реальном времени, пока ход ещё идёт.
  *
  * Локальный `useState`, не Zustand-стор — история диалога нужна только
  * этой одной панели, ни один другой widget/feature её не читает (см.
@@ -78,12 +72,18 @@ export function AiChatPanel({
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isSending, setSending] = useState(false);
+  /** Имя инструмента, который сейчас выполняется на backend (между
+   * `tool_start` и своим `tool_result`) — только для лейбла в пузыре
+   * ассистента, который ещё формируется (см. `isStreamingPlaceholder` в
+   * рендере). `null`, пока инструмент не запущен (изначальные три точки)
+   * или между инструментами. */
+  const [pendingTool, setPendingTool] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     viewportRef.current?.scrollTo({ top: viewportRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, pendingTool]);
 
   useEffect(() => {
     if (isOpen) inputRef.current?.focus();
@@ -98,45 +98,98 @@ export function AiChatPanel({
     setInput('');
     setSending(true);
 
+    const assistantId = crypto.randomUUID();
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: 'assistant', content: '', toolExecutions: [] },
+    ]);
+
+    const toolExecutions: ToolExecutionSummary[] = [];
+    let receivedMessage = false;
+    // "Не применено — есть несохранённые правки" — одна и та же причина на
+    // весь ход, даже если мутирующих инструментов было несколько подряд
+    // (см. §8 роадмапа: `get_project_tree` → `add_block` × 2 в один ход) —
+    // предупреждать про неё на каждый инструмент было бы просто шумом.
+    let warnedAboutDirty = false;
+
     try {
-      const result = await sendAiChatMessage(businessId, text);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: result.message,
-          toolExecutions: result.toolExecutions,
-        },
-      ]);
-      const didMutate = result.toolExecutions.some(
-        (execution) => execution.status === 'success' && execution.riskLevel !== 'low',
-      );
-      if (didMutate && onMutationApplied) {
-        const applied = await onMutationApplied();
-        if (!applied) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              content:
-                'Изменения сохранены на сервере, но в конструкторе есть несохранённые правки — сохраните их или обновите страницу, чтобы увидеть результат на холсте.',
-            },
-          ]);
+      for await (const streamEvent of streamAiChat(businessId, text)) {
+        if (streamEvent.type === 'tool_start') {
+          setPendingTool(streamEvent.tool);
+        } else if (streamEvent.type === 'tool_result') {
+          setPendingTool(null);
+          toolExecutions.push({
+            tool: streamEvent.tool,
+            riskLevel: streamEvent.riskLevel,
+            status: streamEvent.status,
+          });
+          const executionsSoFar = [...toolExecutions];
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantId
+                ? { ...message, toolExecutions: executionsSoFar }
+                : message,
+            ),
+          );
+
+          // Применяем мутацию к холсту СРАЗУ по мере готовности каждого
+          // инструмента (AI-3, "live-canvas apply-on-tool-result", не
+          // одним блоком в конце хода, как раньше) — `await` внутри `for
+          // await` тела гарантированно сериализует эти вызовы: следующий
+          // эвент из потока не читается, пока текущий `onMutationApplied`
+          // не завершится, так что параллельных гонок за перезагрузку
+          // документа стора быть не может.
+          const mutated = streamEvent.status === 'success' && streamEvent.riskLevel !== 'low';
+          if (mutated && onMutationApplied) {
+            const applied = await onMutationApplied();
+            if (!applied && !warnedAboutDirty) {
+              warnedAboutDirty = true;
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: crypto.randomUUID(),
+                  role: 'assistant',
+                  content:
+                    'Изменения сохранены на сервере, но в конструкторе есть несохранённые правки — сохраните их или обновите страницу, чтобы увидеть результат на холсте.',
+                },
+              ]);
+            }
+          }
+        } else if (streamEvent.type === 'message') {
+          receivedMessage = true;
+          setPendingTool(null);
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantId ? { ...message, content: streamEvent.message } : message,
+            ),
+          );
         }
       }
+
+      if (!receivedMessage) {
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId
+              ? {
+                  ...message,
+                  content: 'Соединение прервалось раньше, чем пришёл ответ.',
+                  isError: true,
+                }
+              : message,
+          ),
+        );
+      }
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: errorMessage(error),
-          isError: true,
-        },
-      ]);
+      setPendingTool(null);
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantId
+            ? { ...message, content: errorMessage(error), isError: true }
+            : message,
+        ),
+      );
     } finally {
+      setPendingTool(null);
       setSending(false);
     }
   }
@@ -158,44 +211,62 @@ export function AiChatPanel({
           </div>
         )}
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={cn(
-              styles.message,
-              styles[`message--${message.role}`],
-              message.isError && styles['message--error'],
-            )}
-          >
-            <div className={styles.message__bubble}>{message.content}</div>
-            {message.toolExecutions && message.toolExecutions.length > 0 && (
-              <ul className={styles.message__tools}>
-                {message.toolExecutions.map((execution, index) => (
-                  <li
-                    key={`${execution.tool}-${index}`}
-                    className={cn(
-                      styles.toolBadge,
-                      execution.status === 'error' && styles['toolBadge--error'],
-                    )}
-                  >
-                    {toolLabel(execution.tool)}
-                    {execution.status === 'error' && ' — не удалось'}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
+        {messages.map((message, index) => {
+          // Пузырь ассистента, который сейчас формируется потоком (пустой
+          // текст, ещё не пришёл `message`-эвент) — последний в списке, пока
+          // `isSending` — показывает точки/текущий инструмент вместо пустого
+          // содержимого; `toolExecutions`-баджи под ним рендерятся как обычно
+          // и наполняются по мере прихода `tool_result`.
+          const isStreamingPlaceholder =
+            isSending &&
+            index === messages.length - 1 &&
+            message.role === 'assistant' &&
+            message.content === '' &&
+            !message.isError;
 
-        {isSending && (
-          <div className={cn(styles.message, styles['message--assistant'])}>
-            <div className={cn(styles.message__bubble, styles['message__bubble--pending'])}>
-              <span className={styles.typingDot} />
-              <span className={styles.typingDot} />
-              <span className={styles.typingDot} />
+          return (
+            <div
+              key={message.id}
+              className={cn(
+                styles.message,
+                styles[`message--${message.role}`],
+                message.isError && styles['message--error'],
+              )}
+            >
+              {isStreamingPlaceholder ? (
+                <div className={cn(styles.message__bubble, styles['message__bubble--pending'])}>
+                  {pendingTool ? (
+                    <span>{toolLabel(pendingTool)}…</span>
+                  ) : (
+                    <>
+                      <span className={styles.typingDot} />
+                      <span className={styles.typingDot} />
+                      <span className={styles.typingDot} />
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className={styles.message__bubble}>{message.content}</div>
+              )}
+              {message.toolExecutions && message.toolExecutions.length > 0 && (
+                <ul className={styles.message__tools}>
+                  {message.toolExecutions.map((execution, executionIndex) => (
+                    <li
+                      key={`${execution.tool}-${executionIndex}`}
+                      className={cn(
+                        styles.toolBadge,
+                        execution.status === 'error' && styles['toolBadge--error'],
+                      )}
+                    >
+                      {toolLabel(execution.tool)}
+                      {execution.status === 'error' && ' — не удалось'}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })}
       </ScrollArea>
 
       <form className={styles.form} onSubmit={handleSubmit}>

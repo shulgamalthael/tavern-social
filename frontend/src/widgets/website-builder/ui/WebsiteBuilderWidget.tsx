@@ -10,7 +10,7 @@ import {
   type BlockBusinessContext,
   type Viewport,
 } from '@/entities/website';
-import { AiChatPanel } from '@/features/ai-chat';
+import { AiAssistantPanel } from '@/features/ai-chat';
 import { cn } from '@/shared/lib/cn';
 import { useAsyncData } from '@/shared/lib/use-async-data';
 import { ErrorState } from '@/shared/ui/ErrorState';
@@ -208,6 +208,11 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
   // этого сохраняли стор поверх) откатываем то, что только что сделал AI.
   // `getState()`, не замыкание из рендера — тот же приём, что и у
   // `saveNow` в cleanup-эффекте ниже, актуальное значение на момент вызова.
+  // Вызывается панелью ПОСЛЕ КАЖДОГО мутирующего инструмента в ходе (AI-3,
+  // "live-canvas apply-on-tool-result", см. `AiChatPanelProps.onMutationApplied`),
+  // может быть вызвана несколько раз за один ход — сам обработчик ничего не
+  // помнит между вызовами (просто перечитывает актуальный документ), так что
+  // повторные вызовы идемпотентны и не нуждаются в собственной дедупликации.
   const handleAiMutation = useCallback(async (): Promise<boolean> => {
     if (useWebsiteBuilderStore.getState().isDirty) return false;
     const draft = await getWebsiteDraft(businessId);
@@ -372,14 +377,17 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
 
       <AddBlockModal capabilities={data.business.capabilities} />
 
-      {/* Плавающий мини-чат, не вкладка панели — холст должен оставаться
+      {/* Плавающее мини-окно AI, не вкладка панели — холст должен оставаться
        * полностью видимым, пока идёт диалог с AI (тот же принцип «холст
        * всегда на виду», что и у остальной части билдера, см. комментарий
        * компонента выше), а не делить экран с ним, как «Страницы»/«Блоки»/
        * «Настройки». `.aiWindow` рендерится ВСЕГДА (не условно) — скрывается
        * через `.aiWindow--hidden` (CSS `display: none`), а не размонтированием:
-       * `AiChatPanel` внутри держит историю диалога в собственном `useState`,
-       * закрытие/открытие пузыря не должно её терять (см. её комментарий). */}
+       * `AiAssistantPanel` внутри (вкладка «Чат») держит историю диалога в
+       * собственном `useState`, закрытие/открытие пузыря не должно её терять
+       * (см. её комментарий) — вторая вкладка, «История» (AI-3, activity
+       * timeline), своего состояния не хранит, читает `AuditLog` заново при
+       * каждом переключении на неё. */}
       <button
         ref={aiBubbleRef}
         type="button"
@@ -398,7 +406,7 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
         aria-label="AI-ассистент"
         aria-hidden={!isAiChatOpen}
       >
-        <AiChatPanel
+        <AiAssistantPanel
           businessId={businessId}
           className={styles.aiWindow__panel}
           isOpen={isAiChatOpen}
