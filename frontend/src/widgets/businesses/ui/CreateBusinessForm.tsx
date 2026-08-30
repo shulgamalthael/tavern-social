@@ -1,30 +1,32 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { BUSINESS_CATEGORIES, createBusiness, type BusinessCategory } from '@/entities/business';
 import { CURRENCY_OPTIONS, DEFAULT_BUSINESS_CURRENCY } from '@/shared/config/currencies';
 import { Button } from '@/shared/ui/Button';
-import { BackIcon } from '@/shared/ui/icons';
-import { PageHead } from '@/shared/ui/PageHead';
-import { SectionContainer } from '@/shared/ui/SectionContainer';
 import styles from './CreateBusinessForm.module.scss';
 
 /**
- * Форма `/businesses/new` — минимум обязательных полей (только название и
- * категория), остальное (описание, контакты, соцсети, SEO) правится потом
- * на самой странице бизнеса — не нагружаем самый первый экран created-flow
- * длинной формой ради «хорошего первого впечатления» (см. корневой план
- * фичи). После создания сразу открывает билдер (`/business/[id]/edit`) —
- * у нового бизнеса сайт уже существует (пустой, см. `BusinessesService.
- * create` на backend), так что там сразу встретит `StarterTemplatePicker`.
+ * Форма ручного создания бизнеса — минимум обязательных полей (только
+ * название и категория), остальное (описание, контакты, соцсети, SEO)
+ * правится потом на самой странице бизнеса — не нагружаем самый первый экран
+ * created-flow длинной формой ради «хорошего первого впечатления» (см.
+ * корневой план фичи). После создания сразу открывает билдер
+ * (`/business/[id]/edit`) — у нового бизнеса сайт уже существует (пустой, см.
+ * `BusinessesService.create` на backend), так что там сразу встретит
+ * `StarterTemplatePicker`.
  *
  * Валюта (Currency System, ROADMAP.md §8) — обязательное поле здесь, не
  * "необязательно, поправите потом", как описание: это единственная точка
  * входа, где бизнес ещё не существует, поэтому нечему "молча подставить
  * RUB, пока не заметили" — выбор явный с самого начала, дефолт `RUB`
  * только предзаполняет select, не скрывает решение.
+ *
+ * Не владеет заголовком/шапкой раздела — это делает `NewBusinessFlow`
+ * (единственный вызывающий, AI-4, AI_PLATFORM_ROADMAP.md §2.7), т.к. форма
+ * теперь один из двух режимов ("вручную"/"с AI") одной страницы `/businesses
+ * /new`, и `<main>`-обёртка (`SectionContainer`) должна быть ровно одна.
  */
 export function CreateBusinessForm() {
   const router = useRouter();
@@ -59,73 +61,64 @@ export function CreateBusinessForm() {
   }
 
   return (
-    <SectionContainer narrow className={styles.section}>
-      <div className={styles.top}>
-        <Link href="/businesses" className={styles.back} aria-label="Назад к бизнесам">
-          <BackIcon />
-        </Link>
-        <PageHead title="Новый бизнес" description="Пара слов — остальное донастроите на месте" />
-      </div>
+    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
+      <label className={styles.field}>
+        <span className={styles['field__label']}>Название</span>
+        <input
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Например, «Кофейня на Ленина»"
+          maxLength={80}
+          autoFocus
+        />
+      </label>
 
-      <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
-        <label className={styles.field}>
-          <span className={styles['field__label']}>Название</span>
-          <input
-            type="text"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Например, «Кофейня на Ленина»"
-            maxLength={80}
-            autoFocus
-          />
-        </label>
+      <label className={styles.field}>
+        <span className={styles['field__label']}>Категория</span>
+        <select
+          value={category}
+          onChange={(event) => setCategory(event.target.value as BusinessCategory)}
+        >
+          {BUSINESS_CATEGORIES.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
-        <label className={styles.field}>
-          <span className={styles['field__label']}>Категория</span>
-          <select
-            value={category}
-            onChange={(event) => setCategory(event.target.value as BusinessCategory)}
-          >
-            {BUSINESS_CATEGORIES.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <label className={styles.field}>
+        <span className={styles['field__label']}>Валюта</span>
+        <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
+          {CURRENCY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
-        <label className={styles.field}>
-          <span className={styles['field__label']}>Валюта</span>
-          <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
-            {CURRENCY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <label className={styles.field}>
+        <span className={styles['field__label']}>Описание (необязательно)</span>
+        <textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Чем занимается бизнес — пригодится в шаблоне сайта"
+          rows={3}
+          maxLength={280}
+        />
+      </label>
 
-        <label className={styles.field}>
-          <span className={styles['field__label']}>Описание (необязательно)</span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Чем занимается бизнес — пригодится в шаблоне сайта"
-            rows={3}
-            maxLength={280}
-          />
-        </label>
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
 
-        {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
-        )}
-
-        <Button type="submit" fullWidth disabled={isSubmitting}>
-          {isSubmitting ? 'Создаём…' : 'Создать и перейти в конструктор'}
-        </Button>
-      </form>
-    </SectionContainer>
+      <Button type="submit" fullWidth disabled={isSubmitting}>
+        {isSubmitting ? 'Создаём…' : 'Создать и перейти в конструктор'}
+      </Button>
+    </form>
   );
 }

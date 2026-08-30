@@ -1,0 +1,69 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.back {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-top: 2px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+
+  &:hover {
+    background: var(--tavern-soft);
+    color: var(--tavern-accent);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.modes {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.mode {
+  flex: 1;
+  padding: 8px 10px;
+  border: none;
+  border-radius: calc(var(--tavern-radius-control) - 4px);
+  background: none;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.mode:hover {
+  color: var(--tavern-ink);
+}
+
+.mode--active {
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+}

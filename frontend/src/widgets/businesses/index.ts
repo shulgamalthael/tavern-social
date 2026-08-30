@@ -1,2 +1,2 @@
 export { BusinessesWidget } from './ui/BusinessesWidget';
-export { CreateBusinessForm } from './ui/CreateBusinessForm';
+export { NewBusinessFlow } from './ui/NewBusinessFlow';

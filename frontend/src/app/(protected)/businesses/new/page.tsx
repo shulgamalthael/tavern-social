@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { CreateBusinessForm } from '@/widgets/businesses';
+import { NewBusinessFlow } from '@/widgets/businesses';
 
 export const metadata: Metadata = {
   title: 'Новый бизнес — Таверна',
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function NewBusinessPage() {
-  return <CreateBusinessForm />;
+  return <NewBusinessFlow />;
 }
