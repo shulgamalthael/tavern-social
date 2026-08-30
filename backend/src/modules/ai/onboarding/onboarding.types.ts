@@ -35,9 +35,13 @@ export interface OnboardingToolDefinition<TInput = unknown, TOutput = unknown> {
  * конструктор (`/business/[id]/edit`, тот же переход, что и у ручной формы
  * `CreateBusinessForm`, см. AI_PLATFORM_ROADMAP.md §2.7), не парся
  * произвольный `resultSummary` конкретного инструмента на frontend.
+ * `templateId` (AI-4 "richer starter content", §11.5) — модель передаёт его
+ * дальше через `?template=` в URL редиректа, чтобы `WebsiteBuilderWidget`
+ * применил тот же стартовый набор блоков, что применил бы человек, вручную
+ * выбрав шаблон в `StarterTemplatePicker`.
  */
 export type OnboardingStreamEvent =
   | { type: 'tool_start'; tool: string; riskLevel: ToolRiskLevel }
   | { type: 'tool_result'; tool: string; riskLevel: ToolRiskLevel; status: 'success' | 'error' }
-  | { type: 'business_created'; businessId: string; slug: string }
+  | { type: 'business_created'; businessId: string; slug: string; templateId: string }
   | { type: 'message'; message: string };

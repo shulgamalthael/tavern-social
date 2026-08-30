@@ -10,17 +10,30 @@ interface CreateBusinessInput {
   category: BusinessCategory;
   description?: string;
   currency?: string;
+  templateId: TemplateId;
 }
 
 interface CreateBusinessOutput {
   businessId: string;
   slug: string;
   name: string;
+  templateId: TemplateId;
 }
 
 const MAX_NAME_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 2000;
 const CATEGORY_VALUES = Object.values(BusinessCategory);
+
+/** Ручная копия id из `frontend/src/entities/website/templates/index.ts`'s
+ * `STARTER_TEMPLATES` (плюс `'blank'` — "шаблон не подходит, ничего не
+ * применяем") — тот же приём независимых копий одного контракта, что и у
+ * currencies.ts/ai-chat model/types.ts (два TS-проекта без общего пакета
+ * типов). Backend НЕ знает содержимого шаблонов (блоки, сид-товары) — только
+ * то, что это валидный id, который позже подхватит `WebsiteBuilderWidget` на
+ * frontend через `?template=` (см. AI_PLATFORM_ROADMAP.md §11.5). Добавили
+ * новый шаблон во `STARTER_TEMPLATES` — добавьте его id и сюда. */
+const TEMPLATE_IDS = ['restaurant', 'agency', 'local-business', 'blank'] as const;
+type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 /**
  * Единственный инструмент AI-4 onboarding-диалога (AI_PLATFORM_ROADMAP.md
@@ -67,6 +80,12 @@ export class CreateBusinessTool implements OnModuleInit {
           currency: {
             type: 'string',
             description: `Код валюты (ISO 4217), одна из: ${SUPPORTED_CURRENCY_CODES.join(', ')} (необязательно)`,
+          },
+          templateId: {
+            type: 'string',
+            description:
+              'Готовый набор секций сайта под тип бизнеса — выбери максимально подходящий, а не наугад: "restaurant" для кафе/ресторанов/баров, "agency" для творческих/консалтинговых/digital-студий, "local-business" для остальных локальных сервисов (красота, фитнес, здоровье, ритейл, недвижимость и т.п.). Если бизнес не подходит ни под один из них (например, финтех/крипто/чисто онлайн-продукт) — выбери "blank", не притягивай неподходящий шаблон.',
+            enum: [...TEMPLATE_IDS],
           },
         },
         required: ['name', 'category'],
@@ -119,7 +138,25 @@ export class CreateBusinessTool implements OnModuleInit {
           currency = args.currency;
         }
 
-        return { name: trimmedName, category: category as BusinessCategory, description, currency };
+        // Нестрого, в отличие от name/category/currency выше: templateId —
+        // косметическая подсказка для стартового набора блоков, не
+        // идентифицирующие данные бизнеса — отсутствующее/невалидное
+        // значение молча становится "blank" (= ничего не применяем), а не
+        // блокирует создание бизнеса ошибкой валидации.
+        const rawTemplateId = args.templateId;
+        const templateId =
+          typeof rawTemplateId === 'string' &&
+          (TEMPLATE_IDS as readonly string[]).includes(rawTemplateId)
+            ? (rawTemplateId as TemplateId)
+            : 'blank';
+
+        return {
+          name: trimmedName,
+          category: category as BusinessCategory,
+          description,
+          currency,
+          templateId,
+        };
       },
       handler: async (input, ctx: OnboardingToolContext): Promise<CreateBusinessOutput> => {
         const business = await this.businessesService.create(ctx.actorId, {
@@ -128,7 +165,12 @@ export class CreateBusinessTool implements OnModuleInit {
           description: input.description,
           currency: input.currency,
         });
-        return { businessId: business.id, slug: business.slug, name: business.name };
+        return {
+          businessId: business.id,
+          slug: business.slug,
+          name: business.name,
+          templateId: input.templateId,
+        };
       },
     };
 

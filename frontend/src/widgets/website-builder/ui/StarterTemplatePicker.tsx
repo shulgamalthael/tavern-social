@@ -1,12 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { updateBusiness } from '@/entities/business';
-import type { BusinessCapability } from '@/entities/business';
-import { createProduct } from '@/entities/product';
-import { createService } from '@/entities/service';
 import { BLANK_TEMPLATE_ICON, STARTER_TEMPLATES, useWebsiteBuilderStore } from '@/entities/website';
 import type { StarterTemplate } from '@/entities/website';
+import { applyStarterTemplate } from '../lib/apply-starter-template';
 import styles from './StarterTemplatePicker.module.scss';
 
 export interface StarterTemplatePickerProps {
@@ -62,47 +59,27 @@ export function StarterTemplatePicker({
   async function handlePick(template: StarterTemplate) {
     if (pendingTemplateId) return;
     setSeedError(null);
-
-    const hasSeedWork =
-      Boolean(template.capabilities?.length) ||
-      Boolean(template.seedProducts?.length) ||
-      Boolean(template.seedServices?.length);
-
-    if (!hasSeedWork) {
-      applyTemplate(template.build(businessName));
-      return;
-    }
-
     setPendingTemplateId(template.id);
-    try {
-      if (template.capabilities?.length) {
-        const merged = Array.from(new Set([...existingCapabilities, ...template.capabilities]));
-        // `StarterTemplate.capabilities` — сырые строки (см. её комментарий в
-        // templates/index.ts: entities/website не имеет права импортировать
-        // BusinessCapability из entities/business, соседнего слайса того же
-        // слоя FSD) — сузить их правильный тип может только backend через
-        // `@IsIn(BUSINESS_CAPABILITIES)`, что и происходит на этом PATCH.
-        await updateBusiness(businessId, { capabilities: merged as BusinessCapability[] });
-      }
-      for (const product of template.seedProducts ?? []) {
-        await createProduct(businessId, product);
-      }
-      for (const service of template.seedServices ?? []) {
-        await createService(businessId, service);
-      }
-      onSeeded();
-    } catch {
+
+    const {
+      blocks,
+      seeded,
+      seedError: didSeedFail,
+    } = await applyStarterTemplate(businessId, businessName, template, existingCapabilities);
+
+    if (didSeedFail) {
       // Сидинг — удобство, не обязательное условие применения шаблона:
       // блоки данных всё равно рендерятся корректно (просто как пустой
       // каталог, ровно как если бы владелец выбрал шаблон и сам ещё не
       // добавил товары/услуги) — поэтому ошибку показываем, но не
       // блокируем ей применение блоков ниже.
       setSeedError('Не удалось создать примеры товаров/услуг — можно добавить их вручную позже');
-    } finally {
-      setPendingTemplateId(null);
+    } else if (seeded) {
+      onSeeded();
     }
 
-    applyTemplate(template.build(businessName));
+    setPendingTemplateId(null);
+    applyTemplate(blocks);
   }
 
   return (

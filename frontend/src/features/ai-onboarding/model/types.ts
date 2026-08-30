@@ -9,7 +9,7 @@ export type ToolRiskLevel = 'low' | 'medium' | 'high' | 'critical';
 export type OnboardingStreamEvent =
   | { type: 'tool_start'; tool: string; riskLevel: ToolRiskLevel }
   | { type: 'tool_result'; tool: string; riskLevel: ToolRiskLevel; status: 'success' | 'error' }
-  | { type: 'business_created'; businessId: string; slug: string }
+  | { type: 'business_created'; businessId: string; slug: string; templateId: string }
   | { type: 'message'; message: string };
 
 /** UI-уровневая модель одной реплики диалога — та же форма, что и

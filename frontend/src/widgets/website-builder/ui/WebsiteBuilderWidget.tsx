@@ -5,6 +5,7 @@ import { getBusiness, type Business } from '@/entities/business';
 import {
   getWebsiteDraft,
   publishWebsite,
+  STARTER_TEMPLATES,
   useAutosave,
   useWebsiteBuilderStore,
   type BlockBusinessContext,
@@ -23,6 +24,7 @@ import {
   SettingsIcon,
   SparkleIcon,
 } from '@/shared/ui/icons';
+import { applyStarterTemplate } from '../lib/apply-starter-template';
 import { AddBlockModal } from './AddBlockModal';
 import { BuilderDndProvider } from './BuilderDndProvider';
 import { BuilderToolbar } from './BuilderToolbar';
@@ -112,6 +114,7 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
   const document = useWebsiteBuilderStore((state) => state.document);
   const loadedBusinessId = useWebsiteBuilderStore((state) => state.businessId);
   const loadDocument = useWebsiteBuilderStore((state) => state.loadDocument);
+  const applyTemplate = useWebsiteBuilderStore((state) => state.applyTemplate);
   const resetStore = useWebsiteBuilderStore((state) => state.reset);
   const viewport = useWebsiteBuilderStore((state) => state.viewport);
   const activePageId = useWebsiteBuilderStore((state) => state.activePageId);
@@ -127,6 +130,26 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
   const [isAiChatOpen, setAiChatOpen] = useState(false);
   const aiBubbleRef = useRef<HTMLButtonElement | null>(null);
   const aiWindowRef = useRef<HTMLDivElement | null>(null);
+
+  // `?template=<id>` в URL — AI-4 онбординг (`create_business`, см.
+  // AI_PLATFORM_ROADMAP.md §11) редиректит сюда сразу с выбранным моделью
+  // шаблоном, чтобы новый бизнес не встречал ту же пустую страницу и ручной
+  // `StarterTemplatePicker` ниже, которую уже видел бы, если бы создавал
+  // бизнес вручную. Читаем через `window.location`, не `useSearchParams()` —
+  // этот компонент рендерит реальный контент только после клиентской
+  // загрузки данных (`status` стартует `'loading'` и на сервере, и на
+  // клиенте, см. `useAsyncData.ts`), так что SSR/гидратация этот код вообще
+  // не задевают, а `useSearchParams()`'s требование Suspense-границы —
+  // сложность без пользы для чисто клиентского значения. `useState` с
+  // ленивым инициализатором — читаем один раз при монтировании, не при
+  // каждом рендере.
+  const [pendingAiTemplateId] = useState<string | null>(() =>
+    typeof window === 'undefined'
+      ? null
+      : new URLSearchParams(window.location.search).get('template'),
+  );
+  const [isApplyingAiTemplate, setApplyingAiTemplate] = useState(Boolean(pendingAiTemplateId));
+  const aiTemplateHandledRef = useRef(false);
 
   // Выбор блока переключает на вкладку «Настройки» — без эффекта, той же
   // логикой сравнения предыдущего значения прямо во время рендера, что и
@@ -146,6 +169,59 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
       loadDocument(businessId, data.draft.document);
     }
   }, [data, businessId, loadedBusinessId, loadDocument]);
+
+  // Применяет `pendingAiTemplateId` ровно один раз, как только документ этого
+  // бизнеса реально загружен в стор (`loadedBusinessId === businessId`) —
+  // раньше `document`/`data.business` ещё не гарантированно те, что нужны.
+  // `aiTemplateHandledRef` — защита от повторного применения при любых
+  // последующих ре-рендерах эффекта (не `useState`, потому что сам факт
+  // «уже обработали» не должен вызывать перерендер). Неизвестный/пустой
+  // `templateId` (модель прислала `blank`, или `STARTER_TEMPLATES` не
+  // содержит такой id) — молча ничего не делает и просто снимает индикатор
+  // загрузки, попадая в обычный `StarterTemplatePicker` ниже, тот же честный
+  // fallback, что и у ручного создания.
+  useEffect(() => {
+    if (aiTemplateHandledRef.current) return;
+    if (!pendingAiTemplateId || !data || !document || loadedBusinessId !== businessId) return;
+
+    aiTemplateHandledRef.current = true;
+    const page = document.pages.find((item) => item.id === activePageId) ?? document.pages[0];
+    const template = STARTER_TEMPLATES.find((item) => item.id === pendingAiTemplateId);
+
+    window.history.replaceState(null, '', window.location.pathname);
+
+    // Оба исхода (шаблон найден/не найден) идут через один и тот же async-
+    // колбэк, а не сразу вызывают `setApplyingAiTemplate` синхронно в теле
+    // эффекта — `react-hooks/set-state-in-effect` (эффект должен
+    // синхронизировать с внешней системой, а не диспатчить state напрямую;
+    // `await`, пусть даже без реальной задержки в ветке "не найден", уже
+    // выносит вызов за пределы синхронного тела эффекта).
+    void (async () => {
+      if (!template || !page || page.blocks.length > 0) {
+        setApplyingAiTemplate(false);
+        return;
+      }
+
+      const { blocks, seeded } = await applyStarterTemplate(
+        businessId,
+        data.business.name,
+        template,
+        data.business.capabilities,
+      );
+      applyTemplate(blocks);
+      if (seeded) refetch();
+      setApplyingAiTemplate(false);
+    })();
+  }, [
+    pendingAiTemplateId,
+    data,
+    document,
+    loadedBusinessId,
+    businessId,
+    activePageId,
+    applyTemplate,
+    refetch,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -272,7 +348,11 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
         </div>
       )}
 
-      {isEmpty && !templateDismissed ? (
+      {isEmpty && isApplyingAiTemplate ? (
+        <div className={styles.status}>
+          <Loader label="Настраиваем стартовый сайт…" />
+        </div>
+      ) : isEmpty && !templateDismissed ? (
         <StarterTemplatePicker
           businessId={businessId}
           businessName={data.business.name}

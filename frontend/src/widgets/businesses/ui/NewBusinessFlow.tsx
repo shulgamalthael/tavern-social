@@ -58,7 +58,13 @@ export function NewBusinessFlow() {
 
       {mode === 'ai' ? (
         <AiOnboardingChat
-          onBusinessCreated={(businessId) => router.push(`/business/${businessId}/edit`)}
+          onBusinessCreated={(businessId, templateId) =>
+            router.push(
+              templateId === 'blank'
+                ? `/business/${businessId}/edit`
+                : `/business/${businessId}/edit?template=${encodeURIComponent(templateId)}`,
+            )
+          }
         />
       ) : (
         <CreateBusinessForm />

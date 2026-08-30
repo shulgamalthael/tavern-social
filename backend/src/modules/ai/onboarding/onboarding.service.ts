@@ -149,8 +149,17 @@ export class AiOnboardingService {
         yield { type: 'tool_result', tool: call.name, riskLevel, status };
 
         if (status === 'success' && createdBusinessId !== null) {
-          const output = outputForModel as { businessId: string; slug: string };
-          yield { type: 'business_created', businessId: output.businessId, slug: output.slug };
+          const output = outputForModel as {
+            businessId: string;
+            slug: string;
+            templateId?: string;
+          };
+          yield {
+            type: 'business_created',
+            businessId: output.businessId,
+            slug: output.slug,
+            templateId: output.templateId ?? 'blank',
+          };
         }
 
         messages.push({

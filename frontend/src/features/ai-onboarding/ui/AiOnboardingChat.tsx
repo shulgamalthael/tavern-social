@@ -15,8 +15,11 @@ export interface AiOnboardingChatProps {
    * ответа модели, см. `AiOnboardingService.runToolLoop` на backend — эвент
    * "бизнес создан" уходит раньше follow-up-запроса за текстом) — родитель
    * (`NewBusinessFlow`) переходит в конструктор сразу, тем же путём, что и
-   * ручная форма после успешного `createBusiness()`. */
-  onBusinessCreated: (businessId: string) => void;
+   * ручная форма после успешного `createBusiness()`. `templateId` — какой
+   * стартовый набор блоков выбрала модель ("blank", если не подошёл ни один,
+   * см. `create_business`'s описание на backend) — родитель прокидывает его
+   * дальше в URL редиректа. */
+  onBusinessCreated: (businessId: string, templateId: string) => void;
 }
 
 function errorMessage(error: unknown): string {
@@ -62,11 +65,13 @@ export function AiOnboardingChat({ className, onBusinessCreated }: AiOnboardingC
 
     let receivedMessage = false;
     let createdBusinessId: string | null = null;
+    let createdTemplateId = 'blank';
 
     try {
       for await (const streamEvent of streamAiOnboarding(text)) {
         if (streamEvent.type === 'business_created') {
           createdBusinessId = streamEvent.businessId;
+          createdTemplateId = streamEvent.templateId;
         } else if (streamEvent.type === 'message') {
           receivedMessage = true;
           setMessages((prev) =>
@@ -79,7 +84,7 @@ export function AiOnboardingChat({ className, onBusinessCreated }: AiOnboardingC
 
       if (createdBusinessId) {
         setRedirecting(true);
-        onBusinessCreated(createdBusinessId);
+        onBusinessCreated(createdBusinessId, createdTemplateId);
         return;
       }
 
