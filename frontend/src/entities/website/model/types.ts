@@ -1,3 +1,5 @@
+import type { GoogleFontId } from './google-fonts';
+
 /** Три брейкпоинта редактирования — тот же набор, что и у остального сайта
  * (`shared/styles/_mixins.scss`, `$bp-mobile`/`$bp-tablet`), но здесь это не
  * CSS-медиазапрос, а явный режим канваса билдера: пользователь переключает
@@ -174,7 +176,12 @@ export interface DataSourceValue {
   sort: 'newest' | 'price-asc' | 'price-desc';
 }
 
-export type FontChoice = 'display-serif' | 'ui-sans' | 'mono' | 'rounded' | 'classic-serif';
+/** `'google'` — реальный веб-шрифт из курируемого списка (`GoogleFontId`,
+ * `google-fonts.ts`), а не один из 5 системных стеков ниже: см.
+ * `WebsiteTheme.fonts.googleFontHeading`/`googleFontBody` для того, КАКОЙ
+ * именно шрифт из списка. */
+export type FontChoice =
+  'display-serif' | 'ui-sans' | 'mono' | 'rounded' | 'classic-serif' | 'google';
 export type ThemeRadius = 'none' | 'sm' | 'md' | 'lg' | 'full';
 export type ButtonStyle = 'solid' | 'outline' | 'soft';
 export type SectionSpacing = 'compact' | 'comfortable' | 'spacious';
@@ -202,7 +209,17 @@ export interface WebsiteThemeColors {
 
 export interface WebsiteTheme {
   colors: WebsiteThemeColors;
-  fonts: { heading: FontChoice; body: FontChoice };
+  fonts: {
+    heading: FontChoice;
+    body: FontChoice;
+    /** Только когда соответствующий `heading`/`body` выше — `'google'`: какой
+     * именно шрифт из курируемого списка (`GoogleFontId`, `google-fonts.ts`)
+     * использовать. Игнорируется рендерером при любом другом `FontChoice` —
+     * тот же приём, что и `BlockStyle.customBackgroundColor` при
+     * `background !== 'custom'` (см. её комментарий). */
+    googleFontHeading?: GoogleFontId;
+    googleFontBody?: GoogleFontId;
+  };
   radius: ThemeRadius;
   buttonStyle: ButtonStyle;
   containerWidth: 'default' | 'wide';

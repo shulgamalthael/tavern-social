@@ -48,6 +48,8 @@ export {
   THEME_CONTAINER_WIDTH_OPTIONS,
   buildThemeCssVars,
 } from './model/theme-tokens';
+export { GOOGLE_FONT_OPTIONS } from './model/google-fonts';
+export type { GoogleFontId } from './model/google-fonts';
 export type {
   Background,
   ContainerWidth,
@@ -89,4 +91,5 @@ export { BLANK_TEMPLATE_ICON, STARTER_TEMPLATES } from './templates';
 export type { StarterTemplate } from './templates';
 
 export { BlockRenderer } from './ui/BlockRenderer';
+export { GoogleFontLink } from './ui/GoogleFontLink';
 export { WebsiteRenderer } from './ui/WebsiteRenderer';

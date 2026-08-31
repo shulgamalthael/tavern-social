@@ -6,6 +6,7 @@ import type { BlockBusinessContext } from '../model/registry';
 import { buildThemeCssVars } from '../model/theme-tokens';
 import type { Viewport, WebsitePage, WebsiteTheme } from '../model/types';
 import { BlockRenderer } from './BlockRenderer';
+import { GoogleFontLink } from './GoogleFontLink';
 import styles from './WebsiteRenderer.module.scss';
 
 export interface WebsiteRendererProps {
@@ -51,6 +52,7 @@ export function WebsiteRenderer({
 
   return (
     <div className={cn(styles.website, className)} style={themeVars}>
+      <GoogleFontLink theme={theme} />
       {page.blocks.map((block) => (
         <BlockRenderer
           key={block.id}

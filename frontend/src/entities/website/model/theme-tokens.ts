@@ -1,3 +1,4 @@
+import { googleFontFamily, type GoogleFontId } from './google-fonts';
 import type {
   Background,
   ButtonStyle,
@@ -12,17 +13,29 @@ import type {
   WebsiteTheme,
 } from './types';
 
-/** Системные шрифтовые стеки — осознанно без загрузки веб-шрифтов (см.
- * корневой план фичи, «custom fonts» — задача на будущее): ноль лишних
- * запросов, ноль FOUT, ноль лицензионных вопросов, а разница между 5
- * пресетами всё равно хорошо видна. */
-const FONT_STACKS: Record<FontChoice, string> = {
+/** Системные шрифтовые стеки — без загрузки веб-шрифтов (ноль лишних
+ * запросов, ноль FOUT, ноль лицензионных вопросов). `'google'` — не системный
+ * стек, у него нет записи здесь — см. `resolveFontStack` ниже, которая
+ * подставляет реальный Google Font по `GoogleFontId` вместо чтения этой
+ * таблицы для того случая. */
+const FONT_STACKS: Record<Exclude<FontChoice, 'google'>, string> = {
   'display-serif': `Georgia, 'Times New Roman', serif`,
   'ui-sans': `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
   mono: `'SFMono-Regular', Consolas, 'Liberation Mono', monospace`,
   rounded: `Verdana, 'Trebuchet MS', sans-serif`,
   'classic-serif': `'Times New Roman', Times, serif`,
 };
+
+/** `choice === 'google'` без `googleFontId` (ещё не выбрали конкретный шрифт
+ * из списка) — фолбэк на `'ui-sans'`, не на пустую строку: тот же принцип,
+ * что и `backgroundValue` в `block-style.ts` — незаконченный custom-выбор не
+ * должен ломать рендер, просто временно выглядит как дефолт. */
+function resolveFontStack(choice: FontChoice, googleFontId: GoogleFontId | undefined): string {
+  if (choice === 'google') {
+    return googleFontId ? googleFontFamily(googleFontId) : FONT_STACKS['ui-sans'];
+  }
+  return FONT_STACKS[choice];
+}
 
 const RADIUS_PX: Record<ThemeRadius, string> = {
   none: '0px',
@@ -94,8 +107,8 @@ export function buildThemeCssVars(theme: WebsiteTheme): Record<string, string> {
     '--site-muted': theme.colors.muted,
     '--site-border': theme.colors.border,
     '--site-radius': RADIUS_PX[theme.radius],
-    '--site-font-heading': FONT_STACKS[theme.fonts.heading],
-    '--site-font-body': FONT_STACKS[theme.fonts.body],
+    '--site-font-heading': resolveFontStack(theme.fonts.heading, theme.fonts.googleFontHeading),
+    '--site-font-body': resolveFontStack(theme.fonts.body, theme.fonts.googleFontBody),
     '--site-container-width': CONTAINER_WIDTH_PX[theme.containerWidth],
     '--site-section-spacing': SECTION_SPACING_PX[theme.sectionSpacing],
     '--site-card-border-width': CARD_BORDER_PX[theme.cardBorder ?? 'hairline'],
@@ -109,6 +122,7 @@ export const FONT_CHOICE_OPTIONS: { value: FontChoice; label: string }[] = [
   { value: 'classic-serif', label: 'Классический серф' },
   { value: 'rounded', label: 'Скруглённый' },
   { value: 'mono', label: 'Моноширинный' },
+  { value: 'google', label: 'Google Font…' },
 ];
 
 export const RADIUS_OPTIONS: { value: ThemeRadius; label: string }[] = [

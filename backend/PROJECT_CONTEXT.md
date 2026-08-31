@@ -145,7 +145,8 @@ Handlers), никогда напрямую из браузера.
 | AI-7 — Web3-провайдер | ✅ первый ограниченный слайс done, verified (read-only баланс/NFT, `AlchemyAdapter`; wallet-connect/подпись транзакций — вне скоупа, см. `AI_PLATFORM_ROADMAP.md` §19) |
 | AI-8 — Custom database builder | ✅ первый ограниченный слайс done, verified (декларативная EAV-модель, `create_entity`/`add_field`/`list_entities`; поля только добавляются, никогда не удаляются, см. `AI_PLATFORM_ROADMAP.md` §20) |
 | AI-9 — HIGH/CRITICAL-risk confirm-флоу | ✅ первый ограниченный слайс done, verified (`publish_website` — первый и пока единственный `high`-risk инструмент; полный quality-gate пересмотр остальных инструментов — вне этого слайса, см. `AI_PLATFORM_ROADMAP.md` §21) |
-| AI-10 — Universal Builder Expansion (новый под-трек, не одна фаза) | ✅ первый ограниченный слайс done, verified (`BlockStyle.background: 'custom'` + `customBackgroundColor`, свободный hex вместо только токенов темы; заодно найден и исправлен реальный pre-existing баг контраста текста на `dark`/`primary`/`custom` фоне — см. `AI_PLATFORM_ROADMAP.md` §23) |
+| AI-10 — Universal Builder Expansion (новый под-трек, не одна фаза) | ✅ слайс 1 done, verified (`BlockStyle.background: 'custom'` + `customBackgroundColor`, свободный hex вместо только токенов темы; заодно найден и исправлен реальный pre-existing баг контраста текста на `dark`/`primary`/`custom` фоне — см. `AI_PLATFORM_ROADMAP.md` §23) |
+| AI-11 — тот же трек, слайс 2 | ✅ done, verified (`FontChoice: 'google'` + курируемый список из 10 Google Fonts, реальная загрузка через `<link>` и React 19 head-hoisting, оба слота — заголовок/текст — независимо; без бэкенд/AI-tool изменений, тема не пишется AI — см. `AI_PLATFORM_ROADMAP.md` §24) |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за
 подробностями): дневная квота Gemini free-tier (сбрасывается по
@@ -175,6 +176,9 @@ revenue sharing) — сама подсистема не построена, то
   историю, обходной путь описан в `AGENTS.md` §9. Не расследовано, какая
   именно миграция и почему.
 - Незапланированный `next start` (production-режим) процесс на порту 3000,
-  обнаруженный во время верификации AI-3 (`AI_PLATFORM_ROADMAP.md` §10.6) —
-  не запущен ни одной командой в задокументированных сессиях, оставлен
-  нетронутым. Стоит уточнить у владельца, что это.
+  впервые замеченный во время верификации AI-3 (`AI_PLATFORM_ROADMAP.md`
+  §10.6) — так и не выяснили, что его запустило, но сам процесс убит и
+  причина сбоя устранена: он раз за разом получал битый `.next`-манифест
+  из-за параллельных `npm run build` в этой же сессии (см.
+  `AI_PLATFORM_ROADMAP.md` §22 — «никогда не гонять `npm run build`, пока
+  `next dev`/`next start` уже держит порт 3000»). Хвост закрыт.

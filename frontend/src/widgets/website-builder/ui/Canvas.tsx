@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import {
   buildThemeCssVars,
+  GoogleFontLink,
   useWebsiteBuilderStore,
   type BlockBusinessContext,
   type WebsitePage,
@@ -51,6 +52,7 @@ export function Canvas({ page, pages, theme, business, viewportWidth }: CanvasPr
       onClick={() => selectEmpty(null)}
     >
       <div className={styles.frame} style={{ ...themeVars, width: viewportWidth }}>
+        <GoogleFontLink theme={theme} />
         <div className={styles.page} onClick={(event) => event.stopPropagation()}>
           {page.blocks.length > 0 ? (
             <SortableList id="root" items={page.blocks.map((block) => block.id)}>

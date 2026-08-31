@@ -5,15 +5,17 @@ import {
   CARD_BORDER_OPTIONS,
   CARD_SHADOW_OPTIONS,
   FONT_CHOICE_OPTIONS,
+  GOOGLE_FONT_OPTIONS,
   RADIUS_OPTIONS,
   SECTION_SPACING_OPTIONS,
   THEME_CONTAINER_WIDTH_OPTIONS,
   useWebsiteBuilderStore,
   type FieldSchema,
+  type GoogleFontId,
   type WebsiteTheme,
   type WebsiteThemeColors,
 } from '@/entities/website';
-import { FieldGroup } from './FieldGroup';
+import { FieldGroup, type FieldGroupItem } from './FieldGroup';
 import styles from './ThemePanel.module.scss';
 
 const COLOR_FIELDS: { key: keyof WebsiteThemeColors; label: string }[] = [
@@ -38,6 +40,20 @@ const BODY_FONT_FIELD: FieldSchema = {
   label: 'Шрифт текста',
   control: 'select',
   options: FONT_CHOICE_OPTIONS,
+};
+
+const GOOGLE_FONT_HEADING_FIELD: FieldSchema = {
+  key: 'googleFontHeading',
+  label: 'Google Font — заголовки',
+  control: 'select',
+  options: GOOGLE_FONT_OPTIONS,
+};
+
+const GOOGLE_FONT_BODY_FIELD: FieldSchema = {
+  key: 'googleFontBody',
+  label: 'Google Font — текст',
+  control: 'select',
+  options: GOOGLE_FONT_OPTIONS,
 };
 
 const RADIUS_FIELD: FieldSchema = {
@@ -76,6 +92,53 @@ const CARD_SHADOW_FIELD: FieldSchema = {
   control: 'select',
   options: CARD_SHADOW_OPTIONS,
 };
+
+/** Показывает выбор конкретного Google Font сразу после заголовка/текста
+ * только когда этот слот реально стоит на `'google'` — та же логика, что и
+ * условная вставка `customBackgroundColor` в `LayoutSection.tsx`: пустой
+ * второй select всем, кто выбрал системный стек, был бы шумом. */
+function buildFontItems(
+  theme: WebsiteTheme,
+  updateTheme: (patch: Partial<WebsiteTheme>) => void,
+): FieldGroupItem[] {
+  const items: FieldGroupItem[] = [
+    {
+      field: HEADING_FONT_FIELD,
+      value: theme.fonts.heading,
+      onChange: (next: unknown) =>
+        updateTheme({
+          fonts: { ...theme.fonts, heading: next as WebsiteTheme['fonts']['heading'] },
+        }),
+    },
+  ];
+
+  if (theme.fonts.heading === 'google') {
+    items.push({
+      field: GOOGLE_FONT_HEADING_FIELD,
+      value: theme.fonts.googleFontHeading ?? '',
+      onChange: (next: unknown) =>
+        updateTheme({ fonts: { ...theme.fonts, googleFontHeading: next as GoogleFontId } }),
+    });
+  }
+
+  items.push({
+    field: BODY_FONT_FIELD,
+    value: theme.fonts.body,
+    onChange: (next: unknown) =>
+      updateTheme({ fonts: { ...theme.fonts, body: next as WebsiteTheme['fonts']['body'] } }),
+  });
+
+  if (theme.fonts.body === 'google') {
+    items.push({
+      field: GOOGLE_FONT_BODY_FIELD,
+      value: theme.fonts.googleFontBody ?? '',
+      onChange: (next: unknown) =>
+        updateTheme({ fonts: { ...theme.fonts, googleFontBody: next as GoogleFontId } }),
+    });
+  }
+
+  return items;
+}
 
 export interface ThemePanelProps {
   theme: WebsiteTheme;
@@ -121,24 +184,7 @@ export function ThemePanel({ theme, businessId }: ThemePanelProps) {
         <FieldGroup
           resetKey="theme-fonts"
           businessId={businessId}
-          items={[
-            {
-              field: HEADING_FONT_FIELD,
-              value: theme.fonts.heading,
-              onChange: (next: unknown) =>
-                updateTheme({
-                  fonts: { ...theme.fonts, heading: next as WebsiteTheme['fonts']['heading'] },
-                }),
-            },
-            {
-              field: BODY_FONT_FIELD,
-              value: theme.fonts.body,
-              onChange: (next: unknown) =>
-                updateTheme({
-                  fonts: { ...theme.fonts, body: next as WebsiteTheme['fonts']['body'] },
-                }),
-            },
-          ]}
+          items={buildFontItems(theme, updateTheme)}
         />
       </section>
 
