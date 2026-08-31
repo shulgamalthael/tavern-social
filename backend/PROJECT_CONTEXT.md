@@ -85,6 +85,13 @@ Handlers), никогда напрямую из браузера.
   кошелёк покупателя/визитора сайта и не приём крипто-платежей — тот поток
   (client-side wallet-signed подтверждение, wagmi/viem) осознанно вне этой
   итерации.
+- `custom-entities` (`/businesses/:id/custom-entities[/:entityId/records]`) —
+  AI_PLATFORM_ROADMAP.md §2.2/§20, AI-8: Custom Database Builder v1.
+  Декларативная EAV-модель (`CustomEntity.fields`/`CustomEntityRecord.data`,
+  оба `Json`), НЕ реальные Postgres DDL-миграции на бизнес — "создать
+  сущность"/"добавить поле" пишет JSON-строку. Поля можно только добавлять
+  (`appendField`), никогда не удалять/переименовывать — та же additive-only
+  дисциплина, что у `Rule.actions`. 4 типа полей (string/number/boolean/date).
 
 **Admin:**
 - `admin` (`/admin`) — модерация, ban/unban, AI Infrastructure Overview.
@@ -99,9 +106,9 @@ Handlers), никогда напрямую из браузера.
   risk), `create_page`, `add_block`, `update_block_props` (allowlist из 6
   типов блоков — `heading`/`text`/`quote`/`spacer`/`image`/`button`, `image`/
   `button` валидируют `LinkTarget`/уже загруженный файл против реальных
-  данных бизнеса), `set_style`, `create_custom_widget` (все — `medium` risk,
-  все пишут в `AuditLog`), `get_wallet_info` (чтение, `low` risk — баланс/NFT
-  кошелька, сохранённого на бизнесе, без аргументов от модели), `create_business`
+  данных бизнеса), `set_style`, `create_custom_widget`, `create_entity`,
+  `add_field` (все — `medium` risk, все пишут в `AuditLog`), `get_wallet_info`/
+  `list_entities` (чтение, `low` risk, без аргументов), `create_business`
   (onboarding-only, с опциональным auto-apply стартового шаблона).
 - Governance/cost-контроль вокруг самих AI-вызовов (не часть
   инструментального слоя выше): `modules/ai/quota` (Gemini RPM/RPD-лимиты,
@@ -121,7 +128,7 @@ Handlers), никогда напрямую из браузера.
 | AI-5 — Business Logic Engine v1 | ✅ done, verified (3 действия: `send_notification`/`add_loyalty_points`/`set_membership_tier`) |
 | AI-6 — Custom Widget Engine v1 | ✅ done, verified (`dataBindings`/`capabilities` ждут AI-7) |
 | AI-7 — Web3-провайдер | ✅ первый ограниченный слайс done, verified (read-only баланс/NFT, `AlchemyAdapter`; wallet-connect/подпись транзакций — вне скоупа, см. `AI_PLATFORM_ROADMAP.md` §19) |
-| AI-8 — Custom database builder | не начато |
+| AI-8 — Custom database builder | ✅ первый ограниченный слайс done, verified (декларативная EAV-модель, `create_entity`/`add_field`/`list_entities`; поля только добавляются, никогда не удаляются, см. `AI_PLATFORM_ROADMAP.md` §20) |
 | AI-9 — HIGH/CRITICAL-risk confirm-флоу, финальный quality-gate | не начато |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за

@@ -585,6 +585,16 @@ export function WalletIcon(props: IconProps): ReactElement {
   );
 }
 
+export function DatabaseIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <ellipse cx={12} cy={5.5} rx={8} ry={3} />
+      <path d="M4 5.5v13c0 1.66 3.58 3 8 3s8-1.34 8-3v-13" />
+      <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+    </BaseIcon>
+  );
+}
+
 export function BuildingIcon(props: IconProps): ReactElement {
   return (
     <BaseIcon {...props}>

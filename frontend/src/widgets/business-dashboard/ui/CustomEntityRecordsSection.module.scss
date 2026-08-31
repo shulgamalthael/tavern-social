@@ -1,0 +1,102 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 999px;
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.title {
+  flex: 1;
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.status {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.error {
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-card);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 10px 12px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--tavern-line);
+  }
+
+  th {
+    color: var(--tavern-muted);
+    font-weight: 600;
+  }
+
+  td {
+    color: var(--tavern-ink);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.rowActions {
+  display: flex;
+  gap: 10px;
+}
+
+.rowActions__button {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--tavern-accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.rowActions__button--danger {
+  color: var(--tavern-danger);
+}

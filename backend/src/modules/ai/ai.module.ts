@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BusinessesModule } from '@/modules/businesses/businesses.module';
+import { CustomEntitiesModule } from '@/modules/custom-entities/custom-entities.module';
 import { CustomWidgetsModule } from '@/modules/custom-widgets/custom-widgets.module';
 import { MediaAssetsModule } from '@/modules/media-assets/media-assets.module';
 import { Web3Module } from '@/modules/web3/web3.module';
@@ -28,17 +29,27 @@ import { CreateBusinessTool } from './onboarding/tools/create-business.tool';
 import { GeminiAdapter } from './providers/gemini-adapter.service';
 import { GeminiQuotaService } from './quota/gemini-quota.service';
 import { AddBlockTool } from './tools/add-block.tool';
+import { AddFieldTool } from './tools/add-field.tool';
 import { CreateCustomWidgetTool } from './tools/create-custom-widget.tool';
+import { CreateEntityTool } from './tools/create-entity.tool';
 import { CreatePageTool } from './tools/create-page.tool';
 import { GetProjectTreeTool } from './tools/get-project-tree.tool';
 import { GetWalletInfoTool } from './tools/get-wallet-info.tool';
+import { ListEntitiesTool } from './tools/list-entities.tool';
 import { ListMediaAssetsTool } from './tools/list-media-assets.tool';
 import { SetStyleTool } from './tools/set-style.tool';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
 
 @Module({
-  imports: [WebsitesModule, BusinessesModule, CustomWidgetsModule, MediaAssetsModule, Web3Module],
+  imports: [
+    WebsitesModule,
+    BusinessesModule,
+    CustomWidgetsModule,
+    CustomEntitiesModule,
+    MediaAssetsModule,
+    Web3Module,
+  ],
   controllers: [AiController, OnboardingController, AiInfrastructureController],
   providers: [
     AiService,
@@ -79,6 +90,9 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
     ListMediaAssetsTool,
     CreateCustomWidgetTool,
     GetWalletInfoTool,
+    ListEntitiesTool,
+    CreateEntityTool,
+    AddFieldTool,
     // AI-4 onboarding (AI_PLATFORM_ROADMAP.md §2.7) — отдельный сервис/реестр/
     // контроллер (см. их комментарии), не расширение business-scoped стека
     // выше.

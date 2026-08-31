@@ -21,6 +21,7 @@ export {
   CommunitiesIcon,
   CopyIcon,
   CpuIcon,
+  DatabaseIcon,
   DesktopIcon,
   DuplicateIcon,
   DumbbellIcon,

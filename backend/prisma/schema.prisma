@@ -677,6 +677,7 @@ model Business {
   rules           Rule[]
   customWidgets   CustomWidget[]
   loyaltyAccounts CustomerLoyaltyAccount[]
+  customEntities  CustomEntity[]
   /// Payment Plans v1 — см. `BusinessSubscription`'s комментарий. Отсутствие
   /// строки (не `null`-поле здесь) значит «тариф ещё ни разу не выбран» —
   /// это и есть сигнал серверного гейта конструктора
@@ -1744,4 +1745,49 @@ model CustomWidget {
 
   @@index([businessId])
   @@map("custom_widgets")
+}
+
+/// AI-8 первый ограниченный слайс (AI_PLATFORM_ROADMAP.md §2.2, §19) —
+/// Custom Database Builder v1. §2.2 явно рекомендует НЕ строить настоящий
+/// dynamic-entity engine (произвольная пользовательская схема + DDL-
+/// миграции) в первой итерации — "the highest-complexity, highest-risk item
+/// in the whole mission". Вместо этого — та же декларативная EAV-модель,
+/// что уже применена к `CustomWidget`/`Rule`: `fields` описывает ФОРМУ
+/// сущности (`CustomEntityField[]`, см. `custom-entity-schema.lib.ts`),
+/// сами данные лежат в `CustomEntityRecord.data`, обе колонки — `Json`
+/// внутри фиксированной, раз и навсегда существующей таблицы. "Создать
+/// сущность"/"добавить поле" — это запись строки JSON, не DDL. Поля можно
+/// только ДОБАВЛЯТЬ (`appendField` в lib), никогда не удалять/переименовывать
+/// — та же "additive, не migration" дисциплина, что у `Rule.actions`.
+model CustomEntity {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  fields     Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  records CustomEntityRecord[]
+
+  @@index([businessId])
+  @@map("custom_entities")
+}
+
+/// Одна запись данных внутри `CustomEntity` — нет собственного `businessId`
+/// (тот же приём, что `OrderItem` относительно `Order`: владение проверяется
+/// через родителя, `CustomEntity.businessId`, не дублируется здесь).
+/// `data` валидируется против `CustomEntity.fields` на каждую запись/правку
+/// (`validateRecordData`) — неизвестные ключи отклоняются, а не молча
+/// отбрасываются или проходят как есть.
+model CustomEntityRecord {
+  id        String       @id @default(uuid())
+  entityId  String
+  entity    CustomEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([entityId])
+  @@map("custom_entity_records")
 }

@@ -22,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
+import { CustomEntitiesModule } from './modules/custom-entities/custom-entities.module';
 import { CustomWidgetsModule } from './modules/custom-widgets/custom-widgets.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { FormSubmissionsModule } from './modules/form-submissions/form-submissions.module';
@@ -78,6 +79,7 @@ import { WebsitesModule } from './modules/websites/websites.module';
     PublicSitesModule,
     RulesModule,
     CustomWidgetsModule,
+    CustomEntitiesModule,
     Web3Module,
     AiModule,
   ],
