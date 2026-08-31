@@ -150,6 +150,7 @@ export const BACKGROUND_OPTIONS: { value: Background; label: string }[] = [
   { value: 'primary', label: 'Акцентный' },
   { value: 'dark', label: 'Тёмный' },
   { value: 'custom', label: 'Свой цвет' },
+  { value: 'gradient', label: 'Градиент' },
 ];
 
 export const TEXT_ALIGN_OPTIONS: { value: TextAlign; label: string }[] = [

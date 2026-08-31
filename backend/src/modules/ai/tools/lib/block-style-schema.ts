@@ -24,15 +24,17 @@
 export type EnumStyleFieldKey =
   'background' | 'paddingY' | 'paddingX' | 'marginTop' | 'marginBottom' | 'textAlign' | 'maxWidth';
 
-/** Единственное НЕ-enum строковое поле style — произвольный hex вместо
- * фиксированного набора значений (см. `customBackgroundColor` в
- * `BlockStyle`, `frontend/src/entities/website/model/types.ts`), поэтому
- * валидируется отдельной веткой в `buildValidatedStyle` (регекспом
- * `HEX_COLOR_RE`), а не через `ENUM_STYLE_FIELDS`. */
-export type StyleFieldKey = EnumStyleFieldKey | 'customBackgroundColor';
+/** Свободный hex вместо фиксированного набора значений (см.
+ * `customBackgroundColor`/`gradientFrom`/`gradientTo` в `BlockStyle`,
+ * `frontend/src/entities/website/model/types.ts`) — валидируются одной веткой
+ * в `buildValidatedStyle` (регекспом `HEX_COLOR_RE`, литеральным сравнением
+ * ключа, а не через `ENUM_STYLE_FIELDS` — так TS сужает тип `key` после
+ * `continue`, чего не сделал бы `Set.has()`). */
+export type StyleFieldKey =
+  EnumStyleFieldKey | 'customBackgroundColor' | 'gradientFrom' | 'gradientTo' | 'gradientAngle';
 
 const ENUM_STYLE_FIELDS: Record<EnumStyleFieldKey, readonly string[]> = {
-  background: ['none', 'surface', 'muted', 'primary', 'dark', 'custom'],
+  background: ['none', 'surface', 'muted', 'primary', 'dark', 'custom', 'gradient'],
   paddingY: ['none', 'sm', 'md', 'lg', 'xl'],
   paddingX: ['none', 'sm', 'md', 'lg', 'xl'],
   marginTop: ['none', 'sm', 'md', 'lg', 'xl'],
@@ -65,6 +67,9 @@ const MAX_CUSTOM_SPACING_PX = 400;
 export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
   ...(Object.keys(ENUM_STYLE_FIELDS) as EnumStyleFieldKey[]),
   'customBackgroundColor',
+  'gradientFrom',
+  'gradientTo',
+  'gradientAngle',
 ];
 
 /**
@@ -106,10 +111,20 @@ export function buildValidatedStyle(
       continue;
     }
 
-    if (key === 'customBackgroundColor') {
+    if (key === 'customBackgroundColor' || key === 'gradientFrom' || key === 'gradientTo') {
       if (typeof value !== 'string' || !HEX_COLOR_RE.test(value)) {
         throw new Error(
-          `Поле "customBackgroundColor" должно быть hex-цветом вида #rrggbb (или null, чтобы убрать)`,
+          `Поле "${key}" должно быть hex-цветом вида #rrggbb (или null, чтобы убрать)`,
+        );
+      }
+      result[key] = value;
+      continue;
+    }
+
+    if (key === 'gradientAngle') {
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 360) {
+        throw new Error(
+          `Поле "gradientAngle" должно быть числом от 0 до 360 (или null, чтобы убрать)`,
         );
       }
       result[key] = value;

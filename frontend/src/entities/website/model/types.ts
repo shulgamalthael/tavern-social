@@ -23,7 +23,7 @@ export interface ResponsiveValue<T> {
   mobile?: T;
 }
 
-export type Background = 'none' | 'surface' | 'muted' | 'primary' | 'dark' | 'custom';
+export type Background = 'none' | 'surface' | 'muted' | 'primary' | 'dark' | 'custom' | 'gradient';
 export type TextAlign = 'left' | 'center' | 'right';
 export type ContainerWidth = 'narrow' | 'default' | 'wide' | 'full';
 export type SpacingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
@@ -62,6 +62,19 @@ export interface BlockStyle {
    * `block-style.ts`) — не нужно чистить поле при переключении обратно на
    * пресет, оно просто перестаёт использоваться. */
   customBackgroundColor?: string;
+  /** Только когда `background === 'gradient'` — линейный градиент из двух
+   * hex-цветов (`#rrggbb`), угол в градусах (`0` — снизу вверх, `90` —
+   * слева направо, CSS `linear-gradient()`-соглашение). Как и
+   * `customBackgroundColor`, игнорируется рендерером при любом другом
+   * значении `background`. Только двухцветный линейный градиент в этом
+   * инкременте — не радиальный/конический и не 3+ цветов, узкий v1 из
+   * того, что просил бриф про "background engine" (см. AI_PLATFORM_
+   * ROADMAP.md §27). */
+  gradientFrom?: string;
+  gradientTo?: string;
+  /** `undefined` — фолбэк `135` (диагональ сверху-слева вниз-направо),
+   * см. `backgroundValue` в `block-style.ts`. */
+  gradientAngle?: number;
   paddingY?: StyleValue<SpacingValue>;
   paddingX?: StyleValue<SpacingValue>;
   marginTop?: StyleValue<SpacingValue>;

@@ -151,6 +151,49 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
     });
   }
 
+  // Градиент — та же условная вставка, что «Свой цвет» выше, только три
+  // поля вместо одного (два цвета + угол): показывать их всем, у кого
+  // background не 'gradient', было бы тем же лишним шумом.
+  if (style?.background === 'gradient') {
+    const gradientFromField: FieldSchema = {
+      key: 'gradientFrom',
+      label: 'Градиент — от',
+      control: 'color',
+    };
+    const gradientToField: FieldSchema = {
+      key: 'gradientTo',
+      label: 'Градиент — до',
+      control: 'color',
+    };
+    const gradientAngleField: FieldSchema = {
+      key: 'gradientAngle',
+      label: 'Угол градиента',
+      control: 'number',
+      min: 0,
+      max: 360,
+      suffix: '°',
+    };
+    basicItems.splice(
+      1,
+      0,
+      {
+        field: gradientFromField,
+        value: style.gradientFrom,
+        onChange: (next: unknown) => onChange({ gradientFrom: next as string }),
+      },
+      {
+        field: gradientToField,
+        value: style.gradientTo,
+        onChange: (next: unknown) => onChange({ gradientTo: next as string }),
+      },
+      {
+        field: gradientAngleField,
+        value: style.gradientAngle ?? 135,
+        onChange: (next: unknown) => onChange({ gradientAngle: next as number }),
+      },
+    );
+  }
+
   const customPadding = Boolean(style?.customPadding);
   const sideItems: FieldGroupItem[] = PADDING_SIDE_FIELDS.map(({ key, label }) => {
     const field: FieldSchema = {

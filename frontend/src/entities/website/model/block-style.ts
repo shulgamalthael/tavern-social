@@ -20,6 +20,8 @@ const FIXED_CONTAINER_WIDTH: Partial<Record<ContainerWidth, string>> = {
   full: 'none',
 };
 
+const DEFAULT_GRADIENT_ANGLE = 135;
+
 function backgroundValue(blockStyle: BlockStyle): string | undefined {
   switch (blockStyle.background) {
     case 'surface':
@@ -32,6 +34,9 @@ function backgroundValue(blockStyle: BlockStyle): string | undefined {
       return 'var(--site-secondary)';
     case 'custom':
       return blockStyle.customBackgroundColor || undefined;
+    case 'gradient':
+      if (!blockStyle.gradientFrom || !blockStyle.gradientTo) return undefined;
+      return `linear-gradient(${blockStyle.gradientAngle ?? DEFAULT_GRADIENT_ANGLE}deg, ${blockStyle.gradientFrom}, ${blockStyle.gradientTo})`;
     default:
       return undefined;
   }
@@ -60,14 +65,25 @@ function isDarkColor(hex: string): boolean {
  * светлый вариант, ничего не зная о фоне снаружи (см. `BlockRenderer.tsx`,
  * откуда этот модуль вынесен). Для `custom` цвета вместо фиксированного
  * списка фонов решает `isDarkColor` — тёмный произвольный цвет должен вести
- * себя так же, как `dark`/`primary`, светлый произвольный — как обычно. */
+ * себя так же, как `dark`/`primary`, светлый произвольный — как обычно.
+ * Для `gradient` — светлый текст только если ОБА цвета градиента тёмные
+ * (консервативно: половина светлого/половина тёмного градиента визуально
+ * неоднозначна для любого фиксированного выбора цвета текста, но
+ * рисковать нечитаемым белым-на-белом хуже, чем нечитаемым тёмным-на-
+ * тёмном участке — тот же принцип "безопаснее не переопределять при
+ * сомнении", что и у `isDarkColor`'s фолбэка на `false`). */
 function contrastOverrides(blockStyle: BlockStyle): CSSProperties | undefined {
   const isDark =
     blockStyle.background === 'primary' ||
     blockStyle.background === 'dark' ||
     (blockStyle.background === 'custom' &&
       Boolean(blockStyle.customBackgroundColor) &&
-      isDarkColor(blockStyle.customBackgroundColor as string));
+      isDarkColor(blockStyle.customBackgroundColor as string)) ||
+    (blockStyle.background === 'gradient' &&
+      Boolean(blockStyle.gradientFrom) &&
+      Boolean(blockStyle.gradientTo) &&
+      isDarkColor(blockStyle.gradientFrom as string) &&
+      isDarkColor(blockStyle.gradientTo as string));
   if (!isDark) return undefined;
   return {
     '--site-text': '#ffffff',

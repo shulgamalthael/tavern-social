@@ -89,6 +89,45 @@ describe('buildValidatedStyle', () => {
     expect(() => buildValidatedStyle(undefined, { background: 5 })).toThrow(/должно быть одним из/);
   });
 
+  it('accepts a gradient background with valid hex stops and an angle', () => {
+    expect(
+      buildValidatedStyle(undefined, {
+        background: 'gradient',
+        gradientFrom: '#1a2b3c',
+        gradientTo: '#ffffff',
+        gradientAngle: 45,
+      }),
+    ).toEqual({
+      background: 'gradient',
+      gradientFrom: '#1a2b3c',
+      gradientTo: '#ffffff',
+      gradientAngle: 45,
+    });
+  });
+
+  it('rejects a gradientFrom/gradientTo that is not a valid hex color', () => {
+    expect(() => buildValidatedStyle(undefined, { gradientFrom: 'red' })).toThrow(/hex-цветом/);
+    expect(() => buildValidatedStyle(undefined, { gradientTo: '#fff' })).toThrow(/hex-цветом/);
+  });
+
+  it('rejects a gradientAngle outside 0-360', () => {
+    expect(() => buildValidatedStyle(undefined, { gradientAngle: -10 })).toThrow(/от 0 до 360/);
+    expect(() => buildValidatedStyle(undefined, { gradientAngle: 361 })).toThrow(/от 0 до 360/);
+    expect(() => buildValidatedStyle(undefined, { gradientAngle: 'deg' })).toThrow(/от 0 до 360/);
+  });
+
+  it('removes gradient fields when given null', () => {
+    const existing = {
+      background: 'gradient',
+      gradientFrom: '#000000',
+      gradientTo: '#ffffff',
+      gradientAngle: 90,
+    };
+    expect(
+      buildValidatedStyle(existing, { gradientFrom: null, gradientTo: null, gradientAngle: null }),
+    ).toEqual({ background: 'gradient' });
+  });
+
   it('leaves untouched fields alone across the whole allowed set', () => {
     const existing = {
       background: 'primary',

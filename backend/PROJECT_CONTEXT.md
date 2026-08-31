@@ -156,6 +156,7 @@ Handlers), никогда напрямую из браузера.
 | AI-11 — тот же трек, слайс 2 | ✅ done, verified (`FontChoice: 'google'` + курируемый список из 10 Google Fonts, реальная загрузка через `<link>` и React 19 head-hoisting, оба слота — заголовок/текст — независимо; без бэкенд/AI-tool изменений, тема не пишется AI — см. `AI_PLATFORM_ROADMAP.md` §24) |
 | AI-12 — тот же трек, слайс 3 | ✅ done, verified (`SpacingValue = SpacingSize \| number` — произвольный px вместо только 5 пресетов, один общий `spacingToPx`/`'spacing'`-контрол на все 8 полей отступов сразу, а не 8 отдельных; `set_style` расширен с границей 0–400px; заодно пойман и исправлен falsy-zero баг до релиза — см. `AI_PLATFORM_ROADMAP.md` §25) |
 | AI-13 — первый реальный Web3-блок конструктора | ✅ done, verified (новый анонимный `GET /sites/:id/web3/wallet` + `Web3Service.getWalletInfoPublic`, блок `web3wallet` по образцу `productgrid`; живая проверка на реальном настроенном кошельке бизнеса — реальный баланс и 25 NFT отрендерились и на канвасе, и в Preview — см. `AI_PLATFORM_ROADMAP.md` §26) |
+| AI-14 — тот же трек (§23), слайс 4 | ✅ done, verified (двухцветный линейный градиент фона — `Background: 'gradient'` + `gradientFrom`/`gradientTo`/`gradientAngle`, тот же паттерн условной вставки полей, что у AI-10; контраст текста только при ОБОИХ тёмных стопах; `set_style` расширен с границей угла 0–360 — см. `AI_PLATFORM_ROADMAP.md` §27) |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за
 подробностями): дневная квота Gemini free-tier (сбрасывается по

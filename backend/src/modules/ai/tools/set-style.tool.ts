@@ -47,8 +47,10 @@ export class SetStyleTool implements OnModuleInit {
           style: {
             type: 'object',
             description:
-              `Поля: background(none|surface|muted|primary|dark|custom), customBackgroundColor(hex вида #rrggbb — ` +
-              `только когда background="custom", иначе игнорируется), paddingY/paddingX/marginTop/marginBottom` +
+              `Поля: background(none|surface|muted|primary|dark|custom|gradient), customBackgroundColor(hex вида ` +
+              `#rrggbb — только когда background="custom"), gradientFrom/gradientTo(hex вида #rrggbb — только когда ` +
+              `background="gradient"), gradientAngle(число 0-360, градус линейного градиента, по умолчанию 135 — ` +
+              `только когда background="gradient"), paddingY/paddingX/marginTop/marginBottom` +
               `(none|sm|md|lg|xl, либо число — свой отступ в px от 0 до 400), ` +
               `textAlign(left|center|right), maxWidth(narrow|default|wide|full). Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}.`,
           },

@@ -45,6 +45,46 @@ describe('computeBlockWrapperStyle — custom background', () => {
   });
 });
 
+describe('computeBlockWrapperStyle — gradient background', () => {
+  it('renders a linear-gradient with the given angle and stops', () => {
+    const { outer } = computeBlockWrapperStyle(
+      { background: 'gradient', gradientFrom: '#111111', gradientTo: '#eeeeee', gradientAngle: 45 },
+      'desktop',
+    );
+    expect(outer.background).toBe('linear-gradient(45deg, #111111, #eeeeee)');
+  });
+
+  it('defaults the angle to 135 when not set', () => {
+    const { outer } = computeBlockWrapperStyle(
+      { background: 'gradient', gradientFrom: '#111111', gradientTo: '#eeeeee' },
+      'desktop',
+    );
+    expect(outer.background).toBe('linear-gradient(135deg, #111111, #eeeeee)');
+  });
+
+  it('renders no background when "gradient" is picked but a stop is missing', () => {
+    const { outer } = computeBlockWrapperStyle(
+      { background: 'gradient', gradientFrom: '#111111' },
+      'desktop',
+    );
+    expect(outer.background).toBeUndefined();
+  });
+
+  it('switches to light text only when both gradient stops are dark', () => {
+    const bothDark = computeBlockWrapperStyle(
+      { background: 'gradient', gradientFrom: '#0a0a0a', gradientTo: '#111111' },
+      'desktop',
+    );
+    expect(bothDark.outer['--site-text' as keyof typeof bothDark.outer]).toBe('#ffffff');
+
+    const mixed = computeBlockWrapperStyle(
+      { background: 'gradient', gradientFrom: '#0a0a0a', gradientTo: '#ffffff' },
+      'desktop',
+    );
+    expect(mixed.outer['--site-text' as keyof typeof mixed.outer]).toBeUndefined();
+  });
+});
+
 describe('computeBlockWrapperStyle — custom pixel spacing', () => {
   it('renders a numeric paddingY/paddingX as literal px, not a preset', () => {
     const { outer, inner } = computeBlockWrapperStyle({ paddingY: 18, paddingX: 40 }, 'desktop');
