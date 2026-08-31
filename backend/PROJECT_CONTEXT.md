@@ -112,8 +112,19 @@ Handlers), никогда напрямую из браузера.
   `button` валидируют `LinkTarget`/уже загруженный файл против реальных
   данных бизнеса), `set_style`, `create_custom_widget`, `create_entity`,
   `add_field` (все — `medium` risk, все пишут в `AuditLog`), `get_wallet_info`/
-  `list_entities` (чтение, `low` risk, без аргументов), `create_business`
+  `list_entities` (чтение, `low` risk, без аргументов), `publish_website`
+  (`high` risk — единственный на сегодня инструмент, требующий подтверждения
+  владельца перед выполнением, см. confirm-флоу ниже), `create_business`
   (onboarding-only, с опциональным auto-apply стартового шаблона).
+- **Confirm-флоу для `high`/`critical` (AI-9, AI_PLATFORM_ROADMAP.md §2.8/§21)**:
+  такой вызов не выполняется сразу — `AiService.runToolLoop` пишет `pending`-
+  строку `AuditLog` (переиспользует ту же таблицу, `status` — `String`, не
+  enum, доп. значения `pending`/`rejected` без миграции), отдаёт
+  `confirmationId` в `AiStreamEvent`/`ChatResult` и останавливает весь ход.
+  `POST .../ai/confirm/:id` выполняет РОВНО этот, уже провалидированный
+  вызов (без нового обращения к LLM); `POST .../ai/reject/:id` отклоняет без
+  выполнения. Оба — владелец-only через тот же `AiOwnershipGuard`, без
+  `AiConfiguredGuard` (не зовут Gemini).
 - Governance/cost-контроль вокруг самих AI-вызовов (не часть
   инструментального слоя выше): `modules/ai/quota` (Gemini RPM/RPD-лимиты,
   Redis-backed), `modules/ai/capacity` (AI Capacity & Cost Manager — бюджеты,
@@ -133,7 +144,7 @@ Handlers), никогда напрямую из браузера.
 | AI-6 — Custom Widget Engine v1 | ✅ done, verified (`dataBindings`/`capabilities` ждут AI-7) |
 | AI-7 — Web3-провайдер | ✅ первый ограниченный слайс done, verified (read-only баланс/NFT, `AlchemyAdapter`; wallet-connect/подпись транзакций — вне скоупа, см. `AI_PLATFORM_ROADMAP.md` §19) |
 | AI-8 — Custom database builder | ✅ первый ограниченный слайс done, verified (декларативная EAV-модель, `create_entity`/`add_field`/`list_entities`; поля только добавляются, никогда не удаляются, см. `AI_PLATFORM_ROADMAP.md` §20) |
-| AI-9 — HIGH/CRITICAL-risk confirm-флоу, финальный quality-gate | не начато |
+| AI-9 — HIGH/CRITICAL-risk confirm-флоу | ✅ первый ограниченный слайс done, verified (`publish_website` — первый и пока единственный `high`-risk инструмент; полный quality-gate пересмотр остальных инструментов — вне этого слайса, см. `AI_PLATFORM_ROADMAP.md` §21) |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за
 подробностями): дневная квота Gemini free-tier (сбрасывается по

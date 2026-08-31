@@ -9,6 +9,15 @@ import type { AuditLogListItem, ToolRiskLevel } from './ai.types';
  * — отдельная задача при реальной необходимости, не сейчас. */
 const ACTIVITY_FEED_LIMIT = 30;
 
+/** `pending`/`rejected` — AI-9 (AI_PLATFORM_ROADMAP.md §2.8/§21): confirm-флоу
+ * для `high`/`critical` инструментов переиспользует ЭТУ ЖЕ таблицу как
+ * хранилище незавершённого подтверждения, не заводит отдельную модель —
+ * `AuditLog.status` в схеме `String`, не Prisma-enum, поэтому новые значения
+ * не требуют миграции. `pending` — вызов провалидирован, но не выполнен,
+ * ждёт `confirmToolCall`/`rejectToolCall` (`AiService`); `rejected` —
+ * владелец отклонил, инструмент так и не выполнился. */
+export type AuditLogStatus = 'success' | 'error' | 'pending' | 'rejected';
+
 export interface AuditLogEntry {
   actorId: string;
   businessId: string | null;
@@ -18,8 +27,19 @@ export interface AuditLogEntry {
    * до выполнения) — НЕ история сообщений диалога и не системный промпт
    * (mission §101-102, см. комментарий модели `AuditLog` в schema.prisma). */
   argsSummary: unknown;
-  status: 'success' | 'error';
+  status: AuditLogStatus;
   resultSummary?: unknown;
+}
+
+export interface PendingAuditLogEntry {
+  id: string;
+  tool: string;
+  riskLevel: ToolRiskLevel;
+  /** Уже провалидированный `parseInput`-результат, сохранённый при
+   * постановке в очередь (`record` со `status: 'pending'`) — `confirmToolCall`
+   * передаёт его в `tool.handler` как есть, не парсит заново (AI уже не
+   * участвует в этом шаге, повторно спрашивать её нечего). */
+  argsSummary: unknown;
 }
 
 /** Единственное место, пишущее в `AuditLog` — тот же принцип, что у
@@ -29,8 +49,12 @@ export interface AuditLogEntry {
 export class AuditLogService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async record(entry: AuditLogEntry): Promise<void> {
-    await this.prisma.auditLog.create({
+  /** Возвращает `id` созданной строки — AI-9's `pending`-запись нужна
+   * `AiService.runToolLoop`, чтобы отдать `confirmationId` в `AiStreamEvent`
+   * (см. её комментарий); для обычных success/error-записей возврат просто
+   * не используется вызывающим кодом, не требует отдельной перегрузки. */
+  async record(entry: AuditLogEntry): Promise<string> {
+    const row = await this.prisma.auditLog.create({
       data: {
         actorId: entry.actorId,
         businessId: entry.businessId,
@@ -42,6 +66,44 @@ export class AuditLogService {
           entry.resultSummary === undefined
             ? undefined
             : (entry.resultSummary as Prisma.InputJsonValue),
+      },
+      select: { id: true },
+    });
+    return row.id;
+  }
+
+  /** Находит `pending`-запись строго внутри `businessId` (владение уже
+   * проверено `AiOwnershipGuard` на уровне контроллера, здесь — вторая
+   * граница, тот же принцип "никогда не доверяем клиентскому id без
+   * проверки", `AGENTS.md` backend §3) — `null`, если не найдена, уже
+   * обработана (`resolvePending` меняет `status`, повторный confirm/reject
+   * на тот же `id` естественно перестаёт находить её) или принадлежит
+   * другому бизнесу. */
+  async findOwnedPending(id: string, businessId: string): Promise<PendingAuditLogEntry | null> {
+    const row = await this.prisma.auditLog.findFirst({
+      where: { id, businessId, status: 'pending' },
+      select: { id: true, tool: true, riskLevel: true, argsSummary: true },
+    });
+    if (!row) return null;
+    return { id: row.id, tool: row.tool, riskLevel: row.riskLevel, argsSummary: row.argsSummary };
+  }
+
+  /** Переводит `pending`-запись в конечный статус (`success`/`error` после
+   * реального выполнения, `rejected` без него) — единственное место, где
+   * `AuditLog`-строка меняется после создания (обычные записи, созданные
+   * сразу с конечным статусом через `record`, никогда не обновляются). */
+  async resolvePending(
+    id: string,
+    patch: { status: AuditLogStatus; resultSummary?: unknown },
+  ): Promise<void> {
+    await this.prisma.auditLog.update({
+      where: { id },
+      data: {
+        status: patch.status,
+        resultSummary:
+          patch.resultSummary === undefined
+            ? undefined
+            : (patch.resultSummary as Prisma.InputJsonValue),
       },
     });
   }
@@ -64,9 +126,9 @@ export class AuditLogService {
       riskLevel: row.riskLevel,
       // `status` — `String` в схеме (см. комментарий модели в
       // schema.prisma), не enum — сюда попадает только то, что сам же
-      // `record()` пишет (`'success' | 'error'`, см. `AuditLogEntry`), так
-      // что сужение здесь безопасно и ничего постороннего попасть не может.
-      status: row.status as 'success' | 'error',
+      // `record()`/`resolvePending()` пишет (`AuditLogStatus`), так что
+      // сужение здесь безопасно и ничего постороннего попасть не может.
+      status: row.status as AuditLogStatus,
       createdAt: row.createdAt.toISOString(),
     }));
   }

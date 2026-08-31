@@ -64,9 +64,25 @@ export interface ToolExecutionSummary {
   status: 'success' | 'error';
 }
 
+/** AI-9 (AI_PLATFORM_ROADMAP.md §2.8/§21) — `high`/`critical` вызов, уже
+ * провалидированный (`parseInput` прошёл), но НЕ выполненный: ход диалога
+ * останавливается здесь, владелец подтверждает/отклоняет отдельным вызовом
+ * (`AiController.confirmToolCall`/`rejectToolCall`, `confirmationId` —
+ * id соответствующей `pending`-строки `AuditLog`). */
+export interface ConfirmRequiredInfo {
+  tool: string;
+  riskLevel: ToolRiskLevel;
+  confirmationId: string;
+  args: unknown;
+}
+
 export interface ChatResult {
   message: string;
   toolExecutions: ToolExecutionSummary[];
+  /** Присутствует, только если ход диалога остановился на `high`/`critical`
+   * вызове, ожидающем подтверждения — `message` в этом случае пустая строка
+   * (модель ещё не сказала ничего после незавершённого вызова). */
+  confirmRequired?: ConfirmRequiredInfo;
 }
 
 /**
@@ -82,7 +98,8 @@ export interface ChatResult {
 export type AiStreamEvent =
   | { type: 'tool_start'; tool: string; riskLevel: ToolRiskLevel }
   | { type: 'tool_result'; tool: string; riskLevel: ToolRiskLevel; status: 'success' | 'error' }
-  | { type: 'message'; message: string };
+  | { type: 'message'; message: string }
+  | ({ type: 'confirm_required' } & ConfirmRequiredInfo);
 
 /**
  * Одна запись "ленты активности" AI для бизнеса (AI-3, третий пункт mission
@@ -98,6 +115,10 @@ export interface AuditLogListItem {
   id: string;
   tool: string;
   riskLevel: ToolRiskLevel;
-  status: 'success' | 'error';
+  /** `pending`/`rejected` — AI-9's confirm-флоу (см. `AuditLogStatus` в
+   * `audit-log.service.ts`): владелец видит в ленте, что AI ждёт
+   * подтверждения или что он его отклонил, не только уже случившиеся
+   * success/error. */
+  status: 'success' | 'error' | 'pending' | 'rejected';
   createdAt: string;
 }

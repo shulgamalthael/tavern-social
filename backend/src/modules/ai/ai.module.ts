@@ -37,6 +37,7 @@ import { GetProjectTreeTool } from './tools/get-project-tree.tool';
 import { GetWalletInfoTool } from './tools/get-wallet-info.tool';
 import { ListEntitiesTool } from './tools/list-entities.tool';
 import { ListMediaAssetsTool } from './tools/list-media-assets.tool';
+import { PublishWebsiteTool } from './tools/publish-website.tool';
 import { SetStyleTool } from './tools/set-style.tool';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
@@ -93,6 +94,7 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
     ListEntitiesTool,
     CreateEntityTool,
     AddFieldTool,
+    PublishWebsiteTool,
     // AI-4 onboarding (AI_PLATFORM_ROADMAP.md §2.7) — отдельный сервис/реестр/
     // контроллер (см. их комментарии), не расширение business-scoped стека
     // выше.

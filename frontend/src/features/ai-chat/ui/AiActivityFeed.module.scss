@@ -40,6 +40,14 @@
   color: #dc2626;
 }
 
+.item--pending {
+  color: var(--tavern-accent);
+}
+
+.item--rejected {
+  color: var(--tavern-muted);
+}
+
 .item__label {
   color: var(--tavern-ink);
   font-size: 12.5px;
@@ -48,6 +56,15 @@
 
 .item--error .item__label {
   color: #dc2626;
+}
+
+.item--pending .item__label {
+  color: var(--tavern-accent);
+}
+
+.item--rejected .item__label {
+  color: var(--tavern-muted);
+  font-style: italic;
 }
 
 .item__time {

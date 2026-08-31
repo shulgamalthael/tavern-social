@@ -61,11 +61,18 @@ export function AiActivityFeed({ businessId, className }: AiActivityFeedProps) {
           {data.map((item) => (
             <li
               key={item.id}
-              className={cn(styles.item, item.status === 'error' && styles['item--error'])}
+              className={cn(
+                styles.item,
+                item.status === 'error' && styles['item--error'],
+                item.status === 'pending' && styles['item--pending'],
+                item.status === 'rejected' && styles['item--rejected'],
+              )}
             >
               <span className={styles.item__label}>
                 {toolLabel(item.tool)}
                 {item.status === 'error' && ' — не удалось'}
+                {item.status === 'pending' && ' — ждёт подтверждения'}
+                {item.status === 'rejected' && ' — отклонено'}
               </span>
               <time className={styles.item__time} dateTime={item.createdAt}>
                 {TIME_FORMATTER.format(new Date(item.createdAt))}

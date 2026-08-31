@@ -1,6 +1,6 @@
-import { Injectable, Logger, type MessageEvent } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, type MessageEvent } from '@nestjs/common';
 import { from, map, type Observable } from 'rxjs';
-import type { AiStreamEvent, AuditLogListItem, ChatResult } from './ai.types';
+import type { AiStreamEvent, AuditLogListItem, ChatResult, ToolExecutionSummary } from './ai.types';
 import { AuditLogService } from './audit-log.service';
 import { AiGatewayService } from './capacity/ai-gateway.service';
 import type { LlmMessage } from './llm-provider';
@@ -50,16 +50,74 @@ export class AiService {
   async chat(businessId: string, actorId: string, userMessage: string): Promise<ChatResult> {
     const executions: ChatResult['toolExecutions'] = [];
     let message = '';
+    let confirmRequired: ChatResult['confirmRequired'];
 
     for await (const event of this.runToolLoop(businessId, actorId, userMessage)) {
       if (event.type === 'tool_result') {
         executions.push({ tool: event.tool, riskLevel: event.riskLevel, status: event.status });
       } else if (event.type === 'message') {
         message = event.message;
+      } else if (event.type === 'confirm_required') {
+        confirmRequired = {
+          tool: event.tool,
+          riskLevel: event.riskLevel,
+          confirmationId: event.confirmationId,
+          args: event.args,
+        };
       }
     }
 
-    return { message, toolExecutions: executions };
+    return { message, toolExecutions: executions, confirmRequired };
+  }
+
+  /** AI-9 (AI_PLATFORM_ROADMAP.md §2.8/§21) — выполняет `pending`-вызов,
+   * поставленный в очередь `runToolLoop` (см. её комментарий про `high`/
+   * `critical`-ветку), РОВНО с теми аргументами, что были провалидированы в
+   * момент постановки — не просит модель повторить вызов и не парсит
+   * аргументы заново (модель в этом шаге вообще не участвует). Не находит
+   * `pending`-строку с этим `id` внутри `businessId` → `404` (несуществующий
+   * `id`, чужой бизнес и уже обработанное подтверждение неотличимы по
+   * ответу, тот же принцип, что у `findOwned*`-методов остального проекта). */
+  async confirmToolCall(
+    businessId: string,
+    actorId: string,
+    confirmationId: string,
+  ): Promise<ToolExecutionSummary> {
+    const pending = await this.auditLog.findOwnedPending(confirmationId, businessId);
+    if (!pending) throw new NotFoundException('Подтверждение не найдено или уже обработано');
+
+    const tool = this.toolRegistry.get(pending.tool);
+    if (!tool) {
+      const outputForModel = { error: `Инструмент "${pending.tool}" больше не зарегистрирован` };
+      await this.auditLog.resolvePending(confirmationId, {
+        status: 'error',
+        resultSummary: outputForModel,
+      });
+      return { tool: pending.tool, riskLevel: pending.riskLevel, status: 'error' };
+    }
+
+    let status: 'success' | 'error' = 'success';
+    let outputForModel: unknown;
+    try {
+      outputForModel = await tool.handler(pending.argsSummary, { actorId, businessId });
+    } catch (error) {
+      status = 'error';
+      outputForModel = { error: error instanceof Error ? error.message : 'Неизвестная ошибка' };
+    }
+
+    await this.auditLog.resolvePending(confirmationId, { status, resultSummary: outputForModel });
+    return { tool: pending.tool, riskLevel: pending.riskLevel, status };
+  }
+
+  /** Отклоняет `pending`-вызов без выполнения — переводит его строку
+   * `AuditLog` сразу в `rejected`, инструмент так и не запускается. Не
+   * принимает `actorId` (в отличие от `confirmToolCall`) — отклонение не
+   * выполняет `tool.handler`, которому он нужен как часть `ToolContext`,
+   * владение уже проверено `AiOwnershipGuard` через `businessId`. */
+  async rejectToolCall(businessId: string, confirmationId: string): Promise<void> {
+    const pending = await this.auditLog.findOwnedPending(confirmationId, businessId);
+    if (!pending) throw new NotFoundException('Подтверждение не найдено или уже обработано');
+    await this.auditLog.resolvePending(confirmationId, { status: 'rejected' });
   }
 
   /** Тот же цикл, что и `chat()`, но отдаёт прогресс через SSE (AI-3, см.
@@ -149,33 +207,105 @@ export class AiService {
         const riskLevel = tool?.riskLevel ?? 'low';
         yield { type: 'tool_start', tool: call.name, riskLevel };
 
-        let status: 'success' | 'error' = 'success';
-        let outputForModel: unknown;
         // `AuditLog.argsSummary` документирован как аргументы ПОСЛЕ парсинга/
         // валидации (см. комментарий столбца в schema.prisma) — не то, что
         // сырым прислала модель. Стартуем с `call.args` как фолбэком на
         // случай, если `parseInput` сам бросит (тогда провалидированной формы
         // никогда не появится, но в аудите всё равно должно быть видно, ЧТО
         // именно модель пыталась передать) — успешный `parseInput` ниже
-        // перезаписывает его нормализованным значением (например, `create_
-        // page` обрезает пробелы у `title`, `add_block` подставляет дефолты
-        // для непереданных `props`).
+        // перезаписывает его нормализованным значением.
         let argsForAudit: unknown = call.args;
 
         if (!tool) {
+          const outputForModel = { error: `Неизвестный инструмент: ${call.name}` };
+          await this.auditLog.record({
+            actorId,
+            businessId,
+            tool: call.name,
+            riskLevel,
+            argsSummary: argsForAudit,
+            status: 'error',
+            resultSummary: outputForModel,
+          });
+          executedAny = true;
+          yield { type: 'tool_result', tool: call.name, riskLevel, status: 'error' };
+          messages.push({
+            role: 'tool',
+            toolCallId: call.id,
+            toolName: call.name,
+            content: JSON.stringify(outputForModel),
+          });
+          continue;
+        }
+
+        let input: unknown;
+        try {
+          input = tool.parseInput(call.args);
+          argsForAudit = input;
+        } catch (error) {
+          const outputForModel = {
+            error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+          };
+          await this.auditLog.record({
+            actorId,
+            businessId,
+            tool: call.name,
+            riskLevel,
+            argsSummary: argsForAudit,
+            status: 'error',
+            resultSummary: outputForModel,
+          });
+          executedAny = true;
+          yield { type: 'tool_result', tool: call.name, riskLevel, status: 'error' };
+          messages.push({
+            role: 'tool',
+            toolCallId: call.id,
+            toolName: call.name,
+            content: JSON.stringify(outputForModel),
+          });
+          continue;
+        }
+
+        // AI-9 (AI_PLATFORM_ROADMAP.md §2.8/§21) — `high`/`critical` вызов
+        // уже провалидирован, но НЕ выполняется здесь: ставим `pending`-
+        // строку `AuditLog` и останавливаем весь ход диалога (не только
+        // этот вызов инструмента) — владелец подтверждает/отклоняет
+        // отдельным REST-вызовом (`confirmToolCall`/`rejectToolCall`),
+        // который выполняет РОВНО этот вызов с теми же аргументами, не
+        // просит модель повторить его. Любые другие вызовы инструментов,
+        // которые модель могла запросить в этом же батче ПОСЛЕ этого,
+        // намеренно не выполняются в этом ходу — реальный, а не
+        // гипотетический сценарий (модель может попросить несколько
+        // инструментов за один ход, см. AI_PLATFORM_ROADMAP.md §8.3), первая
+        // ограниченная версия этого механизма его не покрывает.
+        if (riskLevel === 'high' || riskLevel === 'critical') {
+          const confirmationId = await this.auditLog.record({
+            actorId,
+            businessId,
+            tool: call.name,
+            riskLevel,
+            argsSummary: input,
+            status: 'pending',
+          });
+          yield {
+            type: 'confirm_required',
+            tool: call.name,
+            riskLevel,
+            confirmationId,
+            args: input,
+          };
+          return;
+        }
+
+        let status: 'success' | 'error' = 'success';
+        let outputForModel: unknown;
+        try {
+          outputForModel = await tool.handler(input, { actorId, businessId });
+        } catch (error) {
           status = 'error';
-          outputForModel = { error: `Неизвестный инструмент: ${call.name}` };
-        } else {
-          try {
-            const input = tool.parseInput(call.args);
-            argsForAudit = input;
-            outputForModel = await tool.handler(input, { actorId, businessId });
-          } catch (error) {
-            status = 'error';
-            outputForModel = {
-              error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-            };
-          }
+          outputForModel = {
+            error: error instanceof Error ? error.message : 'Неизвестная ошибка',
+          };
         }
 
         await this.auditLog.record({

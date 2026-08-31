@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   RequestMethod,
@@ -16,7 +18,7 @@ import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import type { RequestUser } from '@/common/types/authenticated-request';
 import { AiService } from './ai.service';
-import type { AuditLogListItem, ChatResult } from './ai.types';
+import type { AuditLogListItem, ChatResult, ToolExecutionSummary } from './ai.types';
 import { ChatRequestDto } from './dto/chat-request.dto';
 import { AiConfiguredGuard } from './guards/ai-configured.guard';
 import { AiOwnershipGuard } from './guards/ai-ownership.guard';
@@ -81,5 +83,31 @@ export class AiController {
   @Get('activity')
   activity(@Param('businessId') businessId: string): Promise<AuditLogListItem[]> {
     return this.aiService.listActivity(businessId);
+  }
+
+  /** AI-9 (AI_PLATFORM_ROADMAP.md §2.8/§21) — выполняет `high`/`critical`
+   * вызов, оставленный `chat`/`chat/stream` в состоянии `pending`
+   * (`AiStreamEvent`'s `confirm_required`). Без `AiConfiguredGuard` — не
+   * зовёт LLM вообще, тот же принцип, что у `activity` выше. */
+  @Post('confirm/:confirmationId')
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
+  confirmToolCall(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('businessId') businessId: string,
+    @Param('confirmationId') confirmationId: string,
+  ): Promise<ToolExecutionSummary> {
+    return this.aiService.confirmToolCall(businessId, currentUser.id, confirmationId);
+  }
+
+  /** Отклоняет тот же `pending`-вызов без выполнения — см.
+   * `AiService.rejectToolCall`. */
+  @Post('reject/:confirmationId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
+  rejectToolCall(
+    @Param('businessId') businessId: string,
+    @Param('confirmationId') confirmationId: string,
+  ): Promise<void> {
+    return this.aiService.rejectToolCall(businessId, confirmationId);
   }
 }

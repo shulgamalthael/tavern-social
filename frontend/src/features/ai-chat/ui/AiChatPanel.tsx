@@ -5,9 +5,11 @@ import { cn } from '@/shared/lib/cn';
 import { Button } from '@/shared/ui/Button';
 import { ForwardIcon, SparkleIcon } from '@/shared/ui/icons';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
+import { confirmToolCall } from '../api/confirm-tool-call';
+import { rejectToolCall } from '../api/reject-tool-call';
 import { streamAiChat } from '../api/stream-ai-chat';
-import { toolLabel } from '../lib/tool-labels';
-import type { AiChatMessage, ToolExecutionSummary } from '../model/types';
+import { riskLevelLabel, toolLabel } from '../lib/tool-labels';
+import type { AiChatMessage, PendingConfirmation, ToolExecutionSummary } from '../model/types';
 import styles from './AiChatPanel.module.scss';
 
 export interface AiChatPanelProps {
@@ -163,6 +165,25 @@ export function AiChatPanel({
               message.id === assistantId ? { ...message, content: streamEvent.message } : message,
             ),
           );
+        } else if (streamEvent.type === 'confirm_required') {
+          // AI-9 (AI_PLATFORM_ROADMAP.md §2.8/§21) — ход диалога закончился
+          // здесь: backend не пришлёт отдельный `message`-эвент вдогонку (см.
+          // `runToolLoop`'s комментарий), поэтому `receivedMessage` тоже
+          // помечаем true — иначе ниже сработал бы фолбэк "соединение
+          // прервалось раньше, чем пришёл ответ", хотя всё в порядке.
+          receivedMessage = true;
+          setPendingTool(null);
+          const pendingConfirmation: PendingConfirmation = {
+            tool: streamEvent.tool,
+            riskLevel: streamEvent.riskLevel,
+            confirmationId: streamEvent.confirmationId,
+            resolution: 'awaiting',
+          };
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === assistantId ? { ...message, pendingConfirmation } : message,
+            ),
+          );
         }
       }
 
@@ -191,6 +212,56 @@ export function AiChatPanel({
     } finally {
       setPendingTool(null);
       setSending(false);
+    }
+  }
+
+  function updatePendingConfirmation(messageId: string, patch: Partial<PendingConfirmation>) {
+    setMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId && message.pendingConfirmation
+          ? { ...message, pendingConfirmation: { ...message.pendingConfirmation, ...patch } }
+          : message,
+      ),
+    );
+  }
+
+  /** AI-9 (AI_PLATFORM_ROADMAP.md §2.8/§21) — выполняет РОВНО тот вызов,
+   * что модель оставила `pending` (`confirmToolCall`, без нового обращения
+   * к LLM). Успешное выполнение мутирующего инструмента обновляет холст тем
+   * же путём, что и обычный `tool_result` в `handleSubmit` выше. */
+  async function handleConfirm(message: AiChatMessage) {
+    const pending = message.pendingConfirmation;
+    if (!pending || pending.resolution !== 'awaiting') return;
+
+    updatePendingConfirmation(message.id, { resolution: 'confirming' });
+    try {
+      const result = await confirmToolCall(businessId, pending.confirmationId);
+      updatePendingConfirmation(message.id, {
+        resolution: result.status === 'success' ? 'confirmed' : 'confirm_failed',
+      });
+      if (result.status === 'success' && result.riskLevel !== 'low' && onMutationApplied) {
+        await onMutationApplied();
+      }
+    } catch {
+      // Сеть упала, или подтверждение уже было обработано где-то ещё
+      // (двойной клик, вторая вкладка) — в обоих случаях безопасно НЕ
+      // предлагать повторное подтверждение: тот же `confirmationId` либо
+      // уже выполнился, либо действительно недоступен, повторный вызов
+      // `confirmToolCall` получил бы `404`, не второй реальный запуск.
+      updatePendingConfirmation(message.id, { resolution: 'confirm_failed' });
+    }
+  }
+
+  async function handleReject(message: AiChatMessage) {
+    const pending = message.pendingConfirmation;
+    if (!pending || pending.resolution !== 'awaiting') return;
+
+    updatePendingConfirmation(message.id, { resolution: 'rejecting' });
+    try {
+      await rejectToolCall(businessId, pending.confirmationId);
+      updatePendingConfirmation(message.id, { resolution: 'rejected' });
+    } catch {
+      updatePendingConfirmation(message.id, { resolution: 'confirm_failed' });
     }
   }
 
@@ -263,6 +334,54 @@ export function AiChatPanel({
                     </li>
                   ))}
                 </ul>
+              )}
+              {message.pendingConfirmation && (
+                <div className={styles.confirmCard}>
+                  <p className={styles.confirmCard__text}>
+                    {toolLabel(message.pendingConfirmation.tool)} —{' '}
+                    {riskLevelLabel(message.pendingConfirmation.riskLevel)}, требуется подтверждение
+                  </p>
+                  {message.pendingConfirmation.resolution === 'awaiting' && (
+                    <div className={styles.confirmCard__actions}>
+                      <button
+                        type="button"
+                        className={styles.confirmCard__reject}
+                        onClick={() => void handleReject(message)}
+                      >
+                        Отклонить
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.confirmCard__confirm}
+                        onClick={() => void handleConfirm(message)}
+                      >
+                        Подтвердить
+                      </button>
+                    </div>
+                  )}
+                  {message.pendingConfirmation.resolution === 'confirming' && (
+                    <p className={styles.confirmCard__status}>Выполняем…</p>
+                  )}
+                  {message.pendingConfirmation.resolution === 'rejecting' && (
+                    <p className={styles.confirmCard__status}>Отклоняем…</p>
+                  )}
+                  {message.pendingConfirmation.resolution === 'confirmed' && (
+                    <p className={styles.confirmCard__status}>Выполнено</p>
+                  )}
+                  {message.pendingConfirmation.resolution === 'rejected' && (
+                    <p className={styles.confirmCard__status}>Отклонено</p>
+                  )}
+                  {message.pendingConfirmation.resolution === 'confirm_failed' && (
+                    <p
+                      className={cn(
+                        styles.confirmCard__status,
+                        styles['confirmCard__status--error'],
+                      )}
+                    >
+                      Не удалось выполнить
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           );
