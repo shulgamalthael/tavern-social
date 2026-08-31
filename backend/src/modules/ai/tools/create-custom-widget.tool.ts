@@ -54,6 +54,23 @@ export class CreateCustomWidgetTool implements OnModuleInit {
           schema: {
             type: 'array',
             description: 'Непустой список блоков виджета: [{ blockType, props? }, ...]',
+            // Gemini function calling требует `items` на КАЖДОМ параметре
+            // `type: 'array'` (проверено живым вызовом — без него весь
+            // запрос падает 400 INVALID_ARGUMENT ещё до того, как модель
+            // успевает выбрать инструмент, что ломает business_chat
+            // целиком, не только этот tool: все function declarations
+            // отправляются одним списком). `props` внутри намеренно не
+            // детализирован глубже `object` — реальная форма зависит от
+            // `blockType` (см. `ALLOWED_BLOCK_TYPES`/`add-block-schemas.ts`),
+            // её проверяет `parseInput` ниже, не эта JSON Schema.
+            items: {
+              type: 'object',
+              properties: {
+                blockType: { type: 'string', enum: [...ALLOWED_BLOCK_TYPES] },
+                props: { type: 'object', description: 'См. props в add_block для blockType.' },
+              },
+              required: ['blockType'],
+            },
           },
         },
         required: ['name', 'schema'],

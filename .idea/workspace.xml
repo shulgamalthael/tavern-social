@@ -8,43 +8,22 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/AI_PLATFORM_ROADMAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/AI_PLATFORM_ROADMAP.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/PROJECT_CONTEXT.md" beforeDir="false" afterPath="$PROJECT_DIR$/backend/PROJECT_CONTEXT.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/backend/prisma/schema.prisma" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/app.module.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/config/configuration.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/configuration.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/config/env.validation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/env.validation.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/llm-provider.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/llm-provider.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/onboarding/onboarding.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/onboarding/onboarding.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/providers/gemini-adapter.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/providers/gemini-adapter.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/add-block.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/add-block.tool.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.test.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/update-block-props.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/update-block-props.tool.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/form-submissions/form-submissions.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/form-submissions/form-submissions.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/(protected)/business/[id]/edit/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(protected)/business/[id]/edit/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/admin/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/admin/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/admin/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/admin/model/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/notification/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/notification/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/notification/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/notification/model/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/website-store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/website-store.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/admin/ui/AdminWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/admin/ui/AdminWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/create-custom-widget.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/create-custom-widget.tool.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/dto/update-business.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/dto/update-business.dto.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/business/api/map-business.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/business/api/map-business.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/business/api/update-business.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/business/api/update-business.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/business/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/business/model/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/ui/icons/icons.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/ui/icons/icons.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/ui/icons/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/ui/icons/index.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/BusinessDashboardWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/BusinessDashboardWidget.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/CreateBusinessForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/CreateBusinessForm.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/NewBusinessFlow.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/NewBusinessFlow.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/AddBlockModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/AddBlockModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,73 +43,73 @@
     &quot;assignee&quot;: &quot;shulgamalthael&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/shulgamalthael/tavern-social.git&quot;,
-    &quot;accountId&quot;: &quot;b64eed75-f493-41e4-8c76-8025b3af6dc2&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/shulgamalthael/tavern-social.git",
+    "accountId": "eaaac6e6-50ff-4968-b7f7-d5d3b7c85864"
   }
-}</component>
+}]]></component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0" />
-      <entry key="S2" value="1.0" />
-      <entry key="S5" value="1.0" />
-      <entry key="S10" value="1.0" />
-      <entry key="S30" value="1.0000000021255533" />
-      <entry key="S60" value="1.0001950130003023" />
-      <entry key="M2" value="1.0592182497886558" />
-      <entry key="M5" value="2.9210002187013777" />
-      <entry key="M10" value="8.774372919436319" />
-      <entry key="M15" value="15.551814465955834" />
-      <entry key="M30" value="33.2712744571955" />
-      <entry key="H1" value="55.090196268770924" />
-      <entry key="H2" value="81.36005199792658" />
-      <entry key="H4" value="119.95990663530324" />
-      <entry key="D1" value="501.82058629909005" />
-      <entry key="W1" value="1673.3899867089988" />
+      <entry key="MS100" value="1.8039929167938977" />
+      <entry key="MS500" value="3.662938575595431" />
+      <entry key="S2" value="4.596069332066298" />
+      <entry key="S5" value="4.831787208123421" />
+      <entry key="S10" value="4.914741854269675" />
+      <entry key="S30" value="5.01533335876042" />
+      <entry key="S60" value="5.7017591208431275" />
+      <entry key="M2" value="9.28806679091145" />
+      <entry key="M5" value="31.211875182731205" />
+      <entry key="M10" value="63.79326139278302" />
+      <entry key="M15" value="85.78553655470154" />
+      <entry key="M30" value="124.79881671600131" />
+      <entry key="H1" value="162.0026411470155" />
+      <entry key="H2" value="198.25968797861452" />
+      <entry key="H4" value="242.70925986522508" />
+      <entry key="D1" value="629.6486448866671" />
+      <entry key="W1" value="1803.6472761052407" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="0.0" />
-      <entry key="S30" value="0.0" />
-      <entry key="S60" value="3.6988301077548903E-208" />
-      <entry key="M2" value="1.9546716514134426E-104" />
-      <entry key="M5" value="3.8943533331263124E-42" />
-      <entry key="M10" value="2.601028641259648E-21" />
-      <entry key="M15" value="2.3411586280905716E-14" />
-      <entry key="M30" value="2.144129002113169E-7" />
-      <entry key="H1" value="6.533276664227068E-4" />
-      <entry key="H2" value="0.036186983852156934" />
-      <entry key="H4" value="0.28229434897405936" />
-      <entry key="D1" value="4.801357662394021" />
-      <entry key="W1" value="29.88463648215129" />
+      <entry key="S2" value="5.377528596486213E-119" />
+      <entry key="S5" value="4.9230369049207293E-48" />
+      <entry key="S10" value="2.2187917669129575E-24" />
+      <entry key="S30" value="1.3042840456418398E-8" />
+      <entry key="S60" value="1.1420525581784044E-4" />
+      <entry key="M2" value="0.010686685913689068" />
+      <entry key="M5" value="0.16275607884520088" />
+      <entry key="M10" value="0.4034303890948234" />
+      <entry key="M15" value="0.5459829399389097" />
+      <entry key="M30" value="0.7389067384126632" />
+      <entry key="H1" value="0.8601511137515421" />
+      <entry key="H2" value="0.9604779676315798" />
+      <entry key="H4" value="1.23381945278577" />
+      <entry key="D1" value="5.762322635715594" />
+      <entry key="W1" value="30.854529545367065" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.0035449967004576597" />
-      <entry key="MS500" value="0.32353641362071334" />
-      <entry key="S2" value="0.7541900383432893" />
-      <entry key="S5" value="0.8932896800141077" />
-      <entry key="S10" value="0.9451400319604009" />
-      <entry key="S30" value="0.981368364090789" />
-      <entry key="S60" value="0.9908353028204306" />
-      <entry key="M2" value="1.054513593047777" />
-      <entry key="M5" value="2.91894036867904" />
-      <entry key="M10" value="8.773059041390793" />
-      <entry key="M15" value="15.55070639361235" />
-      <entry key="M30" value="33.270397639295425" />
-      <entry key="H1" value="55.090207960574794" />
-      <entry key="H2" value="81.39578949077318" />
-      <entry key="H4" value="120.24181046839428" />
-      <entry key="D1" value="506.6215873706025" />
-      <entry key="W1" value="1703.2744753183238" />
+      <entry key="MS100" value="1.7618421183710282" />
+      <entry key="MS500" value="3.6448518022080605" />
+      <entry key="S2" value="4.590349425799496" />
+      <entry key="S5" value="4.829378234605901" />
+      <entry key="S10" value="4.913516074246424" />
+      <entry key="S30" value="5.014916473231079" />
+      <entry key="S60" value="5.701625928083587" />
+      <entry key="M2" value="9.2978813015159" />
+      <entry key="M5" value="31.369570900840287" />
+      <entry key="M10" value="64.19008547513302" />
+      <entry key="M15" value="86.32535599367209" />
+      <entry key="M30" value="125.53325909799261" />
+      <entry key="H1" value="162.86000299659415" />
+      <entry key="H2" value="199.21853708001694" />
+      <entry key="H4" value="243.94207259124835" />
+      <entry key="D1" value="635.4105045123838" />
+      <entry key="W1" value="1834.501642283927" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -142,32 +121,32 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/nikita-shulha/projects/tavern&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;/home/nikita-shulha/projects/tavern/backend/node_modules/prettier&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
-    &quot;ts.external.directory.path&quot;: &quot;D:\\projects\\tavern\\frontend\\node_modules\\typescript\\lib&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "master",
+    "javascript.preferred.runtime.type.id": "node",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/home/nikita-shulha/projects/tavern",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "prettierjs.PrettierConfiguration.Package": "/home/nikita-shulha/projects/tavern/backend/node_modules/prettier",
+    "settings.editor.selected.configurable": "org.jetbrains.plugins.github.ui.GithubSettingsConfigurable",
+    "to.speed.mode.migration.done": "true",
+    "ts.external.directory.path": "D:\\projects\\tavern\\frontend\\node_modules\\typescript\\lib"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -201,7 +180,7 @@
       <workItem from="1788002283346" duration="1196000" />
       <workItem from="1788010031165" duration="15126000" />
       <workItem from="1788048442936" duration="47594000" />
-      <workItem from="1788173097345" duration="934000" />
+      <workItem from="1788173097345" duration="3414000" />
     </task>
     <task id="LOCAL-00001" summary="Init project">
       <option name="closed" value="true" />

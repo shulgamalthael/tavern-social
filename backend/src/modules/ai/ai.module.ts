@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BusinessesModule } from '@/modules/businesses/businesses.module';
 import { CustomWidgetsModule } from '@/modules/custom-widgets/custom-widgets.module';
 import { MediaAssetsModule } from '@/modules/media-assets/media-assets.module';
+import { Web3Module } from '@/modules/web3/web3.module';
 import { WebsitesModule } from '@/modules/websites/websites.module';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
@@ -30,13 +31,14 @@ import { AddBlockTool } from './tools/add-block.tool';
 import { CreateCustomWidgetTool } from './tools/create-custom-widget.tool';
 import { CreatePageTool } from './tools/create-page.tool';
 import { GetProjectTreeTool } from './tools/get-project-tree.tool';
+import { GetWalletInfoTool } from './tools/get-wallet-info.tool';
 import { ListMediaAssetsTool } from './tools/list-media-assets.tool';
 import { SetStyleTool } from './tools/set-style.tool';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
 
 @Module({
-  imports: [WebsitesModule, BusinessesModule, CustomWidgetsModule, MediaAssetsModule],
+  imports: [WebsitesModule, BusinessesModule, CustomWidgetsModule, MediaAssetsModule, Web3Module],
   controllers: [AiController, OnboardingController, AiInfrastructureController],
   providers: [
     AiService,
@@ -76,6 +78,7 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
     UpdateBlockPropsTool,
     ListMediaAssetsTool,
     CreateCustomWidgetTool,
+    GetWalletInfoTool,
     // AI-4 onboarding (AI_PLATFORM_ROADMAP.md §2.7) — отдельный сервис/реестр/
     // контроллер (см. их комментарии), не расширение business-scoped стека
     // выше.

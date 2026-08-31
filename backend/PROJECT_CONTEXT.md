@@ -78,6 +78,13 @@ Handlers), никогда напрямую из браузера.
 - `custom-widgets` (`/businesses/:id/widgets`) — сохранённые именованные
   композиции существующих типов блоков (не исполняемый код), вставляются в
   страницу снапшотом (без живой синхронизации при редактировании виджета).
+- `web3` (`/businesses/:id/web3`) — AI_PLATFORM_ROADMAP.md §2.6, AI-7:
+  read-only витрина баланса/NFT кошелька, который владелец сам указал для
+  бизнеса (`Business.web3WalletAddress`). `Web3Provider`/`AlchemyAdapter`
+  (прямой fetch к Alchemy, без SDK, тот же приём, что `GeminiAdapter`). НЕ
+  кошелёк покупателя/визитора сайта и не приём крипто-платежей — тот поток
+  (client-side wallet-signed подтверждение, wagmi/viem) осознанно вне этой
+  итерации.
 
 **Admin:**
 - `admin` (`/admin`) — модерация, ban/unban, AI Infrastructure Overview.
@@ -93,8 +100,9 @@ Handlers), никогда напрямую из браузера.
   типов блоков — `heading`/`text`/`quote`/`spacer`/`image`/`button`, `image`/
   `button` валидируют `LinkTarget`/уже загруженный файл против реальных
   данных бизнеса), `set_style`, `create_custom_widget` (все — `medium` risk,
-  все пишут в `AuditLog`), `create_business` (onboarding-only, с
-  опциональным auto-apply стартового шаблона).
+  все пишут в `AuditLog`), `get_wallet_info` (чтение, `low` risk — баланс/NFT
+  кошелька, сохранённого на бизнесе, без аргументов от модели), `create_business`
+  (onboarding-only, с опциональным auto-apply стартового шаблона).
 - Governance/cost-контроль вокруг самих AI-вызовов (не часть
   инструментального слоя выше): `modules/ai/quota` (Gemini RPM/RPD-лимиты,
   Redis-backed), `modules/ai/capacity` (AI Capacity & Cost Manager — бюджеты,
@@ -112,7 +120,7 @@ Handlers), никогда напрямую из браузера.
 | AI-4 — разговорный онбординг бизнеса | ✅ done, verified |
 | AI-5 — Business Logic Engine v1 | ✅ done, verified (3 действия: `send_notification`/`add_loyalty_points`/`set_membership_tier`) |
 | AI-6 — Custom Widget Engine v1 | ✅ done, verified (`dataBindings`/`capabilities` ждут AI-7) |
-| AI-7 — Web3-провайдер | не начато — нужен выбор провайдера + API-ключ от владельца |
+| AI-7 — Web3-провайдер | ✅ первый ограниченный слайс done, verified (read-only баланс/NFT, `AlchemyAdapter`; wallet-connect/подпись транзакций — вне скоупа, см. `AI_PLATFORM_ROADMAP.md` §19) |
 | AI-8 — Custom database builder | не начато |
 | AI-9 — HIGH/CRITICAL-risk confirm-флоу, финальный quality-gate | не начато |
 

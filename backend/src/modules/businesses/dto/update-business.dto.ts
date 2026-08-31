@@ -112,4 +112,15 @@ export class UpdateBusinessDto {
   @ValidateNested()
   @Type(() => WorkingHoursDto)
   workingHours?: WorkingHoursDto | null;
+
+  /** Адрес СОБСТВЕННОГО кошелька владельца для read-only Web3-витрины
+   * (AI_PLATFORM_ROADMAP.md §2.6, AI-7, см. `Business.web3WalletAddress`
+   * в schema.prisma) — не кошелёк покупателя. Пустая строка = очистить
+   * (тот же приём "клиент присылает явное намерение", что и остальные
+   * nullable-подобные поля этого DTO). */
+  @IsOptional()
+  @Matches(/^(0x[a-fA-F0-9]{40})?$/, {
+    message: 'Адрес кошелька должен быть в формате 0x + 40 hex-символов',
+  })
+  web3WalletAddress?: string;
 }

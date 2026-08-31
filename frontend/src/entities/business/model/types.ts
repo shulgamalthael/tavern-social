@@ -57,6 +57,10 @@ export interface Business {
   /** `none` — налог не считается вообще (значение по умолчанию). */
   taxMode: TaxMode;
   workingHours: WorkingHours | null;
+  /** `null` — Web3-кошелёк ещё не задан (AI_PLATFORM_ROADMAP.md §2.6,
+   * AI-7). Собственный кошелёк владельца бизнеса для read-only витрины
+   * баланса/NFT — не кошелёк покупателя/визитора сайта. */
+  web3WalletAddress: string | null;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

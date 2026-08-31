@@ -33,6 +33,9 @@ export interface UpdateBusinessInput {
   /** `null` очищает часы — «не ограничено» (см. `Business.workingHours`'s
    * комментарий в `model/types.ts`). */
   workingHours?: WorkingHours | null;
+  /** Пустая строка очищает кошелёк (см. `Business.web3WalletAddress`'s
+   * комментарий в `model/types.ts`). */
+  web3WalletAddress?: string;
 }
 
 /** Владелец-only на backend (см. `BusinessesService.update`). */

@@ -54,6 +54,9 @@ export interface BusinessDto {
   /** `null` — часы не заданы, записи принимаются в любое время (см.
    * комментарий `Business.workingHours` в schema.prisma). */
   workingHours: WorkingHours | null;
+  /** `null` — Web3-кошелёк ещё не задан (см. `Business.web3WalletAddress`
+   * в schema.prisma, AI_PLATFORM_ROADMAP.md §2.6). */
+  web3WalletAddress: string | null;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

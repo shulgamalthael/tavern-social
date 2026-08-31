@@ -135,6 +135,9 @@ export class BusinessesService {
                   : (dto.workingHours as unknown as Prisma.InputJsonValue),
             }
           : {}),
+        ...(dto.web3WalletAddress !== undefined
+          ? { web3WalletAddress: dto.web3WalletAddress === '' ? null : dto.web3WalletAddress }
+          : {}),
       },
       include: { website: { select: { id: true, publishedAt: true } } },
     });
@@ -339,6 +342,7 @@ export class BusinessesService {
       taxRateBps: business.taxRateBps,
       taxMode: business.taxMode,
       workingHours: (business.workingHours as unknown as WorkingHours | null) ?? null,
+      web3WalletAddress: business.web3WalletAddress,
       status: business.website?.publishedAt ? 'published' : 'draft',
       createdAt: business.createdAt.toISOString(),
       updatedAt: business.updatedAt.toISOString(),

@@ -25,6 +25,7 @@ import {
   SettingsIcon,
   ShoppingBagIcon,
   TagIcon,
+  WalletIcon,
 } from '@/shared/ui/icons';
 import { AppointmentsSection } from './AppointmentsSection';
 import { BlogSection } from './BlogSection';
@@ -36,6 +37,7 @@ import { PagesSection } from './PagesSection';
 import { ProductsSection } from './ProductsSection';
 import { RulesSection } from './RulesSection';
 import { ServicesSection } from './ServicesSection';
+import { Web3Section } from './Web3Section';
 import { WidgetsSection } from './WidgetsSection';
 import styles from './BusinessDashboardWidget.module.scss';
 
@@ -54,7 +56,8 @@ type DashboardTab =
   | 'blog'
   | 'forms'
   | 'rules'
-  | 'widgets';
+  | 'widgets'
+  | 'web3';
 
 const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[] = [
   { id: 'overview', icon: ChartIcon, label: 'Обзор' },
@@ -68,6 +71,7 @@ const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[
   { id: 'forms', icon: MailIcon, label: 'Заявки' },
   { id: 'widgets', icon: GridIcon, label: 'Виджеты' },
   { id: 'rules', icon: CpuIcon, label: 'Автоматизация' },
+  { id: 'web3', icon: WalletIcon, label: 'Web3' },
 ];
 
 /**
@@ -113,6 +117,11 @@ const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[
  * ни на одну капабилити. Виджет пока нигде не встраивается на реальные
  * страницы сайта (см. `WidgetsSection`'s комментарий) — вкладка позволяет
  * только создавать/редактировать сохранённые композиции блоков впрок.
+ *
+ * «Web3» (AI_PLATFORM_ROADMAP.md §2.6, AI-7 первый ограниченный слайс) —
+ * тоже без гейта капабилити: read-only витрина баланса/NFT кошелька,
+ * который владелец сам указал для бизнеса (`Business.web3WalletAddress`),
+ * не приём платежей от покупателей (см. `Web3Section`'s комментарий).
  */
 export function BusinessDashboardWidget({ businessId }: BusinessDashboardWidgetProps) {
   const businessFetcher = useCallback(() => getBusiness(businessId), [businessId]);
@@ -238,6 +247,9 @@ export function BusinessDashboardWidget({ businessId }: BusinessDashboardWidgetP
           {tab === 'forms' && <FormsSection businessId={businessId} />}
           {tab === 'rules' && <RulesSection businessId={businessId} />}
           {tab === 'widgets' && <WidgetsSection businessId={businessId} />}
+          {tab === 'web3' && (
+            <Web3Section business={data} onWalletChanged={() => void business.refetch()} />
+          )}
         </div>
       </div>
     </div>

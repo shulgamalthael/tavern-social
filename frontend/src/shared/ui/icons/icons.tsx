@@ -574,6 +574,17 @@ export function CpuIcon(props: IconProps): ReactElement {
   );
 }
 
+export function WalletIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={3} y={6} width={18} height={13} rx={2} />
+      <path d="M3 10h18" />
+      <path d="M16 14.5h2" />
+      <path d="M7 6V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1" />
+    </BaseIcon>
+  );
+}
+
 export function BuildingIcon(props: IconProps): ReactElement {
   return (
     <BaseIcon {...props}>

@@ -27,6 +27,12 @@ export interface AppConfig {
   /** `undefined`, если Gemini не настроен — см. `GeminiAdapter.isConfigured()`,
    * тот же приём, что у `stripeSecretKey`. */
   geminiApiKey: string | undefined;
+
+  /** `undefined`, если Web3 не настроен — см. `AlchemyAdapter.isConfigured()`,
+   * тот же приём, что у `geminiApiKey`. AI_PLATFORM_ROADMAP.md §2.6, AI-7. */
+  alchemyApiKey: string | undefined;
+  /** Одна сеть на весь backend, не per-business (см. `web3.types.ts`). */
+  alchemyNetwork: string;
   /** Дефолт — стабильная модель с поддержкой function calling на бесплатном
    * tier (см. `AI_PLATFORM_ROADMAP.md` §2.3). */
   geminiModel: string;
@@ -115,6 +121,8 @@ export default (): { app: AppConfig } => ({
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     stripeSubscriptionsWebhookSecret: process.env.STRIPE_SUBSCRIPTIONS_WEBHOOK_SECRET,
     geminiApiKey: process.env.GEMINI_API_KEY,
+    alchemyApiKey: process.env.ALCHEMY_API_KEY,
+    alchemyNetwork: process.env.ALCHEMY_NETWORK ?? 'eth-mainnet',
     // `gemini-2.5-flash` вернул 404 "no longer available to new users" при
     // реальном тесте (2026-08-29) — Google сам называет замену в тексте
     // ошибки. Вынесено в конфиг именно на случай следующей такой миграции.

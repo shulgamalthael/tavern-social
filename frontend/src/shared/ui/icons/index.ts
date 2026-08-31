@@ -70,5 +70,6 @@ export {
   UploadIcon,
   UtensilsIcon,
   VideoIcon,
+  WalletIcon,
 } from './icons';
 export type { IconProps } from './icons';
