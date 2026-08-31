@@ -28,16 +28,17 @@ function shortenAddress(address: string): string {
  * витрина баланса/NFT СОБСТВЕННОГО кошелька владельца бизнеса, не форма
  * приёма крипто-платежей от покупателей (та работа — client-side
  * wallet-signed подтверждение через wagmi/viem, осознанно вне этого
- * слайса, см. §2.6). Адрес и BYOK-ключ (§19.1) хранятся прямо на `Business`
- * (`updateBusiness`), отдельного CRUD не заводим — те же nullable-поля,
- * что у остальных настроек бизнеса (email/phone/address).
+ * слайса, см. §2.6). Адрес и API-ключ Alchemy (§19.2) хранятся прямо на
+ * `Business` (`updateBusiness`), отдельного CRUD не заводим — те же
+ * nullable-поля, что у остальных настроек бизнеса (email/phone/address).
  *
- * BYOK — API-ключ никогда не приходит с backend (`hasOwnWeb3ApiKey`,
- * `usingOwnApiKey` — только boolean-флаги, см. их комментарии) — поле ввода
- * поэтому всегда начинается пустым, даже когда ключ уже сохранён. Пустое
- * поле при сабмите значит «не менять» (не отправляется вовсе), удаление —
- * отдельное явное действие (`handleClearApiKey`), не побочный эффект пустой
- * формы.
+ * Ключ — только собственный, у каждого бизнеса свой: платформа своего
+ * ключа не предоставляет и не подставляет. Сам ключ никогда не приходит с
+ * backend (`hasOwnWeb3ApiKey` — только boolean-флаг, см. её комментарий) —
+ * поле ввода поэтому всегда начинается пустым, даже когда ключ уже
+ * сохранён. Пустое поле при сабмите значит «не менять» (не отправляется
+ * вовсе), удаление — отдельное явное действие (`handleClearApiKey`), не
+ * побочный эффект пустой формы.
  */
 export function Web3Section({ business, onWalletChanged }: Web3SectionProps) {
   const fetcher = useCallback(() => getWalletInfo(business.id), [business.id]);
@@ -136,7 +137,7 @@ export function Web3Section({ business, onWalletChanged }: Web3SectionProps) {
           </p>
 
           <label className={styles.field}>
-            <span className={styles.label}>Собственный API-ключ Alchemy (необязательно)</span>
+            <span className={styles.label}>API-ключ Alchemy</span>
             <input
               type="password"
               autoComplete="off"
@@ -148,9 +149,13 @@ export function Web3Section({ business, onWalletChanged }: Web3SectionProps) {
           </label>
           <div className={styles.apiKeyHelp}>
             <p className={styles.hint}>
-              Без собственного ключа используется общий ключ платформы (если администратор его
-              настроил) — лимит запросов на нём общий для всех бизнесов. Свой ключ даёт отдельный
-              лимит и работает, даже если платформа Web3 ещё не настроила.
+              Без API-ключа Alchemy баланс и NFT не отображаются — Web3-раздел работает только с
+              вашим собственным ключом.
+            </p>
+            <p className={styles.hint}>
+              Бесплатный ключ Alchemy имеет ограниченные лимиты запросов — обычно этого достаточно
+              для одного бизнеса, но при интенсивном использовании (например, частые обращения через
+              AI-ассистента) лимит может быть исчерпан быстрее.
             </p>
             <p className={styles.hint}>
               Как получить: зарегистрируйтесь на Alchemy → создайте App на сети Ethereum Mainnet →
@@ -223,11 +228,11 @@ export function Web3Section({ business, onWalletChanged }: Web3SectionProps) {
 
       {!data.providerConfigured ? (
         <EmptyState
-          title="Web3 пока не настроен"
-          description="Администратор ещё не подключил провайдера (Alchemy) на платформе — укажите собственный API-ключ Alchemy, и баланс/NFT появятся сразу."
+          title="Нужен API-ключ Alchemy"
+          description="Укажите собственный API-ключ Alchemy, чтобы увидеть баланс и NFT."
           action={
             <Button variant="outline" onClick={() => setEditing(true)}>
-              Указать свой ключ
+              Указать ключ
             </Button>
           }
         />
@@ -235,11 +240,6 @@ export function Web3Section({ business, onWalletChanged }: Web3SectionProps) {
         <ErrorState message={data.error} onRetry={refetch} />
       ) : (
         <>
-          <p className={styles.keySource}>
-            {data.usingOwnApiKey
-              ? 'Используется ваш собственный ключ Alchemy'
-              : 'Используется общий ключ платформы'}
-          </p>
           <div className={styles.stats}>
             <div className={styles.stat}>
               <span className={styles.stat__value}>{data.balance?.balanceEth ?? '0'} ETH</span>

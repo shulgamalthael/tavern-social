@@ -12,11 +12,10 @@ import type { WalletInfoDto } from './web3.types';
  * `BusinessesService` (тот же принцип "billing не должен зависеть от
  * BusinessesModule ради одной проверки", применённый здесь один в один).
  *
- * BYOK (§19.1) — `business.web3AlchemyApiKey` (если задан) передаётся в
- * каждый вызов `Web3Provider` как override поверх платформенного
- * `ALCHEMY_API_KEY`; это единственное место, где решается, чей ключ
- * используется, ни `AlchemyAdapter`, ни вызывающие этот сервис (дашборд,
- * `get_wallet_info`) сами это не выбирают.
+ * Ключ — только собственный, бизнеса (§19.2) — `business.web3AlchemyApiKey`
+ * передаётся в `Web3Provider` напрямую, платформенного fallback нет и не
+ * было задумано: без своего ключа Web3-раздел просто показывает "нужен
+ * ключ" (`providerConfigured: false`), а не тихо работает на чужом лимите.
  */
 @Injectable()
 export class Web3Service {
@@ -35,20 +34,12 @@ export class Web3Service {
     if (!business) throw new NotFoundException('Бизнес не найден');
     if (business.ownerId !== ownerId) throw new ForbiddenException('Это не ваш бизнес');
 
-    const apiKey = business.web3AlchemyApiKey ?? undefined;
-    const usingOwnApiKey = business.web3AlchemyApiKey !== null;
-    const providerConfigured = this.web3Provider.isConfigured(apiKey);
+    const apiKey = business.web3AlchemyApiKey;
+    const providerConfigured = this.web3Provider.isConfigured(apiKey ?? undefined);
     const walletAddress = business.web3WalletAddress;
 
-    if (!walletAddress || !providerConfigured) {
-      return {
-        walletAddress,
-        providerConfigured,
-        usingOwnApiKey,
-        balance: null,
-        nfts: [],
-        error: null,
-      };
+    if (!walletAddress || !apiKey) {
+      return { walletAddress, providerConfigured, balance: null, nfts: [], error: null };
     }
 
     try {
@@ -56,7 +47,7 @@ export class Web3Service {
         this.web3Provider.getWalletBalance(walletAddress, apiKey),
         this.web3Provider.getNftHoldings(walletAddress, apiKey),
       ]);
-      return { walletAddress, providerConfigured, usingOwnApiKey, balance, nfts, error: null };
+      return { walletAddress, providerConfigured, balance, nfts, error: null };
     } catch (error) {
       // Не роняем весь запрос ради read-only виджета (ключ временно
       // невалиден, сеть Alchemy недоступна, адрес не резолвится) — тот же
@@ -68,7 +59,6 @@ export class Web3Service {
       return {
         walletAddress,
         providerConfigured,
-        usingOwnApiKey,
         balance: null,
         nfts: [],
         error: 'Не удалось получить данные кошелька — попробуйте позже',

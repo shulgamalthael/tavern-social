@@ -16,13 +16,10 @@ export interface NftHolding {
 
 export interface WalletInfo {
   walletAddress: string | null;
-  /** `false` — ни собственный ключ бизнеса (BYOK), ни `ALCHEMY_API_KEY`
-   * платформы не заданы, витрина показывает «Web3 пока не настроен», а не
-   * форму ввода. */
+  /** `false` — у бизнеса не задан собственный API-ключ Alchemy, витрина
+   * показывает «нужен ключ», а не баланс/NFT. Платформа своего ключа не
+   * предоставляет (AI_PLATFORM_ROADMAP.md §19.2). */
   providerConfigured: boolean;
-  /** `true` — использован собственный API-ключ бизнеса (BYOK,
-   * AI_PLATFORM_ROADMAP.md §19.1), `false` — общий ключ платформы. */
-  usingOwnApiKey: boolean;
   balance: WalletBalance | null;
   nfts: NftHolding[];
   /** Непустая строка — адрес и провайдер оба настроены, но реальный запрос

@@ -69,16 +69,10 @@ class EnvironmentVariables {
   @IsString()
   GEMINI_API_KEY?: string;
 
-  /** Необязателен — без него `AlchemyAdapter.isConfigured()` возвращает
-   * `false`, Web3-раздел дашборда/`get_wallet_info` отвечают "не настроено"
-   * вместо падения (тот же приём, что у `GEMINI_API_KEY`). См.
-   * `AI_PLATFORM_ROADMAP.md` §2.6, AI-7. */
-  @IsOptional()
-  @IsString()
-  ALCHEMY_API_KEY?: string;
-
   /** Сеть Alchemy (`eth-mainnet`, `eth-sepolia`, ...) — одна на весь
-   * backend, не per-business (см. `web3.types.ts`'s комментарий). */
+   * backend, не per-business (см. `web3.types.ts`'s комментарий). Ключ
+   * платформенным не бывает — только собственный, у каждого бизнеса
+   * (`Business.web3AlchemyApiKey`, AI_PLATFORM_ROADMAP.md §19.2). */
   @IsOptional()
   @IsString()
   ALCHEMY_NETWORK?: string;

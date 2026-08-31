@@ -10,22 +10,19 @@ import type { NftHolding, WalletBalance } from './web3.types';
  * входят: та работа — client-side, кошельком самого пользователя
  * (wagmi/viem), backend/AI-слой её в принципе не должен уметь делать.
  *
- * `apiKey?` на каждом методе — BYOK (bring your own key, AI_PLATFORM_
- * ROADMAP.md §19.1): бизнес может задать собственный `Business.
- * web3AlchemyApiKey` вместо (или в дополнение к) общему `ALCHEMY_API_KEY`
- * платформы. `undefined` — используется платформенный ключ по умолчанию,
- * тот же "необязательный override поверх дефолта" приём, что и везде в
- * проекте, где сначала появился один общий сценарий, а потом — per-tenant
- * вариант поверх него (например, `Business.currency` поверх глобального
- * дефолта валюты).
+ * Ключ ВСЕГДА собственный, конкретного бизнеса (`Business.
+ * web3AlchemyApiKey`) — платформа не хранит и не предоставляет общий ключ
+ * ни для одного бизнеса (AI_PLATFORM_ROADMAP.md §19.2). `apiKey` поэтому
+ * обязателен на read-методах — `Web3Service` вызывает их, только когда
+ * ключ у бизнеса уже есть.
  */
 export abstract class Web3Provider {
-  /** `false`, если НИ переданный `apiKey`, НИ платформенный `ALCHEMY_API_KEY`
-   * не заданы — вызывающий код показывает "Web3 не настроен", не падает
-   * (тот же принцип, что у `StripeAdapter`). */
-  abstract isConfigured(apiKey?: string): boolean;
+  /** `false`, если `apiKey` не передан/пуст — вызывающий код показывает
+   * "нужен собственный ключ", не падает (тот же принцип, что у
+   * `StripeAdapter`). */
+  abstract isConfigured(apiKey: string | undefined): boolean;
 
-  abstract getWalletBalance(address: string, apiKey?: string): Promise<WalletBalance>;
+  abstract getWalletBalance(address: string, apiKey: string): Promise<WalletBalance>;
 
-  abstract getNftHoldings(address: string, apiKey?: string): Promise<NftHolding[]>;
+  abstract getNftHoldings(address: string, apiKey: string): Promise<NftHolding[]>;
 }

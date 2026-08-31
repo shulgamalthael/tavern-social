@@ -84,12 +84,11 @@ Handlers), никогда напрямую из браузера.
   (прямой fetch к Alchemy, без SDK, тот же приём, что `GeminiAdapter`). НЕ
   кошелёк покупателя/визитора сайта и не приём крипто-платежей — тот поток
   (client-side wallet-signed подтверждение, wagmi/viem) осознанно вне этой
-  итерации. **BYOK (§19.1)**: бизнес может задать собственный API-ключ
-  Alchemy (`Business.web3AlchemyApiKey`, через `UpdateBusinessDto`) — если
-  задан, используется вместо платформенного `ALCHEMY_API_KEY`
-  (`AlchemyAdapter.resolveApiKey`). Ключ write-only — `BusinessDto` отдаёт
-  только `hasOwnWeb3ApiKey: boolean`, сам ключ клиенту никогда не
-  возвращается.
+  итерации. **API-ключ — только собственный, бизнеса (§19.2)**:
+  `Business.web3AlchemyApiKey` (через `UpdateBusinessDto`) — платформа
+  своего ключа не хранит и не предоставляет, без ключа Web3-раздел
+  недоступен. Ключ write-only — `BusinessDto` отдаёт только
+  `hasOwnWeb3ApiKey: boolean`, сам ключ клиенту никогда не возвращается.
 - `custom-entities` (`/businesses/:id/custom-entities[/:entityId/records]`) —
   AI_PLATFORM_ROADMAP.md §2.2/§20, AI-8: Custom Database Builder v1.
   Декларативная EAV-модель (`CustomEntity.fields`/`CustomEntityRecord.data`,

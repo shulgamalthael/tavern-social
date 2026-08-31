@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '@/config/configuration';
 import { Web3Provider } from './web3-provider';
@@ -50,55 +50,35 @@ function formatWeiToEth(weiHex: string): string {
  * не имеет стандартного JSON-RPC метода для перечисления NFT владельца,
  * это Alchemy-специфичное расширение поверх индексации.
  *
- * BYOK (AI_PLATFORM_ROADMAP.md §19.1) — каждый метод принимает
- * необязательный `apiKey`: если бизнес задал собственный
- * `Business.web3AlchemyApiKey`, `Web3Service` передаёт его сюда, иначе
- * `undefined` и используется платформенный `this.platformApiKey`
- * (`ALCHEMY_API_KEY`). `resolveApiKey` — единственное место, где решается,
- * чей ключ используется.
+ * Ключ (AI_PLATFORM_ROADMAP.md §19.2) всегда приходит от вызывающего
+ * (`Web3Service`, из `Business.web3AlchemyApiKey`) — платформа не хранит и
+ * не подставляет свой ключ ни для одного бизнеса, поэтому здесь нет
+ * собственного состояния под ключ, только сеть (`ALCHEMY_NETWORK`).
  */
 @Injectable()
 export class AlchemyAdapter extends Web3Provider {
-  private readonly logger = new Logger(AlchemyAdapter.name);
-  private readonly platformApiKey: string | undefined;
   private readonly network: string;
 
   constructor(configService: ConfigService) {
     super();
     const config = configService.get<AppConfig>('app')!;
-    this.platformApiKey = config.alchemyApiKey;
     this.network = config.alchemyNetwork;
-
-    if (!this.platformApiKey) {
-      this.logger.warn(
-        'ALCHEMY_API_KEY не задан — Web3 доступен только бизнесам с собственным ключом',
-      );
-    }
   }
 
-  private resolveApiKey(apiKey: string | undefined): string | undefined {
-    return apiKey ?? this.platformApiKey;
+  isConfigured(apiKey: string | undefined): boolean {
+    return Boolean(apiKey);
   }
 
-  isConfigured(apiKey?: string): boolean {
-    return this.resolveApiKey(apiKey) !== undefined;
+  private rpcUrl(apiKey: string): string {
+    return `https://${this.network}.g.alchemy.com/v2/${apiKey}`;
   }
 
-  private rpcUrl(resolvedKey: string): string {
-    return `https://${this.network}.g.alchemy.com/v2/${resolvedKey}`;
+  private nftApiUrl(apiKey: string, path: string): string {
+    return `https://${this.network}.g.alchemy.com/nft/v3/${apiKey}/${path}`;
   }
 
-  private nftApiUrl(resolvedKey: string, path: string): string {
-    return `https://${this.network}.g.alchemy.com/nft/v3/${resolvedKey}/${path}`;
-  }
-
-  async getWalletBalance(address: string, apiKey?: string): Promise<WalletBalance> {
-    const resolvedKey = this.resolveApiKey(apiKey);
-    if (!resolvedKey) {
-      throw new Error('Alchemy не настроен — вызывающий код обязан проверить isConfigured()');
-    }
-
-    const response = await fetch(this.rpcUrl(resolvedKey), {
+  async getWalletBalance(address: string, apiKey: string): Promise<WalletBalance> {
+    const response = await fetch(this.rpcUrl(apiKey), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -117,13 +97,8 @@ export class AlchemyAdapter extends Web3Provider {
     return { balanceWei: BigInt(body.result).toString(), balanceEth: formatWeiToEth(body.result) };
   }
 
-  async getNftHoldings(address: string, apiKey?: string): Promise<NftHolding[]> {
-    const resolvedKey = this.resolveApiKey(apiKey);
-    if (!resolvedKey) {
-      throw new Error('Alchemy не настроен — вызывающий код обязан проверить isConfigured()');
-    }
-
-    const url = new URL(this.nftApiUrl(resolvedKey, 'getNFTsForOwner'));
+  async getNftHoldings(address: string, apiKey: string): Promise<NftHolding[]> {
+    const url = new URL(this.nftApiUrl(apiKey, 'getNFTsForOwner'));
     url.searchParams.set('owner', address);
     url.searchParams.set('withMetadata', 'true');
     url.searchParams.set('pageSize', String(NFT_PAGE_SIZE));
