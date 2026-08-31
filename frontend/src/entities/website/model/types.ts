@@ -21,7 +21,7 @@ export interface ResponsiveValue<T> {
   mobile?: T;
 }
 
-export type Background = 'none' | 'surface' | 'muted' | 'primary' | 'dark';
+export type Background = 'none' | 'surface' | 'muted' | 'primary' | 'dark' | 'custom';
 export type TextAlign = 'left' | 'center' | 'right';
 export type ContainerWidth = 'narrow' | 'default' | 'wide' | 'full';
 export type SpacingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
@@ -45,6 +45,13 @@ export type StyleValue<T> = T | ResponsiveValue<T>;
  */
 export interface BlockStyle {
   background?: Background;
+  /** Только когда `background === 'custom'` — произвольный hex-цвет (`#rrggbb`)
+   * фона блока, независимый от токенов темы (в отличие от `surface`/`muted`/
+   * `primary`/`dark`, которые всегда читают `--site-*` переменные). Игнорируется
+   * рендерером при любом другом значении `background` (см. `backgroundValue` в
+   * `block-style.ts`) — не нужно чистить поле при переключении обратно на
+   * пресет, оно просто перестаёт использоваться. */
+  customBackgroundColor?: string;
   paddingY?: StyleValue<SpacingSize>;
   paddingX?: StyleValue<SpacingSize>;
   marginTop?: StyleValue<SpacingSize>;

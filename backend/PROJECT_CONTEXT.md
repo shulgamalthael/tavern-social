@@ -145,6 +145,7 @@ Handlers), никогда напрямую из браузера.
 | AI-7 — Web3-провайдер | ✅ первый ограниченный слайс done, verified (read-only баланс/NFT, `AlchemyAdapter`; wallet-connect/подпись транзакций — вне скоупа, см. `AI_PLATFORM_ROADMAP.md` §19) |
 | AI-8 — Custom database builder | ✅ первый ограниченный слайс done, verified (декларативная EAV-модель, `create_entity`/`add_field`/`list_entities`; поля только добавляются, никогда не удаляются, см. `AI_PLATFORM_ROADMAP.md` §20) |
 | AI-9 — HIGH/CRITICAL-risk confirm-флоу | ✅ первый ограниченный слайс done, verified (`publish_website` — первый и пока единственный `high`-risk инструмент; полный quality-gate пересмотр остальных инструментов — вне этого слайса, см. `AI_PLATFORM_ROADMAP.md` §21) |
+| AI-10 — Universal Builder Expansion (новый под-трек, не одна фаза) | ✅ первый ограниченный слайс done, verified (`BlockStyle.background: 'custom'` + `customBackgroundColor`, свободный hex вместо только токенов темы; заодно найден и исправлен реальный pre-existing баг контраста текста на `dark`/`primary`/`custom` фоне — см. `AI_PLATFORM_ROADMAP.md` §23) |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за
 подробностями): дневная квота Gemini free-tier (сбрасывается по

@@ -1,14 +1,7 @@
 import type { CSSProperties } from 'react';
 import { readResponsiveProp } from './registry';
 import { SPACING_PX } from './theme-tokens';
-import type {
-  Background,
-  BlockStyle,
-  ContainerWidth,
-  SpacingSize,
-  StyleValue,
-  Viewport,
-} from './types';
+import type { BlockStyle, ContainerWidth, SpacingSize, StyleValue, Viewport } from './types';
 
 const FIXED_CONTAINER_WIDTH: Partial<Record<ContainerWidth, string>> = {
   narrow: '640px',
@@ -16,8 +9,8 @@ const FIXED_CONTAINER_WIDTH: Partial<Record<ContainerWidth, string>> = {
   full: 'none',
 };
 
-function backgroundValue(background: Background | undefined): string | undefined {
-  switch (background) {
+function backgroundValue(blockStyle: BlockStyle): string | undefined {
+  switch (blockStyle.background) {
     case 'surface':
       return 'var(--site-surface)';
     case 'muted':
@@ -26,18 +19,45 @@ function backgroundValue(background: Background | undefined): string | undefined
       return 'var(--site-primary)';
     case 'dark':
       return 'var(--site-secondary)';
+    case 'custom':
+      return blockStyle.customBackgroundColor || undefined;
     default:
       return undefined;
   }
+}
+
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{6})$/;
+
+/** Воспринимаемая яркость `#rrggbb` (формула YIQ) — `false`, если строка не
+ * похожа на валидный hex-цвет: тогда `contrastOverrides` ничего не
+ * переопределяет и текст остаётся тёмным по умолчанию, что безопаснее для
+ * незаконченного/некорректного значения, чем угадывать белым. */
+function isDarkColor(hex: string): boolean {
+  const match = HEX_COLOR_RE.exec(hex);
+  if (!match) return false;
+  const value = match[1];
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq < 140;
 }
 
 /** На тёмном/акцентном фоне `--site-text`/`--site-muted` часто сами
  * тёмные — переопределяем сами переменные на обёртке, любой вложенный блок,
  * который просто читает `var(--site-text)`, автоматически получает
  * светлый вариант, ничего не зная о фоне снаружи (см. `BlockRenderer.tsx`,
- * откуда этот модуль вынесен). */
-function contrastOverrides(background: Background | undefined): CSSProperties | undefined {
-  if (background !== 'primary' && background !== 'dark') return undefined;
+ * откуда этот модуль вынесен). Для `custom` цвета вместо фиксированного
+ * списка фонов решает `isDarkColor` — тёмный произвольный цвет должен вести
+ * себя так же, как `dark`/`primary`, светлый произвольный — как обычно. */
+function contrastOverrides(blockStyle: BlockStyle): CSSProperties | undefined {
+  const isDark =
+    blockStyle.background === 'primary' ||
+    blockStyle.background === 'dark' ||
+    (blockStyle.background === 'custom' &&
+      Boolean(blockStyle.customBackgroundColor) &&
+      isDarkColor(blockStyle.customBackgroundColor as string));
+  if (!isDark) return undefined;
   return {
     '--site-text': '#ffffff',
     '--site-muted': 'rgba(255, 255, 255, 0.72)',
@@ -125,12 +145,23 @@ export function computeBlockWrapperStyle(
   const left = resolveSide(blockStyle.paddingLeft, viewport, blockStyle.customPadding, paddingX);
 
   const outer: CSSProperties = {
-    background: backgroundValue(blockStyle.background),
+    background: backgroundValue(blockStyle),
+    // Переобъявляем `color` тем же `--site-text`, что уже наследовался бы и
+    // без этой строки НА САМОМ ДЕЛЕ ЖЕ ЗНАЧЕНИИ — но `color: inherit` внутри
+    // конкретного блока (напр. `.hero__heading` в `business.module.scss`)
+    // иначе наследует уже вычисленный на корне `WebsiteRenderer` цвет, а не
+    // переменную заново: `contrastOverrides` ниже переопределяет саму
+    // переменную `--site-text` на ЭТОЙ обёртке для тёмного/акцентного/своего
+    // фона, но без повторного `color: var(...)` здесь у любого потомка с
+    // `color: inherit` (а не прямым `color: var(--site-text)`) остался бы
+    // старый тёмный цвет поверх тёмного фона — найдено живым тестом `hero`
+    // блока с `background: 'custom'` на тёмном цвете.
+    color: 'var(--site-text)',
     paddingTop: top ? SPACING_PX[top] : undefined,
     paddingBottom: bottom ? SPACING_PX[bottom] : undefined,
     marginTop: marginTop ? SPACING_PX[marginTop] : undefined,
     marginBottom: marginBottom ? SPACING_PX[marginBottom] : undefined,
-    ...contrastOverrides(blockStyle.background),
+    ...contrastOverrides(blockStyle),
   };
 
   const inner: CSSProperties = {

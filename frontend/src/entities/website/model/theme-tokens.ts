@@ -135,6 +135,7 @@ export const BACKGROUND_OPTIONS: { value: Background; label: string }[] = [
   { value: 'muted', label: 'Приглушённый' },
   { value: 'primary', label: 'Акцентный' },
   { value: 'dark', label: 'Тёмный' },
+  { value: 'custom', label: 'Свой цвет' },
 ];
 
 export const TEXT_ALIGN_OPTIONS: { value: TextAlign; label: string }[] = [

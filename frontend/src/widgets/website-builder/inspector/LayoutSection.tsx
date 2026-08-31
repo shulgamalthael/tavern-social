@@ -134,6 +134,23 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
     };
   });
 
+  // Свой цвет фона — не отдельное поле в `BASIC_FIELDS` (в отличие от
+  // остальных 7), а условная вставка сразу после «Фон»: показывать пустой
+  // color picker всем, у кого background не 'custom', было бы шумом ради
+  // поля, которым реально пользуются только выбравшие этот пресет.
+  if (style?.background === 'custom') {
+    const customColorField: FieldSchema = {
+      key: 'customBackgroundColor',
+      label: 'Свой цвет фона',
+      control: 'color',
+    };
+    basicItems.splice(1, 0, {
+      field: customColorField,
+      value: style.customBackgroundColor,
+      onChange: (next: unknown) => onChange({ customBackgroundColor: next as string }),
+    });
+  }
+
   const customPadding = Boolean(style?.customPadding);
   const sideItems: FieldGroupItem[] = PADDING_SIDE_FIELDS.map(({ key, label }) => {
     const field: FieldSchema = {

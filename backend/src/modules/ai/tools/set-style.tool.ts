@@ -47,7 +47,8 @@ export class SetStyleTool implements OnModuleInit {
           style: {
             type: 'object',
             description:
-              `Поля: background(none|surface|muted|primary|dark), paddingY/paddingX/marginTop/marginBottom(none|sm|md|lg|xl), ` +
+              `Поля: background(none|surface|muted|primary|dark|custom), customBackgroundColor(hex вида #rrggbb — ` +
+              `только когда background="custom", иначе игнорируется), paddingY/paddingX/marginTop/marginBottom(none|sm|md|lg|xl), ` +
               `textAlign(left|center|right), maxWidth(narrow|default|wide|full). Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}.`,
           },
         },

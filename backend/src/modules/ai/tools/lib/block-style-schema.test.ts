@@ -42,6 +42,28 @@ describe('buildValidatedStyle', () => {
     expect(() => buildValidatedStyle(undefined, 'surface')).toThrow(/должен быть объектом/);
   });
 
+  it('accepts a custom background with a valid hex color', () => {
+    expect(
+      buildValidatedStyle(undefined, { background: 'custom', customBackgroundColor: '#1a2b3c' }),
+    ).toEqual({ background: 'custom', customBackgroundColor: '#1a2b3c' });
+  });
+
+  it('rejects a customBackgroundColor that is not a valid hex color', () => {
+    expect(() => buildValidatedStyle(undefined, { customBackgroundColor: 'not-a-color' })).toThrow(
+      /hex-цветом/,
+    );
+    expect(() => buildValidatedStyle(undefined, { customBackgroundColor: '#fff' })).toThrow(
+      /hex-цветом/,
+    );
+  });
+
+  it('removes customBackgroundColor when given null', () => {
+    const existing = { background: 'custom', customBackgroundColor: '#1a2b3c' };
+    expect(buildValidatedStyle(existing, { customBackgroundColor: null })).toEqual({
+      background: 'custom',
+    });
+  });
+
   it('leaves untouched fields alone across the whole allowed set', () => {
     const existing = {
       background: 'primary',

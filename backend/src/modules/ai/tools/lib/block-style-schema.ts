@@ -21,11 +21,17 @@
  *   это штатный путь без деградации, просто без per-viewport override.
  */
 
-export type StyleFieldKey =
+export type EnumStyleFieldKey =
   'background' | 'paddingY' | 'paddingX' | 'marginTop' | 'marginBottom' | 'textAlign' | 'maxWidth';
 
-const STYLE_FIELDS: Record<StyleFieldKey, readonly string[]> = {
-  background: ['none', 'surface', 'muted', 'primary', 'dark'],
+/** Единственное НЕ-enum поле style — произвольный hex вместо фиксированного
+ * набора значений (см. `customBackgroundColor` в `BlockStyle`, `frontend/
+ * src/entities/website/model/types.ts`), поэтому валидируется отдельной веткой
+ * в `buildValidatedStyle` (регекспом `HEX_COLOR_RE`), а не через `ENUM_STYLE_FIELDS`. */
+export type StyleFieldKey = EnumStyleFieldKey | 'customBackgroundColor';
+
+const ENUM_STYLE_FIELDS: Record<EnumStyleFieldKey, readonly string[]> = {
+  background: ['none', 'surface', 'muted', 'primary', 'dark', 'custom'],
   paddingY: ['none', 'sm', 'md', 'lg', 'xl'],
   paddingX: ['none', 'sm', 'md', 'lg', 'xl'],
   marginTop: ['none', 'sm', 'md', 'lg', 'xl'],
@@ -34,7 +40,12 @@ const STYLE_FIELDS: Record<StyleFieldKey, readonly string[]> = {
   maxWidth: ['narrow', 'default', 'wide', 'full'],
 };
 
-export const STYLE_FIELD_KEYS = Object.keys(STYLE_FIELDS) as StyleFieldKey[];
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
+  ...(Object.keys(ENUM_STYLE_FIELDS) as EnumStyleFieldKey[]),
+  'customBackgroundColor',
+];
 
 /**
  * Мёржит валидированные изменения поверх текущего `style` блока (partial —
@@ -75,9 +86,20 @@ export function buildValidatedStyle(
       continue;
     }
 
-    if (typeof value !== 'string' || !STYLE_FIELDS[key].includes(value)) {
+    if (key === 'customBackgroundColor') {
+      if (typeof value !== 'string' || !HEX_COLOR_RE.test(value)) {
+        throw new Error(
+          `Поле "customBackgroundColor" должно быть hex-цветом вида #rrggbb (или null, чтобы убрать)`,
+        );
+      }
+      result[key] = value;
+      continue;
+    }
+
+    const allowed = ENUM_STYLE_FIELDS[key];
+    if (typeof value !== 'string' || !allowed.includes(value)) {
       throw new Error(
-        `Поле "${key}" должно быть одним из: ${STYLE_FIELDS[key].join(', ')} (или null, чтобы убрать)`,
+        `Поле "${key}" должно быть одним из: ${allowed.join(', ')} (или null, чтобы убрать)`,
       );
     }
     result[key] = value;
