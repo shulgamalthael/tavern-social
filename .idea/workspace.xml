@@ -7,8 +7,13 @@
     <list default="true" id="ffe7bfaa-5868-4759-bace-829feb31aa13" name="Changes" comment="business features">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/backend/prisma/schema.prisma" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/app.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/dto/update-business.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/dto/update-business.dto.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/web3/alchemy-adapter.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/web3/alchemy-adapter.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/web3/web3-provider.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/web3/web3-provider.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/web3/web3.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/web3/web3.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/web3/web3.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/web3/web3.types.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,61 +45,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0609971146033619" />
-      <entry key="MS500" value="2.04855731616301" />
-      <entry key="S2" value="5.989410510553368" />
-      <entry key="S5" value="9.21567605955414" />
-      <entry key="S10" value="10.8827063859008" />
-      <entry key="S30" value="12.236429154102265" />
-      <entry key="S60" value="12.610436890830465" />
-      <entry key="M2" value="12.803229875406142" />
-      <entry key="M5" value="12.920814050177277" />
-      <entry key="M10" value="12.986186056948618" />
-      <entry key="M15" value="13.443438243313793" />
-      <entry key="M30" value="22.22330094291831" />
-      <entry key="H1" value="57.06627560802834" />
-      <entry key="H2" value="116.40588856470687" />
-      <entry key="H4" value="188.284948048119" />
-      <entry key="D1" value="609.4057232223172" />
-      <entry key="W1" value="1802.7254725509267" />
+      <entry key="MS100" value="1.0095143248382468" />
+      <entry key="MS500" value="2.218623123987805" />
+      <entry key="S2" value="7.517511690733516" />
+      <entry key="S5" value="11.787025733502718" />
+      <entry key="S10" value="15.870523541614512" />
+      <entry key="S30" value="28.945997983551152" />
+      <entry key="S60" value="40.89247521670301" />
+      <entry key="M2" value="51.53099114490271" />
+      <entry key="M5" value="60.51101475348262" />
+      <entry key="M10" value="64.08410815991476" />
+      <entry key="M15" value="65.34967159301809" />
+      <entry key="M30" value="66.71880186085934" />
+      <entry key="H1" value="70.39412247812683" />
+      <entry key="H2" value="94.66838474188259" />
+      <entry key="H4" value="158.52379096454717" />
+      <entry key="D1" value="607.5242812654443" />
+      <entry key="W1" value="1839.6395470292648" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
-      <entry key="S10" value="6.60613125494457E-228" />
-      <entry key="S30" value="1.8763581276034677E-76" />
-      <entry key="S60" value="1.3698022220756776E-38" />
-      <entry key="M2" value="1.1703855014804638E-19" />
-      <entry key="M5" value="2.6750479632968625E-8" />
-      <entry key="M10" value="1.6355573861215802E-4" />
-      <entry key="M15" value="0.0029907298894462906" />
-      <entry key="M30" value="0.05468757755732637" />
-      <entry key="H1" value="0.23400454119700725" />
-      <entry key="H2" value="0.5009705218684138" />
-      <entry key="H4" value="0.8910744589675286" />
-      <entry key="D1" value="5.458097651496119" />
-      <entry key="W1" value="30.616373511305916" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="1.0003505404273278E-228" />
+      <entry key="S60" value="1.0001752548565294E-114" />
+      <entry key="M2" value="1.0000876235893165E-57" />
+      <entry key="M5" value="1.5849487406130224E-23" />
+      <entry key="M10" value="3.981141470248226E-12" />
+      <entry key="M15" value="2.5119157771294085E-8" />
+      <entry key="M30" value="1.584902781467904E-4" />
+      <entry key="H1" value="0.012597409766798797" />
+      <entry key="H2" value="0.11623600023751099" />
+      <entry key="H4" value="0.4292183080362347" />
+      <entry key="D1" value="4.832464531999901" />
+      <entry key="W1" value="30.08849846045494" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.039160778398438" />
-      <entry key="MS500" value="2.039436808100014" />
-      <entry key="S2" value="5.98075902199341" />
-      <entry key="S5" value="9.209983126341609" />
-      <entry key="S10" value="10.879281295845411" />
-      <entry key="S30" value="12.235130998992487" />
-      <entry key="S60" value="12.609766221713201" />
-      <entry key="M2" value="12.802888977947683" />
-      <entry key="M5" value="12.92067636033937" />
-      <entry key="M10" value="12.9862778485703" />
-      <entry key="M15" value="13.446349103384833" />
-      <entry key="M30" value="22.277635027431607" />
-      <entry key="H1" value="57.299509782425936" />
-      <entry key="H2" value="116.90600372039158" />
-      <entry key="H4" value="189.17529255310316" />
-      <entry key="D1" value="614.8633818273403" />
-      <entry key="W1" value="1833.3416838877613" />
+      <entry key="MS100" value="0.9887346511395955" />
+      <entry key="MS500" value="2.2075559564137635" />
+      <entry key="S2" value="7.508042533847209" />
+      <entry key="S5" value="11.781334605657738" />
+      <entry key="S10" value="15.866736985265016" />
+      <entry key="S30" value="28.941606839330355" />
+      <entry key="S60" value="40.88726503688675" />
+      <entry key="M2" value="51.52666385590638" />
+      <entry key="M5" value="60.508628668304596" />
+      <entry key="M10" value="64.08277746833747" />
+      <entry key="M15" value="65.34875140637753" />
+      <entry key="M30" value="66.71848201309798" />
+      <entry key="H1" value="70.40643532797078" />
+      <entry key="H2" value="94.78429961035545" />
+      <entry key="H4" value="158.95259604647035" />
+      <entry key="D1" value="612.3563467675054" />
+      <entry key="W1" value="1869.7278846377026" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -165,7 +170,7 @@
       <workItem from="1788002283346" duration="1196000" />
       <workItem from="1788010031165" duration="15126000" />
       <workItem from="1788048442936" duration="47594000" />
-      <workItem from="1788173097345" duration="4311000" />
+      <workItem from="1788173097345" duration="5980000" />
     </task>
     <task id="LOCAL-00001" summary="Init project">
       <option name="closed" value="true" />

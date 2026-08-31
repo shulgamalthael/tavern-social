@@ -138,6 +138,9 @@ export class BusinessesService {
         ...(dto.web3WalletAddress !== undefined
           ? { web3WalletAddress: dto.web3WalletAddress === '' ? null : dto.web3WalletAddress }
           : {}),
+        ...(dto.web3AlchemyApiKey !== undefined
+          ? { web3AlchemyApiKey: dto.web3AlchemyApiKey === '' ? null : dto.web3AlchemyApiKey }
+          : {}),
       },
       include: { website: { select: { id: true, publishedAt: true } } },
     });
@@ -343,6 +346,7 @@ export class BusinessesService {
       taxMode: business.taxMode,
       workingHours: (business.workingHours as unknown as WorkingHours | null) ?? null,
       web3WalletAddress: business.web3WalletAddress,
+      hasOwnWeb3ApiKey: Boolean(business.web3AlchemyApiKey),
       status: business.website?.publishedAt ? 'published' : 'draft',
       createdAt: business.createdAt.toISOString(),
       updatedAt: business.updatedAt.toISOString(),

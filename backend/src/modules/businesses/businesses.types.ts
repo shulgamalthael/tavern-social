@@ -57,6 +57,10 @@ export interface BusinessDto {
   /** `null` — Web3-кошелёк ещё не задан (см. `Business.web3WalletAddress`
    * в schema.prisma, AI_PLATFORM_ROADMAP.md §2.6). */
   web3WalletAddress: string | null;
+  /** `true` — у бизнеса задан собственный API-ключ Alchemy (BYOK,
+   * AI_PLATFORM_ROADMAP.md §19.1). Сам ключ (`Business.web3AlchemyApiKey`)
+   * никогда не отдаётся клиенту — только этот boolean-флаг. */
+  hasOwnWeb3ApiKey: boolean;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

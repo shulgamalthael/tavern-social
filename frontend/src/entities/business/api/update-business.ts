@@ -36,6 +36,10 @@ export interface UpdateBusinessInput {
   /** Пустая строка очищает кошелёк (см. `Business.web3WalletAddress`'s
    * комментарий в `model/types.ts`). */
   web3WalletAddress?: string;
+  /** Собственный API-ключ Alchemy бизнеса (BYOK) — пустая строка удаляет
+   * сохранённый ключ, `undefined`/не переданное поле не трогает его (см.
+   * `Business.hasOwnWeb3ApiKey`'s комментарий в `model/types.ts`). */
+  web3AlchemyApiKey?: string;
 }
 
 /** Владелец-only на backend (см. `BusinessesService.update`). */

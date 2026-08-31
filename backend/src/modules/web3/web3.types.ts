@@ -23,11 +23,16 @@ export interface NftHolding {
 
 export interface WalletInfoDto {
   walletAddress: string | null;
-  /** `false`, если `ALCHEMY_API_KEY` не задан (см. `AlchemyAdapter.
-   * isConfigured()`) — тот же приём, что у `PaymentProvider`/`LlmProvider`:
-   * вызывающий код (здесь — frontend) показывает понятное "недоступно",
-   * не получает голый 500. */
+  /** `false`, если НИ собственный ключ бизнеса, НИ платформенный
+   * `ALCHEMY_API_KEY` не заданы (см. `AlchemyAdapter.isConfigured()`) — тот
+   * же приём, что у `PaymentProvider`/`LlmProvider`: вызывающий код (здесь —
+   * frontend) показывает понятное "недоступно", не получает голый 500. */
   providerConfigured: boolean;
+  /** `true` — использован собственный ключ бизнеса (BYOK, AI_PLATFORM_
+   * ROADMAP.md §19.1), `false` — платформенный `ALCHEMY_API_KEY`. Только
+   * для UI-подсказки ("используется ваш ключ" / "используется общий ключ
+   * платформы") — сам ключ никогда не возвращается. */
+  usingOwnApiKey: boolean;
   balance: WalletBalance | null;
   nfts: NftHolding[];
   /** Непустая строка, если адрес и провайдер оба настроены, но реальный

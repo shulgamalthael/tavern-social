@@ -28,6 +28,7 @@ export interface BusinessResponse {
   taxMode: TaxMode;
   workingHours: WorkingHours | null;
   web3WalletAddress: string | null;
+  hasOwnWeb3ApiKey: boolean;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

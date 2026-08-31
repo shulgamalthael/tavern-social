@@ -85,6 +85,54 @@
   font-size: 12px;
 }
 
+.apiKeyHelp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-soft);
+}
+
+.apiKeyHelp__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--tavern-accent);
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.apiKeyHelp__clear {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--tavern-danger);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+.keySource {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;

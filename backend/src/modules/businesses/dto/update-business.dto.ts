@@ -123,4 +123,16 @@ export class UpdateBusinessDto {
     message: 'Адрес кошелька должен быть в формате 0x + 40 hex-символов',
   })
   web3WalletAddress?: string;
+
+  /** Собственный API-ключ Alchemy бизнеса (BYOK, AI_PLATFORM_ROADMAP.md
+   * §19.1, см. `Business.web3AlchemyApiKey`) — используется вместо
+   * платформенного `ALCHEMY_API_KEY`, если задан. Пустая строка = удалить
+   * сохранённый ключ (тот же приём, что у `web3WalletAddress` выше).
+   * Формат ключей у Alchemy не документирован как стабильный, поэтому
+   * только ограничение длины, не regex — строгий формат рискует однажды
+   * отклонить настоящий валидный ключ. */
+  @IsOptional()
+  @IsString()
+  @Length(0, 200, { message: 'API-ключ не должен превышать 200 символов' })
+  web3AlchemyApiKey?: string;
 }

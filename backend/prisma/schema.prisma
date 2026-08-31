@@ -661,6 +661,20 @@ model Business {
   /// подтверждения самим кошельком, никогда не AI"). `null` — кошелёк не
   /// задан, Web3-раздел дашборда показывает форму ввода вместо баланса.
   web3WalletAddress String?
+  /// BYOK для Web3 (AI_PLATFORM_ROADMAP.md §19.1) — собственный API-ключ
+  /// Alchemy этого бизнеса, используется ВМЕСТО платформенного
+  /// `ALCHEMY_API_KEY`, если задан (`AlchemyAdapter.resolveApiKey`). Нужен
+  /// бизнесам, которым нужен собственный лимит запросов Alchemy, или когда
+  /// платформенный ключ вообще не настроен оператором. Хранится как есть
+  /// (тот же уровень защиты, что у остальных полей `Business` — в проекте
+  /// нет отдельного at-rest шифрования секретов ни для одного поля), но
+  /// НИКОГДА не возвращается клиенту в открытом виде — `BusinessDto` отдаёт
+  /// только `hasOwnWeb3ApiKey: boolean` (см. `businesses.service.ts`'s
+  /// `toDto`), тот же "секрет не round-trip'ится обратно" принцип, что и у
+  /// `STRIPE_SECRET_KEY`/`GEMINI_API_KEY` (те вообще не в БД, только в
+  /// `.env`, здесь тот же итог другим путём — секрет пишется, но не читается
+  /// обратно).
+  web3AlchemyApiKey String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 

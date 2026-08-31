@@ -61,6 +61,10 @@ export interface Business {
    * AI-7). Собственный кошелёк владельца бизнеса для read-only витрины
    * баланса/NFT — не кошелёк покупателя/визитора сайта. */
   web3WalletAddress: string | null;
+  /** `true` — у бизнеса задан собственный API-ключ Alchemy (BYOK,
+   * AI_PLATFORM_ROADMAP.md §19.1), используется вместо общего ключа
+   * платформы. Сам ключ никогда не приходит с backend — только этот флаг. */
+  hasOwnWeb3ApiKey: boolean;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;
