@@ -89,6 +89,13 @@ Handlers), никогда напрямую из браузера.
   своего ключа не хранит и не предоставляет, без ключа Web3-раздел
   недоступен. Ключ write-only — `BusinessDto` отдаёт только
   `hasOwnWeb3ApiKey: boolean`, сам ключ клиенту никогда не возвращается.
+  **Публичная версия (AI-13, §26)**: `GET /sites/:businessId/web3/wallet`
+  (`PublicSitesController`, `Web3Service.getWalletInfoPublic` — без owner-
+  проверки) для блока `web3wallet` в конструкторе сайта — единственный
+  анонимный `GET` в проекте с бо́льшим `@Throttle`, чем у соседних
+  (`getPublicProducts`/`getPublicServices`), потому что каждый вызов реально
+  идёт во внешний Alchemy API за счёт лимита конкретного бизнеса, а не
+  просто читает свою БД. Кеширования пока нет — известный пробел на будущее.
 - `custom-entities` (`/businesses/:id/custom-entities[/:entityId/records]`) —
   AI_PLATFORM_ROADMAP.md §2.2/§20, AI-8: Custom Database Builder v1.
   Декларативная EAV-модель (`CustomEntity.fields`/`CustomEntityRecord.data`,
@@ -148,6 +155,7 @@ Handlers), никогда напрямую из браузера.
 | AI-10 — Universal Builder Expansion (новый под-трек, не одна фаза) | ✅ слайс 1 done, verified (`BlockStyle.background: 'custom'` + `customBackgroundColor`, свободный hex вместо только токенов темы; заодно найден и исправлен реальный pre-existing баг контраста текста на `dark`/`primary`/`custom` фоне — см. `AI_PLATFORM_ROADMAP.md` §23) |
 | AI-11 — тот же трек, слайс 2 | ✅ done, verified (`FontChoice: 'google'` + курируемый список из 10 Google Fonts, реальная загрузка через `<link>` и React 19 head-hoisting, оба слота — заголовок/текст — независимо; без бэкенд/AI-tool изменений, тема не пишется AI — см. `AI_PLATFORM_ROADMAP.md` §24) |
 | AI-12 — тот же трек, слайс 3 | ✅ done, verified (`SpacingValue = SpacingSize \| number` — произвольный px вместо только 5 пресетов, один общий `spacingToPx`/`'spacing'`-контрол на все 8 полей отступов сразу, а не 8 отдельных; `set_style` расширен с границей 0–400px; заодно пойман и исправлен falsy-zero баг до релиза — см. `AI_PLATFORM_ROADMAP.md` §25) |
+| AI-13 — первый реальный Web3-блок конструктора | ✅ done, verified (новый анонимный `GET /sites/:id/web3/wallet` + `Web3Service.getWalletInfoPublic`, блок `web3wallet` по образцу `productgrid`; живая проверка на реальном настроенном кошельке бизнеса — реальный баланс и 25 NFT отрендерились и на канвасе, и в Preview — см. `AI_PLATFORM_ROADMAP.md` §26) |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за
 подробностями): дневная квота Gemini free-tier (сбрасывается по

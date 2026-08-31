@@ -34,6 +34,8 @@ import type { PublicProductDto } from '@/modules/products/products.types';
 import { RulesService } from '@/modules/rules/rules.service';
 import { ServicesService } from '@/modules/services/services.service';
 import type { PublicServiceDto } from '@/modules/services/services.types';
+import { Web3Service } from '@/modules/web3/web3.service';
+import type { WalletInfoDto } from '@/modules/web3/web3.types';
 import { WebsitesService } from '@/modules/websites/websites.service';
 import type { WebsitePublicDto } from '@/modules/websites/websites.types';
 
@@ -69,6 +71,7 @@ export class PublicSitesController {
     private readonly analyticsService: AnalyticsService,
     private readonly discountsService: DiscountsService,
     private readonly rulesService: RulesService,
+    private readonly web3Service: Web3Service,
   ) {}
 
   @Get('resolve')
@@ -299,5 +302,23 @@ export class PublicSitesController {
     const post = await this.blogPostsService.getPublicBySlug(businessId, slug);
     if (!post) throw new NotFoundException('Пост не найден');
     return post;
+  }
+
+  /** Витрина баланса/NFT для блока `web3wallet` (AI_PLATFORM_ROADMAP.md §26,
+   * AI-13) — тот же принцип, что и `getPublicProducts`/`getPublicServices`:
+   * по-настоящему анонимно, никакой owner-проверки (`Web3Service.
+   * getWalletInfoPublic`, не `getWalletInfo` — та требует владельца). API-
+   * ключ бизнеса используется только внутри `Web3Service`, наружу никогда не
+   * уходит. Более строгий `@Throttle`, чем у остальных анонимных `GET` здесь
+   * (`getPublicProducts`/`getPublicServices` читают из своей БД — дёшево;
+   * этот эндпоинт на каждый вызов идёт во внешний Alchemy API реальным
+   * запросом, оплаченным лимитом КОНКРЕТНОГО бизнеса, — без лимита анонимный
+   * трафик на популярную страницу мог бы быстро исчерпать чужую бесплатную
+   * квоту). Кеширования пока нет — известный, не скрытый пробел на будущее
+   * (см. AI_PLATFORM_ROADMAP.md §26). */
+  @Get(':businessId/web3/wallet')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  getPublicWalletInfo(@Param('businessId') businessId: string): Promise<WalletInfoDto> {
+    return this.web3Service.getWalletInfoPublic(businessId);
   }
 }

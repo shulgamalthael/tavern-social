@@ -34,9 +34,37 @@ export class Web3Service {
     if (!business) throw new NotFoundException('Бизнес не найден');
     if (business.ownerId !== ownerId) throw new ForbiddenException('Это не ваш бизнес');
 
-    const apiKey = business.web3AlchemyApiKey;
+    return this.resolveWalletInfo(business.web3WalletAddress, business.web3AlchemyApiKey);
+  }
+
+  /**
+   * По-настоящему анонимная версия `getWalletInfo` — без owner-проверки, для
+   * блока `web3wallet` на публичном сайте (AI_PLATFORM_ROADMAP.md §26, AI-13)
+   * и Preview/канваса билдера (тот же принцип "тот же рендерер и те же
+   * данные", что уже применён к `productgrid`/`servicegrid`: см.
+   * `PublicSitesController.getPublicProducts`). Ключ никогда не покидает
+   * backend — используется здесь только чтобы сходить в Alchemy, в ответе
+   * его нет вообще (`WalletInfoDto` его и не содержит, см. её комментарий).
+   * Владелец сам решает, показывать ли этот блок на своём сайте, добавляя
+   * его в конструкторе — адрес кошелька по своей природе публичные данные
+   * (он и так виден в любом блокчейн-эксплорере), решение показать баланс/
+   * NFT посетителям сайта тоже осознанный выбор владельца, не утечка.
+   */
+  async getWalletInfoPublic(businessId: string): Promise<WalletInfoDto> {
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: { web3WalletAddress: true, web3AlchemyApiKey: true },
+    });
+    if (!business) throw new NotFoundException('Бизнес не найден');
+
+    return this.resolveWalletInfo(business.web3WalletAddress, business.web3AlchemyApiKey);
+  }
+
+  private async resolveWalletInfo(
+    walletAddress: string | null,
+    apiKey: string | null,
+  ): Promise<WalletInfoDto> {
     const providerConfigured = this.web3Provider.isConfigured(apiKey ?? undefined);
-    const walletAddress = business.web3WalletAddress;
 
     if (!walletAddress || !apiKey) {
       return { walletAddress, providerConfigured, balance: null, nfts: [], error: null };
@@ -53,8 +81,8 @@ export class Web3Service {
       // невалиден, сеть Alchemy недоступна, адрес не резолвится) — тот же
       // принцип "не должен ронять реальный вызов", что у `RulesService.
       // evaluate`, просто здесь ошибка идёт в само DTO, а не в лог сбоку,
-      // потому что вызывающий (дашборд/AI tool) должен её увидеть, не
-      // проглотить молча.
+      // потому что вызывающий (дашборд/AI tool/публичный сайт) должен её
+      // увидеть, не проглотить молча.
       this.logger.warn(`Не удалось получить данные кошелька ${walletAddress}: ${String(error)}`);
       return {
         walletAddress,

@@ -9,6 +9,7 @@ import { OrdersModule } from '@/modules/orders/orders.module';
 import { ProductsModule } from '@/modules/products/products.module';
 import { RulesModule } from '@/modules/rules/rules.module';
 import { ServicesModule } from '@/modules/services/services.module';
+import { Web3Module } from '@/modules/web3/web3.module';
 import { WebsitesModule } from '@/modules/websites/websites.module';
 import { PublicSitesController } from './public-sites.controller';
 
@@ -25,6 +26,7 @@ import { PublicSitesController } from './public-sites.controller';
     AnalyticsModule,
     DiscountsModule,
     RulesModule,
+    Web3Module,
   ],
   controllers: [PublicSitesController],
 })

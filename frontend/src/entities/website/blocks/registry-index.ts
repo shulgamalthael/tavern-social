@@ -22,3 +22,4 @@ import './booking';
 import './blog';
 import './forms';
 import './utility';
+import './web3';
