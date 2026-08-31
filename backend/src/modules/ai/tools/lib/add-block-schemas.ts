@@ -6,15 +6,46 @@
  * (`add-block-schemas.test.ts`), а не только curl-верификацией через живой
  * чат (которая покрывает happy path, но не удобна для проверки каждого
  * отдельного отказа валидации).
+ *
+ * `image`/`button` (AI_PLATFORM_ROADMAP.md §9.6/§16 — расширение allowlist,
+ * согласовано с пользователем сразу широким v1) используют два новых вида
+ * полей (`mediaAsset`/`linkTarget`, см. их комментарии ниже) вместо
+ * `string`/`enum` — оба требуют проверки существования (загруженный файл/
+ * страница/товар/услуга), которую эта функция сама не делает (остаётся
+ * чистой, без Prisma) — вызывающий тул обязан собрать `BuildValidatedPropsRefs`
+ * через уже существующие сервисы ДО вызова.
  */
 
-export type AllowedBlockType = 'heading' | 'text' | 'quote' | 'spacer';
+import { validateLinkTarget, type LinkTargetRefs } from './link-target-schema';
+
+export type AllowedBlockType = 'heading' | 'text' | 'quote' | 'spacer' | 'image' | 'button';
 
 interface CuratedField {
-  kind: 'string' | 'enum';
+  kind: 'string' | 'enum' | 'linkTarget' | 'mediaAsset';
   maxLength?: number;
   values?: readonly string[];
 }
+
+/** Множества id/URL, против которых проверяются `linkTarget`/`mediaAsset`
+ * поля — см. `LinkTargetRefs`. Пустые по умолчанию: `heading`/`text`/
+ * `quote`/`spacer` не используют эти виды полей вообще, так что вызывающему
+ * коду не нужно ничего собирать для них. */
+export interface BuildValidatedPropsRefs extends LinkTargetRefs {
+  mediaAssetUrls: ReadonlySet<string>;
+}
+
+const EMPTY_REFS: BuildValidatedPropsRefs = {
+  pageIds: new Set(),
+  productIds: new Set(),
+  serviceIds: new Set(),
+  mediaAssetUrls: new Set(),
+};
+
+/** Совпадает с frontend's `EMPTY_LINK_TARGET` (`entities/website/model/
+ * resolve-link.ts`) — две независимые копии одного контракта, тот же приём,
+ * что у `currencies.ts`/AI chat model types в этом проекте (backend не
+ * импортирует frontend-код). */
+const EMPTY_LINK_TARGET = { type: 'external', url: '' };
 
 interface CuratedBlockSchema {
   label: string;
@@ -64,11 +95,62 @@ const SPACER_SCHEMA: CuratedBlockSchema = {
   defaultProps: { height: 'md' },
 };
 
+/** Сверено 1:1 с `imageFields`/`defaultProps` в `blocks/media/index.tsx`.
+ * `src` — `mediaAsset`: AI может указать только уже загруженный владельцем
+ * через дашборд файл (см. `ListMediaAssetsTool`), сам ничего не грузит —
+ * загрузка бинарных данных через chat tool-calling не предусмотрена ни
+ * одним LLM API, которым пользуется этот проект. `link` — полный `LinkTarget`
+ * (все 7 вариантов, включая `addToCart`/`bookAppointment`). */
+const IMAGE_SCHEMA: CuratedBlockSchema = {
+  label: 'Изображение',
+  fields: {
+    src: { kind: 'mediaAsset' },
+    alt: { kind: 'string', maxLength: 200 },
+    objectFit: { kind: 'enum', values: ['cover', 'contain'] },
+    radius: { kind: 'enum', values: ['none', 'sm', 'md', 'lg', 'full'] },
+    link: { kind: 'linkTarget' },
+    width: { kind: 'enum', values: ['auto', 'full'] },
+  },
+  defaultProps: {
+    src: null,
+    alt: '',
+    objectFit: 'cover',
+    radius: 'md',
+    link: EMPTY_LINK_TARGET,
+    width: 'full',
+  },
+};
+
+/** Сверено 1:1 с `buttonFields`/`defaultProps` в `blocks/actions/index.tsx`
+ * — намеренно БЕЗ необязательного `icon?: string` (иконка — отдельный
+ * picker в инспекторе, не существенна для того, чтобы кнопка работала;
+ * пропущенное необязательное поле остаётся `undefined`, тот же штатный
+ * путь, что и у кнопки, добавленной вручную без иконки). */
+const BUTTON_SCHEMA: CuratedBlockSchema = {
+  label: 'Кнопка',
+  fields: {
+    label: { kind: 'string', maxLength: 60 },
+    url: { kind: 'linkTarget' },
+    variant: { kind: 'enum', values: ['solid', 'outline', 'soft'] },
+    size: { kind: 'enum', values: ['sm', 'md', 'lg'] },
+    target: { kind: 'enum', values: ['_self', '_blank'] },
+  },
+  defaultProps: {
+    label: 'Узнать больше',
+    url: EMPTY_LINK_TARGET,
+    variant: 'solid',
+    size: 'md',
+    target: '_self',
+  },
+};
+
 export const BLOCK_SCHEMAS: Record<AllowedBlockType, CuratedBlockSchema> = {
   heading: HEADING_SCHEMA,
   text: TEXT_SCHEMA,
   quote: QUOTE_SCHEMA,
   spacer: SPACER_SCHEMA,
+  image: IMAGE_SCHEMA,
+  button: BUTTON_SCHEMA,
 };
 
 export const ALLOWED_BLOCK_TYPES = Object.keys(BLOCK_SCHEMAS) as AllowedBlockType[];
@@ -89,6 +171,7 @@ export function buildValidatedProps(
   schema: (typeof BLOCK_SCHEMAS)[AllowedBlockType],
   rawProps: unknown,
   base: Record<string, unknown> = schema.defaultProps,
+  refs: BuildValidatedPropsRefs = EMPTY_REFS,
 ): Record<string, unknown> {
   const input =
     typeof rawProps === 'object' && rawProps !== null ? (rawProps as Record<string, unknown>) : {};
@@ -109,6 +192,14 @@ export function buildValidatedProps(
       if (typeof value !== 'string' || !field.values?.includes(value)) {
         throw new Error(`Поле "${key}" должно быть одним из: ${field.values?.join(', ')}`);
       }
+      result[key] = value;
+    } else if (field.kind === 'linkTarget') {
+      result[key] = validateLinkTarget(value, refs, key);
+    } else if (field.kind === 'mediaAsset') {
+      if (value !== null && (typeof value !== 'string' || !refs.mediaAssetUrls.has(value))) {
+        throw new Error(`Поле "${key}" должно быть null или ссылкой на уже загруженный файл`);
+      }
+      result[key] = value;
     } else {
       if (typeof value !== 'string') {
         throw new Error(`Поле "${key}" должно быть строкой`);
@@ -116,8 +207,8 @@ export function buildValidatedProps(
       if (field.maxLength !== undefined && value.length > field.maxLength) {
         throw new Error(`Поле "${key}" не может быть длиннее ${field.maxLength} символов`);
       }
+      result[key] = value;
     }
-    result[key] = value;
   }
 
   return result;

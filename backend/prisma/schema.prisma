@@ -29,6 +29,18 @@ enum NotificationType {
   post_repost
   group_join_request
   group_join_accepted
+  /// Business Logic Engine v1 (AI_PLATFORM_ROADMAP.md §2.5/AI-5/§15.4) —
+  /// отправляется владельцу бизнеса через `send_notification`-действие
+  /// правила, для любого из реализованных триггеров (`order_completed`/
+  /// `appointment_booked`/`form_submitted`, см. `RuleTrigger`) — переименован
+  /// из `order_received` во втором bounded-слайсе AI-5 (§15.1), когда
+  /// появились ещё два триггера: имя `order_received` стало неточным
+  /// (уведомление больше не только про заказы). Безопасно переименовано
+  /// через `ALTER TYPE ... RENAME VALUE` — на момент переименования в БД не
+  /// было ни одной строки этого типа. В отличие от остальных типов выше, у
+  /// события нет человека-"актёра" (см. `Notification.actorId`'s комментарий
+  /// про то, почему оно nullable именно из-за этого типа).
+  rule_triggered
 }
 
 enum ReactionType {
@@ -478,8 +490,16 @@ model Notification {
   recipientId    String
   recipient      User             @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
   type           NotificationType
-  actorId        String
-  actor          User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  /// `null` только для `rule_triggered` (Business Logic Engine, AI-5) — тот
+  /// единственный тип, у которого нет человека-"актёра": событие, запустившее
+  /// правило (заказ/запись/форма), исходит от анонимного посетителя без
+  /// сессии Таверны (см. `PublicSitesController`), связывать уведомление с
+  /// ним как с `User` было бы неправильно (его вообще не существует как
+  /// записи `User`). У всех остальных типов (`friend_request`, `post_like`...)
+  /// `actorId` по-прежнему обязателен по факту — просто на уровне схемы это
+  /// больше не гарантировано.
+  actorId        String?
+  actor          User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   actorCount     Int              @default(1)
   recentActorIds String[]         @default([])
   postId         String?
@@ -490,11 +510,29 @@ model Notification {
   /// опциональный паттерн, что и `postId`/`commentId` выше.
   groupId        String?
   group          Group?           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  /// Заполнено только для `rule_triggered` (AI_PLATFORM_ROADMAP.md §15.4) —
+  /// БЕЗ `@relation` намеренно, тот же принцип, что у `AuditLog.businessId`/
+  /// `RuleExecutionLog.businessId` (см. их комментарии): история уведомлений
+  /// должна пережить удаление бизнеса, а не исчезнуть/заблокировать его
+  /// удаление каскадом. Бизнес-notifications-экран (`GET /businesses/
+  /// :businessId/notifications`) просто фильтрует по этому полю — после
+  /// удаления бизнеса строки остаются в БД, но экран, который их показывает,
+  /// уже недостижим (тот же исход, что у осиротевшего `AuditLog`).
+  businessId     String?
+  /// Короткое человекочитаемое описание события — заполнено только для
+  /// `rule_triggered` (например, «Новый заказ на 500 ₴», «Новая запись:
+  /// Стрижка»), строится `RulesService.runActions` из контекста триггера.
+  /// Не JSON — рендерить структуру на фронтенде ради одного места
+  /// использования было бы лишней косвенностью, а разные триггеры дают
+  /// принципиально разный набор полей контекста (см. `RULE_TRIGGER_CONTEXT_
+  /// FIELDS` в `rules.types.ts`).
+  summary        String?
   isRead         Boolean          @default(false)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
   @@index([recipientId, isRead, createdAt])
+  @@index([businessId, createdAt])
   @@map("notifications")
 }
 
@@ -627,10 +665,117 @@ model Business {
   mediaAssets     MediaAsset[]
   analyticsEvents AnalyticsEvent[]
   discounts       Discount[]
+  rules           Rule[]
+  customWidgets   CustomWidget[]
+  loyaltyAccounts CustomerLoyaltyAccount[]
+  /// Payment Plans v1 — см. `BusinessSubscription`'s комментарий. Отсутствие
+  /// строки (не `null`-поле здесь) значит «тариф ещё ни разу не выбран» —
+  /// это и есть сигнал серверного гейта конструктора
+  /// (`/business/[id]/edit`, см. `BillingService.getStatus`).
+  subscription    BusinessSubscription?
 
   @@index([ownerId])
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("businesses")
+}
+
+/// Payment Plans v1 (см. AI_PLATFORM_ROADMAP.md, "Business Automation OS —
+/// Master Pricing & Payment Plans System") — 5 статичных тиров этой
+/// итерации, копирайт/цены только в `plan-catalog.ts` (backend и frontend,
+/// не в БД: 5 фиксированных, редко меняющихся строк не стоят отдельной
+/// таблицы с админкой на редактирование — см. комментарий в implementation
+/// plan). Enum, а не String: закрытое множество, расширение которого —
+/// редкое, требующее ревью событие (в отличие от `Business.capabilities`,
+/// где каждое значение — независимый tumbler без единого источника
+/// истины). Будущие dynamic-pricing/AI-custom-plan системы (§3-12
+/// исходного brief'а, сознательно отложены в этой итерации) читали бы этот
+/// же enum как "тип базового тарифа", не заменяли бы его.
+enum PlanTier {
+  free
+  starter
+  business
+  scale
+  enterprise
+}
+
+/// Статус подписки на бизнесе — подмножество статусов Stripe Subscription,
+/// плюс `active` для `free` (у которого никогда не будет реального Stripe
+/// Subscription/Customer). `incomplete` — checkout-сессия создана, ждём
+/// вебхука `checkout.session.completed` (см. `BillingService.startCheckout`)
+/// — ИМЕННО это состояние не открывает гейт конструктора, отличая
+/// "оплата в процессе" от "тариф выбран".
+enum SubscriptionStatus {
+  active
+  incomplete
+  past_due
+  canceled
+}
+
+/// Единственная запись ТЕКУЩЕГО состояния оплаты на бизнес — 1:1
+/// (`businessId @unique`), не история (та — `PlanSelectionEvent` ниже).
+/// Каскадно удаляется вместе с бизнесом (в отличие от `PlanSelectionEvent`)
+/// — это рабочее состояние, а не финансовая история, которая обязана
+/// пережить удаление бизнеса.
+model BusinessSubscription {
+  id         String   @id @default(uuid())
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  tier   PlanTier           @default(free)
+  status SubscriptionStatus @default(active)
+
+  /// Ниже — `null` для `tier: free` (нет реального Stripe Subscription).
+  /// `stripePriceId` — Price ID, пойманный на момент чекаута (не lookup
+  /// key) — так уже подписавшийся клиент остаётся привязан к цене, на
+  /// которую реально подписался, даже если оператор позже пересоздаст
+  /// Price в Stripe Dashboard под тем же lookup key с другой суммой.
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  currentPeriodEnd     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("business_subscriptions")
+}
+
+/// Что случилось с планом тарификации — тип события audit-трейла (см.
+/// `PlanSelectionEvent`).
+enum PlanEventType {
+  free_selected
+  checkout_started
+  checkout_completed
+  checkout_canceled
+  subscription_updated
+  subscription_canceled
+  enterprise_inquiry
+}
+
+/// Append-only лог КАЖДОГО события выбора/оплаты тарифа — тот же приём, что
+/// `AuditLog` в этом файле: `businessId` — БЕЗ `@relation` намеренно
+/// (billing-история обязана пережить удаление бизнеса, это финансово
+/// значимая запись, а не рабочая ссылка на живую сущность — тот же принцип,
+/// что у `AuditLog.businessId`/`Notification.businessId`). `actorId` —
+/// nullable без `@relation` по той же причине (события от Stripe-вебхука не
+/// несут надёжного Tavern-актора, а те, что несут — не должны исчезать при
+/// удалении аккаунта: это платёжная история). Никогда не UPDATE/DELETE —
+/// только `create`.
+model PlanSelectionEvent {
+  id         String        @id @default(uuid())
+  businessId String
+  actorId    String?
+  type       PlanEventType
+  tier       PlanTier?
+  /// Свободные детали конкретного события (checkout session id, stripe
+  /// subscription id, статус до/после и т. п.) — форма зависит от `type`,
+  /// тот же принцип, что `AuditLog.argsSummary`/`resultSummary`.
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+
+  @@index([businessId])
+  @@index([createdAt])
+  @@map("plan_selection_events")
 }
 
 /// Первая реальная капабилити-сущность (Commerce, см. ROADMAP.md §2.2/§5) —
@@ -1216,9 +1361,9 @@ enum ToolRiskLevel {
 /// промпт — только то, что реально нужно для разбора инцидента: кто, что,
 /// когда, с каким результатом.
 model AuditLog {
-  id      String        @id @default(uuid())
-  actorId String
-  actor   User          @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  id            String        @id @default(uuid())
+  actorId       String
+  actor         User          @relation(fields: [actorId], references: [id], onDelete: Cascade)
   /// Без `@relation` намеренно — аудит-лог обязан переживать удаление
   /// бизнеса (историческая запись «кто что делал», а не рабочая ссылка на
   /// живую сущность), поэтому здесь просто строка id на момент вызова, не
@@ -1238,4 +1383,356 @@ model AuditLog {
   @@index([actorId])
   @@index([businessId])
   @@map("audit_logs")
+}
+
+/// Приоритет одного AI-запроса (AI Capacity & Cost Manager, см.
+/// `backend/src/modules/ai/capacity`) — определяется по `operation`
+/// (`AI_OPERATIONS` registry), не выбирается вызывающим кодом произвольно.
+/// Сегодня оба реальных сценария (`business_chat`, `onboarding_chat`) —
+/// `high` (пользователь ждёт ответа синхронно); `medium`/`low` пока не имеют
+/// ни одного реального потребителя (нет фоновых AI-операций вроде SEO-
+/// анализа) — механизм приоритезации построен и протестирован заранее, но
+/// реально начнёт на что-то влиять только когда появится первая
+/// low/medium-операция.
+enum AiPriority {
+  high
+  medium
+  low
+}
+
+enum AiRequestStatus {
+  success
+  failed
+  rate_limited
+}
+
+/// Одна строка — одна РЕАЛЬНАЯ попытка HTTP-запроса к Gemini (включая
+/// повторные попытки после 429, каждая — своя строка), не одно сообщение
+/// пользователя: цикл инструментов (`AiService.runToolLoop`) может сделать
+/// несколько вызовов модели за один ход. Источник истины для usage/cost по
+/// измерениям (§6 GEMINI OPTIMIZATION-подобного brief'а — user/business/
+/// operation/день) и для 429-анализа (§33) — `AiUsageDailyAggregate` ниже
+/// лишь агрегирует эти строки. Хранится ограниченное время (`AiRetentionService`,
+/// `AI_RAW_REQUEST_RETENTION_DAYS`) — после агрегации в дневные тоталы сырые
+/// строки не нужны для долгосрочной аналитики, только для недавнего
+/// расследования инцидентов.
+model AiRequestLog {
+  id             String          @id @default(uuid())
+  operation      String
+  priority       AiPriority
+  /// Без `@relation`, как и `AuditLog.businessId` (см. её комментарий) —
+  /// телеметрия расхода обязана переживать удаление бизнеса/пользователя,
+  /// иначе исторический cost-репорт задним числом терял бы данные.
+  businessId     String?
+  actorId        String?
+  model          String
+  status         AiRequestStatus
+  inputTokens    Int?
+  outputTokens   Int?
+  totalTokens    Int?
+  /// USD * 1_000_000 (не `*Cents`, как `Product.priceCents` — токен обычно
+  /// стоит доли цента, `Cents`-точности недостаточно даже для одного
+  /// запроса, тем более для округления накопится систематическая ошибка).
+  /// `null`, если для текущей модели не сконфигурирован pricing (см.
+  /// `ModelPricingService`) — намеренно НЕ придумываем правдоподобное число.
+  costMicros     Int?
+  latencyMs      Int?
+  /// % от safety-лимита RPM/RPD В МОМЕНТ этого запроса (не текущий) — нужно
+  /// для 429-анализа постфактум ("был ли это реально RPM или разовый сбой
+  /// провайдера"), см. `AiRequestAccountingService`.
+  rpmUsedPercent Int?
+  rpdUsedPercent Int?
+  errorMessage   String?
+  createdAt      DateTime        @default(now())
+
+  @@index([createdAt])
+  @@index([businessId, createdAt])
+  @@index([operation, createdAt])
+  @@index([status, createdAt])
+  @@map("ai_request_logs")
+}
+
+/// Дневной агрегат по (день, бизнес, операция) — долгосрочное хранение
+/// (в отличие от `AiRequestLog`, не подчищается по retention), источник
+/// данных для Forecast Engine (`AiForecastService`) и dashboard'а. `businessId
+/// = null` — агрегат "без привязки к бизнесу" (сегодня такого не бывает: оба
+/// реальных сценария всегда внутри бизнеса или после его создания, но поле
+/// nullable на будущее — например, гипотетическая общеплатформенная AI-фича
+/// вне контекста бизнеса).
+model AiUsageDailyAggregate {
+  id               String   @id @default(uuid())
+  date             DateTime @db.Date
+  businessId       String?
+  operation        String
+  requestCount     Int      @default(0)
+  successCount     Int      @default(0)
+  failedCount      Int      @default(0)
+  rateLimitedCount Int      @default(0)
+  inputTokens      Int      @default(0)
+  outputTokens     Int      @default(0)
+  totalTokens      Int      @default(0)
+  costMicros       Int      @default(0)
+
+  @@unique([date, businessId, operation])
+  @@index([date])
+  @@map("ai_usage_daily_aggregates")
+}
+
+/// Периодический снимок состояния RPM/RPD-бюджета (см. `GeminiQuotaService`
+/// из предыдущей итерации) — пишется раз в `AI_CAPACITY_SNAPSHOT_INTERVAL_MS`
+/// фоновым таймером (`AiCapacitySnapshotService`), НЕ на каждый запрос (те уже
+/// покрыты `AiRequestLog.rpmUsedPercent`/`rpdUsedPercent`) — нужен, чтобы
+/// Forecast Engine видел тренд capacity даже в периоды затишья без единого
+/// реального запроса.
+model AiCapacitySnapshot {
+  id               String   @id @default(uuid())
+  rpmUsed          Int
+  rpmSafetyLimit   Int
+  rpmOfficialLimit Int
+  rpdUsed          Int
+  rpdSafetyLimit   Int
+  rpdOfficialLimit Int
+  /// normal | warning | critical | emergency — строка, не enum: пороги
+  /// (`AI_CAPACITY_*_PERCENT`) конфигурируются через `.env`, набор статусов
+  /// стабилен, но название уровня как enum добавило бы миграцию ради того,
+  /// что и так уже проверяется кодом (`ai-capacity.lib.ts`).
+  status           String
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("ai_capacity_snapshots")
+}
+
+enum AiBudgetScope {
+  global
+  business
+}
+
+/// Настраиваемый месячный бюджет расхода на AI — `scope=global` (ровно одна
+/// строка, `businessId=null`) или `scope=business` (по одной на бизнес,
+/// желающий свой лимит). Тарифные/пользовательские бюджеты (§17-19
+/// исходного brief'а) сознательно не реализованы в этой итерации — в схеме
+/// нет модели подписки/тарифа, привязывать бюджет было бы не к чему (решение
+/// согласовано с пользователем перед реализацией).
+model AiBudget {
+  id                String        @id @default(uuid())
+  scope             AiBudgetScope
+  businessId        String?
+  monthlyLimitCents Int
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@unique([scope, businessId])
+  @@map("ai_budgets")
+}
+
+enum AiAlertSeverity {
+  warning
+  critical
+  emergency
+}
+
+/// Персистентная лента алертов (§16 brief'а) — структурные логи
+/// (`AI_CAPACITY_WARNING` и т. п., см. `AiAlertsService`) дублируются сюда,
+/// чтобы у admin-дашборда была реальная лента поверх БД, не только grep по
+/// логам контейнера.
+model AiAlert {
+  id             String          @id @default(uuid())
+  type           String
+  severity       AiAlertSeverity
+  message        String
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  acknowledgedAt DateTime?
+
+  @@index([createdAt])
+  @@map("ai_alerts")
+}
+
+/// Обнаруженная аномалия (§23 brief'а) — всплеск RPM/TPM/cost/retry относительно
+/// конфигурируемого порога (см. `AiAnomalyService`), НЕ ML-модель — простое
+/// пороговое сравнение, обманывать пользователя видимостью statistical
+/// rigor'а, которого нет, не нужно.
+model AiAnomaly {
+  id          String   @id @default(uuid())
+  type        String
+  description String
+  metadata    Json?
+  detectedAt  DateTime @default(now())
+
+  @@index([detectedAt])
+  @@map("ai_anomalies")
+}
+
+/// Рекомендация Capacity/Efficiency Engine (§14, §25 brief'а) — read-only
+/// вывод для администратора, НИКОГДА не приводит к автоматическому изменению
+/// биллинга/лимитов провайдера (см. `AiRecommendationsService`'s комментарий
+/// про §26 "не разрешать без explicit admin approval").
+model AiRecommendation {
+  id          String    @id @default(uuid())
+  type        String
+  message     String
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  dismissedAt DateTime?
+
+  @@index([createdAt])
+  @@map("ai_recommendations")
+}
+
+/// Business Logic Engine v1 (AI_PLATFORM_ROADMAP.md §2.5, AI-5's first
+/// bounded slice) — единственный реальный триггер сегодня: `order_completed`
+/// (см. `PublicSitesController.createOrder`, вызывается ПОСЛЕ `OrdersService.
+/// createFromCart`, тот же "Controller решает, Service не знает" принцип,
+/// что и у остальных real-time эмиссий в проекте, см. `AGENTS.md` backend).
+/// Второй bounded-слайс AI-5 подключил ещё два реальных, ранее описанных как
+/// кандидатов триггера — `appointment_booked` (после `AppointmentsService.
+/// createFromRequest`) и `form_submitted` (после `FormSubmissionsService.
+/// createFromRequest`), тот же контроллер (`PublicSitesController`), тот же
+/// "Controller решает, Service не знает" принцип, что и у `order_completed`.
+enum RuleTrigger {
+  order_completed
+  appointment_booked
+  form_submitted
+}
+
+/// См. `RuleAction` (TS, `rules.types.ts`) про то, почему список действий
+/// сознательно мал (§2.5: "small, versioned enum", НЕ произвольный код).
+/// `add_loyalty_points`/`set_membership_tier` — второй bounded-слайс поверх
+/// первого (`send_notification`), решение о самой механике (баллы + статус,
+/// идентификация клиента по email, фиксированное число баллов в самом
+/// правиле) согласовано с пользователем перед реализацией — см.
+/// `CustomerLoyaltyAccount` ниже.
+enum RuleActionType {
+  send_notification
+  add_loyalty_points
+  set_membership_tier
+}
+
+/// Одно правило автоматизации бизнеса — принадлежит РОВНО одному `Business`
+/// (нет межбизнесовых правил, тот же tenant-boundary принцип, что и везде в
+/// проекте, см. `AI_PLATFORM_ROADMAP.md §0.1`). `condition`/`actions` — JSON,
+/// но НЕ произвольные: валидируются на границе (`rules.types.ts`'s
+/// `parseRuleCondition`/`parseRuleActions`) против маленького, типизированного
+/// формата (не JsonLogic/произвольное выражение — см. `rule-condition.lib.ts`
+/// про то, почему), тем же принципом, что AI-инструменты валидируют `props`
+/// блоков перед записью (см. `AI_PLATFORM_ROADMAP.md §3`).
+model Rule {
+  id         String      @id @default(uuid())
+  businessId String
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  trigger    RuleTrigger
+  /// `null` — условия нет, правило срабатывает всегда при этом триггере.
+  /// Непустой — массив `RuleConditionNode` (`rules.types.ts`): верхний
+  /// уровень — AND, каждый узел — лист (простое сравнение) или вложенная
+  /// группа `{ any: [...] }`/`{ all: [...] }` произвольной глубины (OR/nested
+  /// добавлены вторым bounded-слайсом AI-5 поверх первого AND-only слайса).
+  condition  Json?
+  /// `RuleAction[]` — на сегодня всегда ровно `[{ type: 'send_notification' }]`
+  /// после валидации, но хранится как массив (не единственный объект) чтобы
+  /// добавление второго типа действия в будущем не требовало миграции схемы.
+  actions    Json
+  isEnabled  Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  executions RuleExecutionLog[]
+
+  @@index([businessId, trigger, isEnabled])
+  @@map("rules")
+}
+
+/// Накопительный счёт лояльности одного покупателя одного бизнеса —
+/// пишется/читается ТОЛЬКО из `RulesService.runActions` при срабатывании
+/// `add_loyalty_points`/`set_membership_tier` (см. `RuleAction` в
+/// `rules.types.ts`). Идентификация покупателя — по email (согласовано с
+/// пользователем перед реализацией): checkout анонимный, `Order`/
+/// `Appointment` не ссылаются на постоянную сущность "клиент", `customerEmail`
+/// на них — единственный стабильный идентификатор одного и того же
+/// покупателя между визитами. Если email не был указан в конкретном
+/// заказе/записи — действие молча пропускается (см. `RulesService`'s
+/// комментарий), строка здесь не создаётся с пустым ключом.
+model CustomerLoyaltyAccount {
+  id         String   @id @default(uuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  email      String
+  /// Накапливается `add_loyalty_points` — сумма `points` из каждого
+  /// сработавшего действия, никогда не сбрасывается автоматически (нет
+  /// понятия "период программы лояльности" в этой итерации).
+  points     Int      @default(0)
+  /// Свободная строка, не enum — тир выбирает владелец бизнеса прямо в
+  /// действии правила (`set_membership_tier.tier`), тот же принцип, что у
+  /// `Business.capabilities`: новый тир не должен требовать миграции схемы.
+  /// `null` — тир ни разу не выставлялся этому покупателю.
+  tier       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([businessId, email])
+  @@map("customer_loyalty_accounts")
+}
+
+/// Одна строка — одно СРАБАТЫВАНИЕ движка для конкретного правила (проверили
+/// условие, независимо от результата) — не одна строка на действие: правило
+/// сегодня максимум с одним действием, но лог по своей роли ближе к
+/// `AuditLog`/`AiRequestLog` (что реально произошло и когда), чем к
+/// результату отдельного действия.
+model RuleExecutionLog {
+  id         String      @id @default(uuid())
+  ruleId     String
+  rule       Rule        @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  /// Без `@relation` на `Business` намеренно — тот же принцип, что у
+  /// `AuditLog.businessId`/`AiRequestLog.businessId` (см. их комментарии):
+  /// история срабатываний должна пережить удаление бизнеса.
+  businessId String
+  trigger    RuleTrigger
+  matched    Boolean
+  actionsRun Json?
+  error      String?
+  createdAt  DateTime    @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([ruleId, createdAt])
+  @@map("rule_execution_logs")
+}
+
+/// Custom Widget Engine v1 (AI_PLATFORM_ROADMAP.md §2.4, AI-6, §16.2) —
+/// "черновик виджета" статус, не статус ПУБЛИКАЦИИ на сайте. Встраивание в
+/// страницу существует (§16.2 — вставка на фронтенде копирует `schema` в
+/// `WebsitePage.blocks` со свежими id, см. `custom-widgets.service.ts`'s
+/// комментарий), но НЕ смотрит на это поле вообще — виджет со статусом
+/// `draft` вставляется в страницу точно так же, как `published`. Разделение
+/// сохранено на будущее (например, скрыть `draft`-виджеты из AI-инструмента
+/// вставки, когда он появится), сегодня оба статуса ведут себя одинаково.
+enum CustomWidgetStatus {
+  draft
+  published
+}
+
+/// Одна сохранённая, именованная КОМПОЗИЦИЯ уже существующих типов блоков —
+/// §2.4's рекомендация "widget = JSON-документ (layout существующих
+/// примитивных блоков + typed dataBindings + typed capabilities), НЕ
+/// произвольный код" реализована в этой версии БЕЗ dataBindings/capabilities
+/// (те требуют "approved data source connector", которого сегодня нет —
+/// тот же "один реальный сценарий сначала" принцип, что и у `Rule.condition`
+/// AND-only/`RuleActionType` с одним значением, AI-5). `schema` — плоский
+/// массив `WebsiteBlock` на верхнем уровне (каждый элемент сам может иметь
+/// `children`, как обычный `WebsiteBlock`), валидируется ТОЙ ЖЕ
+/// curated allowlist, что AI-2's `add_block` (`heading`/`text`/`quote`/
+/// `spacer`, см. `custom-widgets.types.ts` → `ai/tools/lib/add-block-schemas.ts`) —
+/// не новая валидация, переиспользование уже проверенной.
+model CustomWidget {
+  id         String             @id @default(uuid())
+  businessId String
+  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name       String
+  schema     Json
+  status     CustomWidgetStatus @default(draft)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@index([businessId])
+  @@map("custom_widgets")
 }

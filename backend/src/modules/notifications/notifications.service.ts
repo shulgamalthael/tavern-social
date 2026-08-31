@@ -5,9 +5,30 @@ import { extractImageUrls } from '@/common/lib/post-image-placeholders';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import { toPublicProfile } from '@/modules/users/users.mapper';
 import type { PublicProfile } from '@/modules/users/users.types';
-import type { NotificationDto, NotificationsListDto } from './notifications.types';
+import type {
+  BusinessNotificationDto,
+  NotificationDto,
+  NotificationsListDto,
+} from './notifications.types';
 
 const DEFAULT_LIMIT = 20;
+/** Максимум строк в бизнес-notifications фиде (`listForBusiness` ниже) — тот
+ * же фиксированный лимит без пагинации, что `AuditLogService.listForBusiness`
+ * (AI-3, §10.7): "мини" по масштабу этой фичи, не полноценная лента с
+ * курсорами. */
+const BUSINESS_FEED_LIMIT = 30;
+/** `rule_triggered` (Business Logic Engine, AI-5) намеренно исключён из
+ * общей социальной ленты `/notifications` — в отличие от всех остальных
+ * типов, у него нет `actor` (см. `Notification.actorId`'s комментарий в
+ * схеме), а фронтенд (`entities/notification/ui/NotificationItem.tsx`,
+ * `model/types.ts`) сегодня везде обращается к `notification.actor.name`/
+ * `.avatarUrl` безусловно — реальный краш, не гипотетический, если такое
+ * уведомление попадёт в общий список без доработки того рендера. Строка в
+ * БД при этом создаётся полноценно (см. `notifyRuleTriggered` ниже) —
+ * исключена только из ЭТИХ двух read-путей, не из записи; отдельный
+ * business-notifications экран (`listForBusiness`/`GET /businesses/
+ * :businessId/notifications`, §15.4) читает те же строки напрямую. */
+const FEED_EXCLUDED_TYPES: NotificationType[] = ['rule_triggered'];
 const MAX_RECENT_ACTORS = 3;
 /** Сколько раз повторить транзакцию при конфликте сериализации (Postgres
  * код 40001 / Prisma P2034) — параллельные лайки на один пост случаются
@@ -20,7 +41,12 @@ const MAX_SERIALIZATION_RETRIES = 8;
 const RETRY_BASE_DELAY_MS = 15;
 
 type NotificationWithRelations = Notification & {
-  actor: User;
+  /// `null` только для `rule_triggered` (см. `Notification.actorId`'s
+  /// комментарий в схеме) — `list()` уже фильтрует такие строки через
+  /// `FEED_EXCLUDED_TYPES`, поэтому `toDto` ниже вправе считать `null` здесь
+  /// нарушенным инвариантом, а не штатным случаем (см. её собственную
+  /// проверку).
+  actor: User | null;
   post: { id: string; text: string } | null;
   comment: { text: string } | null;
   group: { id: string; name: string } | null;
@@ -59,7 +85,10 @@ export class NotificationsService {
       data: { recipientId, actorId, type: 'friend_request', recentActorIds: [actorId] },
       select: { id: true, actor: true },
     });
-    return { id: notification.id, actor: toPublicProfile(notification.actor) };
+    // `actorId` выше — обязательный параметр этого метода, `actor` в ответе
+    // Prisma гарантированно не `null` (nullable он только для `rule_triggered`,
+    // см. `NotificationWithRelations`'s комментарий).
+    return { id: notification.id, actor: toPublicProfile(notification.actor!) };
   }
 
   async notifyFriendAccepted(
@@ -70,7 +99,9 @@ export class NotificationsService {
       data: { recipientId, actorId, type: 'friend_accepted', recentActorIds: [actorId] },
       select: { id: true, actor: true },
     });
-    return { id: notification.id, actor: toPublicProfile(notification.actor) };
+    // См. `notifyFriendRequest`'s комментарий — `actor` здесь тоже
+    // гарантированно не `null`.
+    return { id: notification.id, actor: toPublicProfile(notification.actor!) };
   }
 
   async notifyGroupJoinRequest(
@@ -88,7 +119,9 @@ export class NotificationsService {
       },
       select: { id: true, actor: true },
     });
-    return { id: notification.id, actor: toPublicProfile(notification.actor) };
+    // См. `notifyFriendRequest`'s комментарий — `actor` здесь тоже
+    // гарантированно не `null`.
+    return { id: notification.id, actor: toPublicProfile(notification.actor!) };
   }
 
   async notifyGroupJoinAccepted(
@@ -106,7 +139,9 @@ export class NotificationsService {
       },
       select: { id: true, actor: true },
     });
-    return { id: notification.id, actor: toPublicProfile(notification.actor) };
+    // См. `notifyFriendRequest`'s комментарий — `actor` здесь тоже
+    // гарантированно не `null`.
+    return { id: notification.id, actor: toPublicProfile(notification.actor!) };
   }
 
   /**
@@ -166,10 +201,13 @@ export class NotificationsService {
               data: { actorCount: { increment: 1 }, recentActorIds, actorId },
               select: { id: true, actorCount: true, actor: true },
             });
+            // `actorId` — обязательный параметр `NotifyPostInteractionParams`,
+            // `actor` здесь тоже гарантированно не `null` (см.
+            // `notifyFriendRequest`'s комментарий).
             return {
               id: updated.id,
               actorCount: updated.actorCount,
-              actor: toPublicProfile(updated.actor),
+              actor: toPublicProfile(updated.actor!),
               isNew: false,
             };
           }
@@ -179,10 +217,12 @@ export class NotificationsService {
           data: { recipientId, actorId, type, postId, commentId, recentActorIds: [actorId] },
           select: { id: true, actorCount: true, actor: true },
         });
+        // См. `notifyFriendRequest`'s комментарий — `actor` здесь тоже
+        // гарантированно не `null`.
         return {
           id: created.id,
           actorCount: created.actorCount,
-          actor: toPublicProfile(created.actor),
+          actor: toPublicProfile(created.actor!),
           isNew: true,
         };
       },
@@ -196,7 +236,7 @@ export class NotificationsService {
     limit = DEFAULT_LIMIT,
   ): Promise<NotificationsListDto> {
     const rows = await this.prisma.notification.findMany({
-      where: { recipientId: userId },
+      where: { recipientId: userId, type: { notIn: FEED_EXCLUDED_TYPES } },
       orderBy: { createdAt: 'desc' },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -214,7 +254,57 @@ export class NotificationsService {
   }
 
   async unreadCount(userId: string): Promise<number> {
-    return this.prisma.notification.count({ where: { recipientId: userId, isRead: false } });
+    return this.prisma.notification.count({
+      where: { recipientId: userId, isRead: false, type: { notIn: FEED_EXCLUDED_TYPES } },
+    });
+  }
+
+  /** Business Logic Engine v1 (AI-5, `send_notification`-действие правила,
+   * см. `RulesService.runActions`) — единственный сегодня вызывающий,
+   * `recipientId` — владелец бизнеса (`Business.ownerId`), не участник
+   * социального графа. `actorId: null`/`recentActorIds: []` — у события нет
+   * человека-инициатора (см. `Notification.actorId`'s комментарий в схеме).
+   * `businessId`/`summary` (добавлены §15.4) — что показать в бизнес-
+   * notifications экране (`listForBusiness` ниже); `RulesService` строит
+   * `summary` из контекста триггера, эта строка его не интерпретирует.
+   * Строка создаётся полноценно даже притом, что общий `/notifications`
+   * фид её сегодня не показывает (см. `FEED_EXCLUDED_TYPES`) — история не
+   * теряется, просто читается другим экраном. */
+  async notifyRuleTriggered(
+    recipientId: string,
+    businessId: string,
+    summary: string,
+  ): Promise<{ id: string }> {
+    const notification = await this.prisma.notification.create({
+      data: { recipientId, type: 'rule_triggered', actorId: null, businessId, summary },
+      select: { id: true },
+    });
+    return { id: notification.id };
+  }
+
+  /** Владелец-only — фид уведомлений Business Logic Engine ДЛЯ ОДНОГО
+   * бизнеса (§15.4), в отличие от `list()` выше (вся социальная лента
+   * пользователя сразу). `recipientId: ownerId` дублирует `businessId`-фильтр
+   * по назначению (обе строки указывают на одного владельца в невырожденном
+   * случае), но именно `recipientId` — реальная проверка владения (тот же
+   * принцип, что `markRead`'s `updateMany`): без него чужой businessId в
+   * URL с чужим `recipientId` тоже ничего не покажет, но с ним проверка не
+   * зависит от того, что businessId вообще принадлежит вызывающему —
+   * `assertOwnership` в контроллере уже это проверяет отдельно, это второй,
+   * defense-in-depth рубеж, а не единственный. */
+  async listForBusiness(businessId: string, ownerId: string): Promise<BusinessNotificationDto[]> {
+    const rows = await this.prisma.notification.findMany({
+      where: { businessId, recipientId: ownerId, type: 'rule_triggered' },
+      orderBy: { createdAt: 'desc' },
+      take: BUSINESS_FEED_LIMIT,
+      select: { id: true, summary: true, isRead: true, createdAt: true },
+    });
+    return rows.map((row): BusinessNotificationDto => ({
+      id: row.id,
+      summary: row.summary ?? 'Событие автоматизации',
+      isRead: row.isRead,
+      createdAt: row.createdAt.toISOString(),
+    }));
   }
 
   /** `updateMany` с фильтром по `recipientId` — заодно проверка владения,
@@ -254,6 +344,14 @@ export class NotificationsService {
     notification: NotificationWithRelations,
     actorProfiles: Map<string, PublicProfile>,
   ): NotificationDto {
+    // `list()` уже фильтрует `rule_triggered` (единственный тип без actor,
+    // см. `FEED_EXCLUDED_TYPES`) до того, как строки долетают сюда — `null`
+    // здесь означает, что этот инвариант нарушен где-то выше, а не штатный
+    // случай, который стоит тихо подставлять заглушкой.
+    if (!notification.actor) {
+      throw new Error(`Notification ${notification.id} (${notification.type}) не имеет actor`);
+    }
+
     return {
       id: notification.id,
       type: notification.type,

@@ -1,0 +1,92 @@
+@use '@/shared/styles/mixins' as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 20px 48px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.notice {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+// `minmax(300px, 360px)` (не `1fr` как максимум) — карточка не растягивается
+// на всю оставшуюся ширину ряда, если колонок в ряду меньше 5 (например,
+// одна Enterprise-карточка на последней строке не раздувается на всю
+// ширину контейнера). `justify-content: center` центрирует неполный
+// последний ряд вместо прижатия к левому краю. Раньше здесь был `minmax
+// (220px, 1fr)`, из-за чего при 5 колонках в ряд каждая карточка получала
+// ~200px ширины при высоком контенте (bullets + монетизация + growth
+// strategy + CTA) — визуально узкие высокие "колбаски".
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 360px));
+  justify-content: center;
+  gap: 20px;
+}
+
+.history {
+  @include card;
+  padding: 18px;
+}
+
+.history__title {
+  margin: 0 0 12px;
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.confirming {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 96px 20px;
+  text-align: center;
+}
+
+.confirming__title {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.confirming__hint {
+  margin: 0;
+  max-width: 360px;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.confirming__retry {
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}

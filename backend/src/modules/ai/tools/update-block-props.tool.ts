@@ -1,11 +1,15 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { PrismaService } from '@/infrastructure/database/prisma.service';
+import { MediaAssetsService } from '@/modules/media-assets/media-assets.service';
 import { WebsitesService } from '@/modules/websites/websites.service';
 import type { ToolContext, ToolDefinition } from '../ai.types';
+import { buildBlockRefs, needsBlockRefs } from './build-block-refs';
 import {
   ALLOWED_BLOCK_TYPES,
   BLOCK_SCHEMAS,
   buildValidatedProps,
   isAllowedBlockType,
+  type BuildValidatedPropsRefs,
 } from './lib/add-block-schemas';
 import { findBlockInPages, replaceBlockInPages } from './lib/block-tree';
 import { ToolRegistryService } from './tool-registry.service';
@@ -37,6 +41,8 @@ interface UpdateBlockPropsOutput {
 export class UpdateBlockPropsTool implements OnModuleInit {
   constructor(
     private readonly websitesService: WebsitesService,
+    private readonly prisma: PrismaService,
+    private readonly mediaAssetsService: MediaAssetsService,
     private readonly toolRegistry: ToolRegistryService,
   ) {}
 
@@ -91,7 +97,16 @@ export class UpdateBlockPropsTool implements OnModuleInit {
         }
 
         const schema = BLOCK_SCHEMAS[found.block.type];
-        const newProps = buildValidatedProps(schema, input.props, found.block.props);
+        const refs: BuildValidatedPropsRefs | undefined = needsBlockRefs(found.block.type)
+          ? await buildBlockRefs(
+              this.prisma,
+              this.mediaAssetsService,
+              ctx.businessId,
+              ctx.actorId,
+              draft.document.pages,
+            )
+          : undefined;
+        const newProps = buildValidatedProps(schema, input.props, found.block.props, refs);
 
         const updatedPages = replaceBlockInPages(draft.document.pages, input.blockId, (block) => ({
           ...block,

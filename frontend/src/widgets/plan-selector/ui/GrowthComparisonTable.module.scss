@@ -1,0 +1,81 @@
+@use '@/shared/styles/mixins' as *;
+
+.root {
+  @include card;
+  padding: 18px;
+}
+
+.title {
+  margin: 0 0 14px;
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+// Обычный `overflow-x: auto` — глобальный CSS-фолбэк скроллбара уже
+// стилизует его (см. AGENTS.md, раздел про скролл: "для случайных
+// переполнений" не нужен `ScrollArea`, тот заточен под вертикальный список).
+.scroller {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.table__headCorner {
+  padding: 10px 12px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table__headCol {
+  padding: 10px 12px;
+  min-width: 96px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.table__rowLabel {
+  padding: 10px 12px;
+  border-top: 1px solid var(--tavern-line);
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table__cell {
+  padding: 10px 12px;
+  border-top: 1px solid var(--tavern-line);
+  color: var(--tavern-muted);
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.table__cell--none {
+  color: var(--tavern-line);
+}
+
+.table__cell--basic {
+  color: var(--tavern-ink);
+}
+
+.table__cell--advanced {
+  color: var(--tavern-accent);
+  font-weight: 600;
+}
+
+.table__cell--custom {
+  color: var(--tavern-ink);
+  font-weight: 600;
+}

@@ -1,0 +1,272 @@
+// Нет глобальных semantic-токенов для warning/critical/emergency (только
+// --tavern-danger, см. globals.css) — заводить их глобально ради одной
+// панели избыточно, локальные переменные держат палитру только здесь.
+$warning-color: #b45309;
+$critical-color: #dc2626;
+$emergency-color: #7f1d1d;
+$normal-color: #16a34a;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.status-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-badge {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.status-badge--normal {
+  background: $normal-color;
+}
+
+.status-badge--warning {
+  background: $warning-color;
+}
+
+.status-badge--critical {
+  background: $critical-color;
+}
+
+.status-badge--emergency {
+  background: $emergency-color;
+}
+
+.status-card__hint {
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}
+
+.gauges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gauge__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.gauge__label {
+  font-weight: 600;
+  color: var(--tavern-ink);
+}
+
+.gauge__value {
+  color: var(--tavern-muted);
+}
+
+.gauge__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--tavern-sunk);
+  overflow: hidden;
+}
+
+.gauge__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.gauge__fill--normal {
+  background: $normal-color;
+}
+
+.gauge__fill--warning {
+  background: $warning-color;
+}
+
+.gauge__fill--critical {
+  background: $critical-color;
+}
+
+.gauge__fill--emergency {
+  background: $emergency-color;
+}
+
+.tpm-line {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tavern-ink);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  .section-title {
+    margin: 0;
+  }
+}
+
+.cost-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.cost-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cost-tile__value {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--tavern-ink);
+}
+
+.cost-tile__label {
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}
+
+.forecast {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tavern-ink);
+
+  p {
+    margin: 0;
+  }
+}
+
+.budget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.budget-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tavern-ink);
+}
+
+.budget-item__scope {
+  font-weight: 600;
+}
+
+.budget-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.budget-form__select,
+.budget-form__input {
+  padding: 8px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  font-size: 13px;
+  color: var(--tavern-ink);
+}
+
+.budget-form__input {
+  min-width: 140px;
+}
+
+.budget-form__error {
+  font-size: 12.5px;
+  color: var(--tavern-danger);
+}
+
+.dimension-list,
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dimension-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tavern-ink);
+}
+
+.dimension-item__id {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--tavern-muted);
+}
+
+.event-item {
+  padding: 8px 10px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+  font-size: 13px;
+  color: var(--tavern-ink);
+}
+
+.event-item--warning {
+  border-left: 3px solid $warning-color;
+}
+
+.event-item--critical {
+  border-left: 3px solid $critical-color;
+}
+
+.event-item--emergency {
+  border-left: 3px solid $emergency-color;
+}

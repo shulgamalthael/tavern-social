@@ -6,62 +6,44 @@
   <component name="ChangeListManager">
     <list default="true" id="ffe7bfaa-5868-4759-bace-829feb31aa13" name="Changes" comment="business features">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ROADMAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/ROADMAP.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/backend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AI_PLATFORM_ROADMAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/AI_PLATFORM_ROADMAP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/backend/prisma/schema.prisma" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/app.module.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/config/configuration.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/configuration.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/config/env.validation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/env.validation.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/appointments/appointments.types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/blog-posts/blog-posts.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/blog-posts/blog-posts.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/businesses.types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/businesses/dto/update-business.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/businesses/dto/update-business.dto.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/orders/orders.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/orders/orders.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/orders/orders.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/orders/orders.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/orders/orders.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/orders/orders.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/orders/stripe-webhook.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/orders/stripe-webhook.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/payments/payment-provider.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/payments/payment-provider.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/modules/payments/stripe-adapter.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/payments/stripe-adapter.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/llm-provider.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/llm-provider.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/onboarding/onboarding.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/onboarding/onboarding.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/providers/gemini-adapter.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/providers/gemini-adapter.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/add-block.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/add-block.tool.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/update-block-props.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/update-block-props.tool.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/form-submissions/form-submissions.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/form-submissions/form-submissions.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/notifications/notifications.types.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/home-app.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/home-app.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/app/page.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/page.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/appointment/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/appointment/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/appointment/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/appointment/model/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/appointment/ui/BookingModal.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/appointment/ui/BookingModal.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/appointment/ui/BookingModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/appointment/ui/BookingModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/business/api/map-business.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/business/api/map-business.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/business/api/update-business.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/business/api/update-business.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/business/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/business/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/business/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/business/model/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/order/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/order/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/actions/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/actions/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/public-sites/public-sites.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/(protected)/business/[id]/edit/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/(protected)/business/[id]/edit/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/admin/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/admin/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/admin/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/admin/model/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/notification/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/notification/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/notification/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/notification/model/types.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/index.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/block-style.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/block-style.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/registry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/registry.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/resolve-link.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/resolve-link.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/types.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/ui/BlockRenderer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/ui/BlockRenderer.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/admin/ui/AdminBar.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/admin/ui/AdminBar.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/AppointmentsSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/AppointmentsSection.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OrdersSection.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OrdersSection.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OrdersSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OrdersSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/website-store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/website-store.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/admin/ui/AdminWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/admin/ui/AdminWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/BusinessDashboardWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/BusinessDashboardWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.module.scss" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-dashboard/ui/OverviewSection.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-settings/ui/BusinessSettingsWidget.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-settings/ui/BusinessSettingsWidget.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business-settings/ui/BusinessSettingsWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business-settings/ui/BusinessSettingsWidget.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business/ui/BusinessPageWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business/ui/BusinessPageWidget.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/header/ui/Header.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/header/ui/Header.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/public-site/ui/PublicSiteWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/public-site/ui/PublicSiteWidget.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldControl.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldControl.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.module.scss" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LinkField.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LinkField.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/CanvasBlock.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/CanvasBlock.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/CreateBusinessForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/CreateBusinessForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/NewBusinessFlow.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/businesses/ui/NewBusinessFlow.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/AddBlockModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/AddBlockModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -70,7 +52,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="972" />
+    <option name="cachedIndexableFilesCount" value="1129" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
@@ -94,61 +76,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.6151434356758188" />
-      <entry key="MS500" value="4.383289755437154" />
-      <entry key="S2" value="6.947298703629009" />
-      <entry key="S5" value="9.586889064699326" />
-      <entry key="S10" value="12.324467228322785" />
-      <entry key="S30" value="15.66874142000738" />
-      <entry key="S60" value="17.70104473966613" />
-      <entry key="M2" value="22.49850033292944" />
-      <entry key="M5" value="38.33134446701398" />
-      <entry key="M10" value="56.534499100660575" />
-      <entry key="M15" value="69.27314063649654" />
-      <entry key="M30" value="96.7095366359693" />
-      <entry key="H1" value="130.15565684357594" />
-      <entry key="H2" value="165.65048508839516" />
-      <entry key="H4" value="214.21877992493063" />
-      <entry key="D1" value="508.50482819276016" />
-      <entry key="W1" value="1488.8502679590538" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0" />
+      <entry key="S30" value="1.0000000021255533" />
+      <entry key="S60" value="1.0001950130003023" />
+      <entry key="M2" value="1.0592182497886558" />
+      <entry key="M5" value="2.9210002187013777" />
+      <entry key="M10" value="8.774372919436319" />
+      <entry key="M15" value="15.551814465955834" />
+      <entry key="M30" value="33.2712744571955" />
+      <entry key="H1" value="55.090196268770924" />
+      <entry key="H2" value="81.36005199792658" />
+      <entry key="H4" value="119.95990663530324" />
+      <entry key="D1" value="501.82058629909005" />
+      <entry key="W1" value="1673.3899867089988" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
-      <entry key="S10" value="1.0651939109229513E-296" />
-      <entry key="S30" value="2.200271255067921E-99" />
-      <entry key="S60" value="4.6907049097847745E-50" />
-      <entry key="M2" value="2.165803525203699E-25" />
-      <entry key="M5" value="1.3622211612963795E-10" />
-      <entry key="M10" value="1.1671423055036544E-5" />
-      <entry key="M15" value="5.145361283351112E-4" />
-      <entry key="M30" value="0.0226841293079584" />
-      <entry key="H1" value="0.15228401418420703" />
-      <entry key="H2" value="0.46932774816381173" />
-      <entry key="H4" value="1.1922202808918285" />
-      <entry key="D1" value="7.108604252781565" />
-      <entry key="W1" value="31.12602835402298" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="3.6988301077548903E-208" />
+      <entry key="M2" value="1.9546716514134426E-104" />
+      <entry key="M5" value="3.8943533331263124E-42" />
+      <entry key="M10" value="2.601028641259648E-21" />
+      <entry key="M15" value="2.3411586280905716E-14" />
+      <entry key="M30" value="2.144129002113169E-7" />
+      <entry key="H1" value="6.533276664227068E-4" />
+      <entry key="H2" value="0.036186983852156934" />
+      <entry key="H4" value="0.28229434897405936" />
+      <entry key="D1" value="4.801357662394021" />
+      <entry key="W1" value="29.88463648215129" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.568242164724805" />
-      <entry key="MS500" value="4.360950505572121" />
-      <entry key="S2" value="6.932918968517849" />
-      <entry key="S5" value="9.564935902946537" />
-      <entry key="S10" value="12.304526936290713" />
-      <entry key="S30" value="15.65859018975774" />
-      <entry key="S60" value="17.695081874254196" />
-      <entry key="M2" value="22.49468199714549" />
-      <entry key="M5" value="38.328776857900344" />
-      <entry key="M10" value="56.53256842451751" />
-      <entry key="M15" value="69.27201469891062" />
-      <entry key="M30" value="96.73091818641116" />
-      <entry key="H1" value="130.30689399407976" />
-      <entry key="H2" value="166.11905430840193" />
-      <entry key="H4" value="215.4104863070008" />
-      <entry key="D1" value="515.6132040025063" />
-      <entry key="W1" value="1519.9761870323887" />
+      <entry key="MS100" value="0.0035449967004576597" />
+      <entry key="MS500" value="0.32353641362071334" />
+      <entry key="S2" value="0.7541900383432893" />
+      <entry key="S5" value="0.8932896800141077" />
+      <entry key="S10" value="0.9451400319604009" />
+      <entry key="S30" value="0.981368364090789" />
+      <entry key="S60" value="0.9908353028204306" />
+      <entry key="M2" value="1.054513593047777" />
+      <entry key="M5" value="2.91894036867904" />
+      <entry key="M10" value="8.773059041390793" />
+      <entry key="M15" value="15.55070639361235" />
+      <entry key="M30" value="33.270397639295425" />
+      <entry key="H1" value="55.090207960574794" />
+      <entry key="H2" value="81.39578949077318" />
+      <entry key="H4" value="120.24181046839428" />
+      <entry key="D1" value="506.6215873706025" />
+      <entry key="W1" value="1703.2744753183238" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -218,7 +200,8 @@
       <workItem from="1787585629002" duration="68552000" />
       <workItem from="1788002283346" duration="1196000" />
       <workItem from="1788010031165" duration="15126000" />
-      <workItem from="1788048442936" duration="4991000" />
+      <workItem from="1788048442936" duration="47594000" />
+      <workItem from="1788173097345" duration="934000" />
     </task>
     <task id="LOCAL-00001" summary="Init project">
       <option name="closed" value="true" />
@@ -348,7 +331,15 @@
       <option name="project" value="LOCAL" />
       <updated>1787702866719</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="business features">
+      <option name="closed" value="true" />
+      <created>1788053519255</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1788053519255</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

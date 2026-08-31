@@ -1,6 +1,7 @@
 'use client';
 
-import { useWebsiteBuilderStore } from '@/entities/website';
+import type { CustomWidget } from '@/entities/custom-widget';
+import { findBlock, findParentId, useWebsiteBuilderStore } from '@/entities/website';
 import { Modal } from '@/shared/ui/Modal';
 import { ComponentLibraryPanel } from './ComponentLibraryPanel';
 import styles from './AddBlockModal.module.scss';
@@ -18,14 +19,18 @@ import styles from './AddBlockModal.module.scss';
  * вместо добавления в конец страницы.
  */
 export interface AddBlockModalProps {
+  businessId: string;
   /** Прокидывается напрямую в `ComponentLibraryPanel` — см. её комментарий. */
   capabilities?: string[];
 }
 
-export function AddBlockModal({ capabilities }: AddBlockModalProps) {
+export function AddBlockModal({ businessId, capabilities }: AddBlockModalProps) {
   const insertionTarget = useWebsiteBuilderStore((state) => state.insertionTarget);
+  const document = useWebsiteBuilderStore((state) => state.document);
+  const activePageId = useWebsiteBuilderStore((state) => state.activePageId);
   const addBlock = useWebsiteBuilderStore((state) => state.addBlock);
   const insertBlockBeside = useWebsiteBuilderStore((state) => state.insertBlockBeside);
+  const insertWidgetBlocks = useWebsiteBuilderStore((state) => state.insertWidgetBlocks);
   const closeInsertPicker = useWebsiteBuilderStore((state) => state.closeInsertPicker);
 
   if (!insertionTarget) return null;
@@ -40,12 +45,43 @@ export function AddBlockModal({ capabilities }: AddBlockModalProps) {
     closeInsertPicker();
   }
 
+  /** Виджет — уже НЕСКОЛЬКО блоков, а не один, поэтому для него нет аналога
+   * `insertBlockBeside`'s обёртки в колонки (см. `website-store.ts`'s
+   * комментарий на `insertWidgetBlocks` про то, почему). Для 'beside' здесь
+   * сознательно используется тот же sibling-режим, что и для 'sibling' —
+   * блоки виджета вставляются сразу ПОСЛЕ анкора в его собственном родителе
+   * (то же вычисление parentId/индекса анкора, что `insertBlockBeside` в
+   * сторе), не рядом с ним в колонках. */
+  function handleAddWidget(widget: CustomWidget) {
+    if (target.mode === 'sibling') {
+      insertWidgetBlocks(widget.schema, target.parentId, target.index);
+      closeInsertPicker();
+      return;
+    }
+
+    const page = document?.pages.find((item) => item.id === activePageId);
+    const parentId = page ? findParentId(page.blocks, target.anchorId) : undefined;
+    if (page && parentId !== undefined) {
+      const siblings =
+        parentId === null ? page.blocks : (findBlock(page.blocks, parentId)?.children ?? []);
+      const anchorIndex = siblings.findIndex((block) => block.id === target.anchorId);
+      insertWidgetBlocks(
+        widget.schema,
+        parentId,
+        anchorIndex === -1 ? siblings.length : anchorIndex + 1,
+      );
+    }
+    closeInsertPicker();
+  }
+
   return (
     <Modal onClose={closeInsertPicker} label="Добавить компонент" className={styles.modal}>
       <h2 className={styles.title}>Добавить компонент</h2>
       <ComponentLibraryPanel
         className={styles.library}
+        businessId={businessId}
         onAdd={handleAdd}
+        onAddWidget={handleAddWidget}
         capabilities={capabilities}
       />
     </Modal>

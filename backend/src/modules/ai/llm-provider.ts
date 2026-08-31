@@ -41,11 +41,24 @@ export interface LlmToolSchema {
   parameters: JsonSchemaObject;
 }
 
+/** Реальный расход токенов ОДНОГО вызова `chat()`, как его вернул сам
+ * провайдер (Gemini — `usageMetadata`, см. `GeminiAdapter`) — НЕ оценка/
+ * подсчёт на нашей стороне. `undefined` у провайдера, который такого не
+ * возвращает (пока таких нет, но абстракция не должна требовать usage от
+ * каждой реализации). Источник для TPM-учёта и Cost Engine
+ * (`AiRequestAccountingService`, AI CAPACITY & COST MANAGER §4/§7). */
+export interface LlmUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 export interface LlmChatResult {
   /** `null`, если ход модели — только запрос инструмента(ов), без
    * сопроводительного текста. */
   message: string | null;
   toolCalls: LlmToolCall[];
+  usage?: LlmUsage;
 }
 
 /**
@@ -62,9 +75,16 @@ export abstract class LlmProvider {
    * (тот же принцип, что у `PaymentProvider.isConfigured()`). */
   abstract isConfigured(): boolean;
 
+  /** `operation` — короткий тег вызывающего хода (например, `business_chat`,
+   * `onboarding_chat`), НЕ бизнес-параметр самого запроса к модели — только
+   * для централизованной телеметрии/аккаунтинга Gemini-квоты (`GeminiQuotaService`,
+   * GEMINI OPTIMIZATION §4/§37: "по какому сценарию тратится RPM/RPD"). У
+   * провайдера без такого учёта (гипотетического будущего адаптера) можно
+   * просто игнорировать аргумент. */
   abstract chat(
     messages: LlmMessage[],
     tools: LlmToolSchema[],
     systemInstruction: string,
+    operation: string,
   ): Promise<LlmChatResult>;
 }

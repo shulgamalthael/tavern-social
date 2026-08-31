@@ -8,6 +8,9 @@ export { getAdminGroups, type GetAdminGroupsOptions } from './api/get-admin-grou
 export { getAdminPosts, type GetAdminPostsOptions } from './api/get-admin-posts';
 export { getAdminStats } from './api/get-admin-stats';
 export { getAdminUsers, type GetAdminUsersOptions } from './api/get-admin-users';
+export { getAiInfrastructureOverview } from './api/get-ai-infrastructure-overview';
+export { recomputeAiRecommendations } from './api/recompute-ai-recommendations';
+export { setAiBudget } from './api/set-ai-budget';
 export { setSuperAdmin } from './api/set-super-admin';
 export { setUserRole } from './api/set-user-role';
 export { unbanUser } from './api/unban-user';
@@ -28,4 +31,15 @@ export type {
   AdminUserRoleFilter,
   AdminUsersPage,
   AdminUserStatusFilter,
+  AiAlert,
+  AiAnomaly,
+  AiBudgetStatus,
+  AiCapacitySnapshot,
+  AiCapacityStatus,
+  AiCostSummary,
+  AiForecast,
+  AiInfrastructureOverview,
+  AiRecommendation,
+  AiUsageByBusiness,
+  AiUsageByOperation,
 } from './model/types';

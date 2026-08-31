@@ -5,6 +5,7 @@ export type { NotificationStore } from './model/notification-store';
 export { useToastStore } from './model/toast-store';
 export type { ToastInput, ToastItem, ToastStore } from './model/toast-store';
 export type {
+  BusinessNotification,
   Notification,
   NotificationActor,
   NotificationGroup,
@@ -17,3 +18,5 @@ export type { NotificationItemProps } from './ui/NotificationItem';
 export { NotificationItemSkeleton } from './ui/NotificationItemSkeleton';
 export { NotificationToast } from './ui/NotificationToast';
 export type { NotificationToastProps } from './ui/NotificationToast';
+export { getBusinessNotifications } from './api/get-business-notifications';
+export { markNotificationRead } from './api/mark-notification-read';

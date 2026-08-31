@@ -63,6 +63,12 @@
   text-transform: uppercase;
 }
 
+.error {
+  margin: 0 2px;
+  color: var(--tavern-danger);
+  font-size: 12px;
+}
+
 .category__grid {
   // Раньше это была узкая 280px-колонка сбоку — фиксированные две колонки
   // тогда были осмысленным потолком. Теперь панель всегда на всю ширину

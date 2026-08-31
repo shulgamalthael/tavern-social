@@ -39,3 +39,15 @@ export interface NotificationsListDto {
   items: NotificationDto[];
   nextCursor: string | null;
 }
+
+/** Отдельная, ЛЁГКАЯ форма — не `NotificationDto` с занулённым `actor`, тот
+ * же принцип, что `AuditLogListItem` (AI-3, §10.7): бизнес-notifications
+ * экран (`NotificationsService.listForBusiness`, §15.4) не показывает
+ * `actor`/`post`/`group`/`commentText` — их и нет у `rule_triggered`,
+ * единственного типа, который этот эндпоинт вообще отдаёт. */
+export interface BusinessNotificationDto {
+  id: string;
+  summary: string;
+  isRead: boolean;
+  createdAt: string;
+}

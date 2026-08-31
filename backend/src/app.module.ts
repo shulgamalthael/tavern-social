@@ -11,6 +11,7 @@ import { RealtimeModule } from './infrastructure/websocket/realtime.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
 import { DomainsModule } from './modules/domains/domains.module';
@@ -21,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { BlogPostsModule } from './modules/blog-posts/blog-posts.module';
+import { CustomWidgetsModule } from './modules/custom-widgets/custom-widgets.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { FormSubmissionsModule } from './modules/form-submissions/form-submissions.module';
 import { MediaAssetsModule } from './modules/media-assets/media-assets.module';
@@ -28,6 +30,7 @@ import { OrdersModule } from './modules/orders/orders.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ProductsModule } from './modules/products/products.module';
 import { PublicSitesModule } from './modules/public-sites/public-sites.module';
+import { RulesModule } from './modules/rules/rules.module';
 import { ServicesModule } from './modules/services/services.module';
 import { SearchModule } from './modules/search/search.module';
 import { ThreadsModule } from './modules/threads/threads.module';
@@ -64,6 +67,7 @@ import { WebsitesModule } from './modules/websites/websites.module';
     ProductsModule,
     OrdersModule,
     DiscountsModule,
+    BillingModule,
     ServicesModule,
     AppointmentsModule,
     BlogPostsModule,
@@ -71,6 +75,8 @@ import { WebsitesModule } from './modules/websites/websites.module';
     MediaAssetsModule,
     AnalyticsModule,
     PublicSitesModule,
+    RulesModule,
+    CustomWidgetsModule,
     AiModule,
   ],
   controllers: [AppController],

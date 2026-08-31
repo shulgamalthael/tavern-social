@@ -1,0 +1,118 @@
+@use '@/shared/styles/mixins' as *;
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 26px;
+}
+
+.card--free {
+  border-color: var(--tavern-accent);
+  box-shadow: 0 0 0 1px var(--tavern-accent);
+}
+
+.card--popular {
+  border-color: var(--tavern-ink);
+}
+
+.card__ribbon {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  height: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.card__name {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.card__tagline {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.card__price {
+  margin: 4px 0 0;
+  color: var(--tavern-ink);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.card__bullets {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card__bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  line-height: 1.4;
+
+  svg {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    margin-top: 1px;
+    color: var(--tavern-accent);
+  }
+}
+
+.card__freeNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+  color: var(--tavern-ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.card__monetization {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card__adNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.4;
+
+  svg {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    margin-top: 1px;
+    color: var(--tavern-muted);
+  }
+}
+
+.card__divider {
+  height: 1px;
+  background: var(--tavern-line);
+}
+
+.card__action {
+  margin-top: 4px;
+}

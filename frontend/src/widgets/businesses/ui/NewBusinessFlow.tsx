@@ -59,10 +59,14 @@ export function NewBusinessFlow() {
       {mode === 'ai' ? (
         <AiOnboardingChat
           onBusinessCreated={(businessId, templateId) =>
+            // Payment Plans v1 — ведёт на выбор тарифа, не сразу в билдер
+            // (тот закрыт server-side гейтом, см. `/business/[id]/edit`'s
+            // комментарий); `template` переживает гейт как query-параметр,
+            // тем же приёмом, что раньше вёл сразу в билдер.
             router.push(
               templateId === 'blank'
-                ? `/business/${businessId}/edit`
-                : `/business/${businessId}/edit?template=${encodeURIComponent(templateId)}`,
+                ? `/business/${businessId}/plan`
+                : `/business/${businessId}/plan?template=${encodeURIComponent(templateId)}`,
             )
           }
         />

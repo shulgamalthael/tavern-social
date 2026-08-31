@@ -2,15 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { BLOCK_SCHEMAS, buildValidatedProps, isAllowedBlockType } from './add-block-schemas';
 
 describe('isAllowedBlockType', () => {
-  it('accepts the four curated types', () => {
+  it('accepts the six curated types', () => {
     expect(isAllowedBlockType('heading')).toBe(true);
     expect(isAllowedBlockType('text')).toBe(true);
     expect(isAllowedBlockType('quote')).toBe(true);
     expect(isAllowedBlockType('spacer')).toBe(true);
+    expect(isAllowedBlockType('image')).toBe(true);
+    expect(isAllowedBlockType('button')).toBe(true);
   });
 
   it('rejects anything outside the allowlist', () => {
-    expect(isAllowedBlockType('image')).toBe(false);
+    expect(isAllowedBlockType('gallery')).toBe(false);
     expect(isAllowedBlockType('productgrid')).toBe(false);
     expect(isAllowedBlockType('')).toBe(false);
   });
@@ -67,5 +69,113 @@ describe('buildValidatedProps', () => {
       existingProps,
     );
     expect(patched).toEqual({ text: 'Новый текст', level: 'h1', size: 'lg', color: 'primary' });
+  });
+
+  describe('mediaAsset field (image.src)', () => {
+    it('falls back to null when no props are given', () => {
+      expect(buildValidatedProps(BLOCK_SCHEMAS.image, undefined).src).toBeNull();
+    });
+
+    it('accepts a URL present in the pre-fetched media asset refs', () => {
+      const refs = {
+        pageIds: new Set<string>(),
+        productIds: new Set<string>(),
+        serviceIds: new Set<string>(),
+        mediaAssetUrls: new Set(['/uploads/website/photo.jpg']),
+      };
+      const props = buildValidatedProps(
+        BLOCK_SCHEMAS.image,
+        { src: '/uploads/website/photo.jpg' },
+        undefined,
+        refs,
+      );
+      expect(props.src).toBe('/uploads/website/photo.jpg');
+    });
+
+    it('rejects a URL not present in the refs — the model cannot invent an upload', () => {
+      const refs = {
+        pageIds: new Set<string>(),
+        productIds: new Set<string>(),
+        serviceIds: new Set<string>(),
+        mediaAssetUrls: new Set(['/uploads/website/real.jpg']),
+      };
+      expect(() =>
+        buildValidatedProps(
+          BLOCK_SCHEMAS.image,
+          { src: '/uploads/website/fake.jpg' },
+          undefined,
+          refs,
+        ),
+      ).toThrow(/должно быть null или ссылкой на уже загруженный файл/);
+    });
+
+    it('rejects a URL when no refs were provided at all (defaults to empty)', () => {
+      expect(() =>
+        buildValidatedProps(BLOCK_SCHEMAS.image, { src: '/uploads/website/photo.jpg' }),
+      ).toThrow(/должно быть null или ссылкой на уже загруженный файл/);
+    });
+  });
+
+  describe('linkTarget field (image.link / button.url)', () => {
+    it('falls back to the empty external link when no props are given', () => {
+      expect(buildValidatedProps(BLOCK_SCHEMAS.button, undefined).url).toEqual({
+        type: 'external',
+        url: '',
+      });
+    });
+
+    it('accepts a well-formed external link', () => {
+      const props = buildValidatedProps(BLOCK_SCHEMAS.button, {
+        url: { type: 'external', url: 'https://example.com' },
+      });
+      expect(props.url).toEqual({ type: 'external', url: 'https://example.com' });
+    });
+
+    it('rejects an unknown link type', () => {
+      expect(() =>
+        buildValidatedProps(BLOCK_SCHEMAS.button, { url: { type: 'teleport' } }),
+      ).toThrow(/url.type должен быть одним из/);
+    });
+
+    it('accepts addToCart pointing at a real product id', () => {
+      const refs = {
+        pageIds: new Set<string>(),
+        productIds: new Set(['prod-1']),
+        serviceIds: new Set<string>(),
+        mediaAssetUrls: new Set<string>(),
+      };
+      const props = buildValidatedProps(
+        BLOCK_SCHEMAS.button,
+        { url: { type: 'addToCart', productId: 'prod-1' } },
+        undefined,
+        refs,
+      );
+      expect(props.url).toEqual({ type: 'addToCart', productId: 'prod-1' });
+    });
+
+    it('rejects addToCart pointing at a product id that does not exist', () => {
+      const refs = {
+        pageIds: new Set<string>(),
+        productIds: new Set(['prod-1']),
+        serviceIds: new Set<string>(),
+        mediaAssetUrls: new Set<string>(),
+      };
+      expect(() =>
+        buildValidatedProps(
+          BLOCK_SCHEMAS.button,
+          { url: { type: 'addToCart', productId: 'made-up' } },
+          undefined,
+          refs,
+        ),
+      ).toThrow(/должен ссылаться на существующий товар/);
+    });
+
+    it('rejects an email link with an invalid email', () => {
+      expect(() =>
+        buildValidatedProps(BLOCK_SCHEMAS.button, {
+          url: { type: 'email', email: 'not-an-email' },
+        }),
+      ).toThrow(/должен быть корректным email/);
+    });
   });
 });

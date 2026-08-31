@@ -18,6 +18,14 @@
   border: 1px solid var(--tavern-line);
   border-radius: var(--tavern-radius-card);
   background: var(--tavern-surface);
+  // Один из тайлов («Тариф») — ссылка на `/business/[id]/plan`, не `<div>`
+  // (см. `OverviewSection.tsx`) — сброс, чтобы вести себя как остальные
+  // некликабельные тайлы визуально, только с hover-подсказкой интерактивности.
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--tavern-accent);
+  }
 }
 
 .stat__icon {

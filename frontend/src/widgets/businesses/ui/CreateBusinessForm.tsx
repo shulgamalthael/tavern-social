@@ -12,10 +12,11 @@ import styles from './CreateBusinessForm.module.scss';
  * название и категория), остальное (описание, контакты, соцсети, SEO)
  * правится потом на самой странице бизнеса — не нагружаем самый первый экран
  * created-flow длинной формой ради «хорошего первого впечатления» (см.
- * корневой план фичи). После создания сразу открывает билдер
- * (`/business/[id]/edit`) — у нового бизнеса сайт уже существует (пустой, см.
- * `BusinessesService.create` на backend), так что там сразу встретит
- * `StarterTemplatePicker`.
+ * корневой план фичи). После создания ведёт на выбор тарифа
+ * (`/business/[id]/plan`, Payment Plans v1) — билдер (`/business/[id]/edit`)
+ * закрыт server-side гейтом до выбора Free или оплаты платного тарифа, у
+ * нового бизнеса сайт уже существует (пустой, см. `BusinessesService.create`
+ * на backend), так что после гейта там сразу встретит `StarterTemplatePicker`.
  *
  * Валюта (Currency System, ROADMAP.md §8) — обязательное поле здесь, не
  * "необязательно, поправите потом", как описание: это единственная точка
@@ -53,7 +54,11 @@ export function CreateBusinessForm() {
         currency,
         description: description.trim() || undefined,
       });
-      router.push(`/business/${business.id}/edit`);
+      // Payment Plans v1 — до выбора тарифа (или подтверждённой оплаты)
+      // билдер закрыт server-side гейтом на `/business/[id]/edit` (см. его
+      // комментарий), поэтому оба сценария создания бизнеса ведут сначала
+      // сюда, а не напрямую в конструктор.
+      router.push(`/business/${business.id}/plan`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Не удалось создать бизнес');
       setSubmitting(false);

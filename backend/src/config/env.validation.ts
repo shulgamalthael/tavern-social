@@ -53,6 +53,15 @@ class EnvironmentVariables {
   @IsString()
   STRIPE_WEBHOOK_SECRET?: string;
 
+  /** Секрет вебхука Payment Plans v1 (`webhooks/stripe-subscriptions`,
+   * см. `SubscriptionWebhookController`) — отдельный от `STRIPE_WEBHOOK_
+   * SECRET` выше (тот про `webhooks/stripe`, заказы), Stripe выдаёт секрет
+   * на каждый endpoint отдельно. Необязателен по той же причине, что
+   * `STRIPE_SECRET_KEY`. */
+  @IsOptional()
+  @IsString()
+  STRIPE_SUBSCRIPTIONS_WEBHOOK_SECRET?: string;
+
   /** Необязателен — без него `GeminiAdapter.isConfigured()` возвращает
    * `false`, `AiController` отвечает 503 вместо падения при старте (тот же
    * приём, что у `STRIPE_SECRET_KEY` выше). См. `AI_PLATFORM_ROADMAP.md` §5. */
@@ -66,6 +75,124 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   GEMINI_MODEL?: string;
+
+  /** Global (across всех инстансов backend) RPM/RPD-бюджет Gemini и
+   * safety-запас под ним — см. `GeminiQuotaService`. Необязательны: дефолты
+   * в `configuration.ts` ориентированы на реальный бесплатный tier, менять
+   * нужно только при смене плана/модели. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  GEMINI_RPM_LIMIT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  GEMINI_RPM_SAFETY_LIMIT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  GEMINI_RPD_LIMIT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  GEMINI_RPD_SAFETY_LIMIT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  GEMINI_MAX_RETRIES?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  GEMINI_RETRY_BASE_DELAY_MS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  GEMINI_QUEUE_MAX_WAIT_MS?: number;
+
+  /** AI Capacity & Cost Manager — см. `configuration.ts`'s комментарии рядом
+   * с соответствующими полями `AppConfig` для смысла каждого значения. */
+  @IsOptional()
+  @Type(() => Number)
+  GEMINI_INPUT_PRICE_PER_MILLION_USD?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  GEMINI_OUTPUT_PRICE_PER_MILLION_USD?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  AI_CAPACITY_WARNING_PERCENT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  AI_CAPACITY_CRITICAL_PERCENT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  AI_CAPACITY_EMERGENCY_PERCENT?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  AI_CAPACITY_SNAPSHOT_INTERVAL_MS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  AI_RAW_REQUEST_RETENTION_DAYS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  AI_AGGREGATION_INTERVAL_MS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  AI_DEDUP_CACHE_TTL_MS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @Min(1)
+  AI_ANOMALY_RATE_MULTIPLIER?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  AI_ANOMALY_RETRY_SPIKE_THRESHOLD?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  AI_RECOMMENDATION_INTERVAL_MS?: number;
 }
 
 /** Валидирует process.env один раз при старте — падаем сразу, а не на первом запросе. */

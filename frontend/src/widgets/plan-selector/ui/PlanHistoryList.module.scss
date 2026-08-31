@@ -1,0 +1,38 @@
+.status {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--tavern-line);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.item__label {
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.item__date {
+  flex: 0 0 auto;
+  color: var(--tavern-muted);
+  font-size: 12px;
+}

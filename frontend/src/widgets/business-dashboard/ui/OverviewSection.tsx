@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback } from 'react';
 import { getAnalyticsSummary } from '@/entities/analytics';
 import type { Business } from '@/entities/business';
+import { getBillingStatus, type PlanTier } from '@/entities/subscription';
 import { useAsyncData } from '@/shared/lib/use-async-data';
 import { Button } from '@/shared/ui/Button';
 import {
@@ -15,8 +16,17 @@ import {
   GlobeIcon,
   MailIcon,
   ShoppingBagIcon,
+  StarIcon,
 } from '@/shared/ui/icons';
 import styles from './OverviewSection.module.scss';
+
+const PLAN_TIER_LABELS: Record<PlanTier, string> = {
+  free: 'Free',
+  starter: 'Starter',
+  business: 'Business',
+  scale: 'Scale',
+  enterprise: 'Enterprise',
+};
 
 export interface OverviewSectionProps {
   business: Business;
@@ -46,6 +56,11 @@ export interface OverviewSectionProps {
  * записи показываются только при включённой соответствующей капабилити (то
  * же, что делает остальной Dashboard) — заявки форм показываются всегда, у
  * них нет капабилити-гейта нигде в проекте (см. `FormSubmissionsService`).
+ *
+ * «Тариф» (Payment Plans v1) — то самое место, где owner видит текущий план
+ * и попадает на его историю/апгрейд (`/business/[id]/plan`), не только в
+ * момент первого гейта после создания бизнеса — та же страница работает и
+ * как self-serve апгрейд, см. `PlanSelectorWidget`'s комментарий.
  */
 export function OverviewSection({
   business,
@@ -59,6 +74,10 @@ export function OverviewSection({
   const last7Days = analytics.data?.last7Days;
   const hasCommerce = business.capabilities.includes('commerce');
   const hasBooking = business.capabilities.includes('booking');
+
+  const billingFetcher = useCallback(() => getBillingStatus(business.id), [business.id]);
+  const billing = useAsyncData(billingFetcher);
+  const planLabel = billing.data?.tier ? PLAN_TIER_LABELS[billing.data.tier] : '—';
 
   return (
     <div className={styles.root}>
@@ -124,6 +143,16 @@ export function OverviewSection({
             </div>
           </div>
         )}
+
+        <Link href={`/business/${business.id}/plan`} className={styles.stat}>
+          <span className={styles.stat__icon}>
+            <StarIcon />
+          </span>
+          <div>
+            <p className={styles.stat__label}>Тариф</p>
+            <p className={styles.stat__value}>{billing.status === 'success' ? planLabel : '—'}</p>
+          </div>
+        </Link>
 
         <div className={styles.stat}>
           <span className={styles.stat__icon}>

@@ -1,7 +1,8 @@
 import { Injectable, Logger, type MessageEvent } from '@nestjs/common';
 import { from, map, type Observable } from 'rxjs';
 import { AuditLogService } from '../audit-log.service';
-import { LlmProvider, type LlmMessage } from '../llm-provider';
+import { AiGatewayService } from '../capacity/ai-gateway.service';
+import type { LlmMessage } from '../llm-provider';
 import { OnboardingToolRegistryService } from './onboarding-tool-registry.service';
 import type { OnboardingStreamEvent } from './onboarding.types';
 
@@ -41,7 +42,7 @@ export class AiOnboardingService {
   private readonly logger = new Logger(AiOnboardingService.name);
 
   constructor(
-    private readonly llmProvider: LlmProvider,
+    private readonly aiGateway: AiGatewayService,
     private readonly toolRegistry: OnboardingToolRegistryService,
     private readonly auditLog: AuditLogService,
   ) {}
@@ -67,9 +68,12 @@ export class AiOnboardingService {
     let executedAny = false;
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-      let result: Awaited<ReturnType<LlmProvider['chat']>>;
+      let result: Awaited<ReturnType<AiGatewayService['chat']>>;
       try {
-        result = await this.llmProvider.chat(messages, toolSchemas, SYSTEM_INSTRUCTION);
+        result = await this.aiGateway.chat(messages, toolSchemas, SYSTEM_INSTRUCTION, {
+          operation: 'onboarding_chat',
+          actorId,
+        });
       } catch (error) {
         // См. `AiService.runToolLoop`'s тот же блок — если create_business уже
         // реально выполнился (бизнес создан в БД), сбой именно follow-up

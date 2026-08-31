@@ -17,12 +17,87 @@ export interface AppConfig {
    * ошибку при старте без них намеренно (см. `env.validation.ts`). */
   stripeSecretKey: string | undefined;
   stripeWebhookSecret: string | undefined;
+  /** Секрет ВТОРОГО Stripe-вебхука (Payment Plans v1, `modules/billing`,
+   * `SubscriptionWebhookController`) — Stripe выдаёт отдельный signing
+   * secret на каждый webhook endpoint, поэтому это не то же значение, что
+   * `stripeWebhookSecret` выше (тот — для `webhooks/stripe`, заказов).
+   * `undefined`-по-умолчанию тем же приёмом: платные тарифы просто
+   * недоступны без него, backend не падает при старте. */
+  stripeSubscriptionsWebhookSecret: string | undefined;
   /** `undefined`, если Gemini не настроен — см. `GeminiAdapter.isConfigured()`,
    * тот же приём, что у `stripeSecretKey`. */
   geminiApiKey: string | undefined;
   /** Дефолт — стабильная модель с поддержкой function calling на бесплатном
    * tier (см. `AI_PLATFORM_ROADMAP.md` §2.3). */
   geminiModel: string;
+  /** RPM/RPD-лимиты официального плана Gemini и safety-запас под ними — см.
+   * `GeminiQuotaService`. Дефолты ниже ориентированы на реальный бесплатный
+   * tier (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, см.
+   * `AI_PLATFORM_ROADMAP.md` §10.4/§10.7 — оба лимита реально ловились живьём
+   * при разработке) — если план сменится, значения переопределяются через
+   * `.env`, без правки кода. Safety-лимит ВСЕГДА должен быть строго меньше
+   * официального: правило "не отправлять заведомо лишние запросы", а не
+   * ждать 429 от самого Gemini. */
+  geminiRpmLimit: number;
+  geminiRpmSafetyLimit: number;
+  geminiRpdLimit: number;
+  geminiRpdSafetyLimit: number;
+  /** Сколько раз повторить запрос после 429 ПЕРЕД тем, как сдаться
+   * (`GeminiRetriesExhaustedError`) — каждая попытка снова резервирует слот
+   * RPM/RPD (см. `GeminiQuotaService.waitForSlot`), так что это не бесконечный
+   * retry-loop (GEMINI OPTIMIZATION §26). */
+  geminiMaxRetries: number;
+  geminiRetryBaseDelayMs: number;
+  /** Сколько максимум ждать свободный RPM-слот внутри ОДНОГО хода диалога,
+   * прежде чем сдаться (`GeminiRpmQueueTimeoutError`) — пользователь ждёт
+   * ответа в этом же HTTP/SSE-запросе, бесконечная очередь здесь не имеет
+   * смысла (в отличие от RPD, где ждать нечего — сброс раз в сутки). */
+  geminiQueueMaxWaitMs: number;
+
+  /** Цена модели за 1M токенов, USD — `undefined`, если оператор не задал
+   * (см. `model-pricing.lib.ts`'s комментарий: НЕ придумываем цену за
+   * `gemini-3.6-flash`, честно считаем cost "недоступен", пока не настроено). */
+  geminiInputPricePerMillionUsd: number | undefined;
+  geminiOutputPricePerMillionUsd: number | undefined;
+
+  /** Пороги Capacity Manager (AI CAPACITY & COST MANAGER §9) — % от
+   * safety-лимита RPM/RPD (см. `percentOfSafetyLimit` в `ai-capacity.lib.ts`),
+   * не от официального лимита плана. */
+  aiCapacityWarningPercent: number;
+  aiCapacityCriticalPercent: number;
+  aiCapacityEmergencyPercent: number;
+  /** Как часто писать `AiCapacitySnapshot` фоновым таймером
+   * (`AiCapacitySnapshotService`) — не на каждый запрос (те уже покрыты
+   * `AiRequestLog`), нужен для видимости тренда capacity в периоды затишья. */
+  aiCapacitySnapshotIntervalMs: number;
+
+  /** Сколько дней хранить сырые `AiRequestLog` (`AiRetentionService`) —
+   * после дневной агрегации в `AiUsageDailyAggregate` они нужны только для
+   * недавнего расследования инцидентов (429-анализ и т. п.), не для
+   * долгосрочной аналитики. */
+  aiRawRequestRetentionDays: number;
+  /** Как часто гонять агрегацию сырых логов в дневные тоталы + подчистку
+   * устаревших сырых строк. */
+  aiAggregationIntervalMs: number;
+
+  /** Окно, в течение которого повторный запрос с ТЕМ ЖЕ отпечатком
+   * (operation+businessId+сообщение) считается дублем и получает
+   * закэшированный результат вместо нового обращения к Gemini (см.
+   * `AiDedupCacheService`). */
+  aiDedupCacheTtlMs: number;
+
+  /** §23 brief'а — во сколько раз текущая частота запросов от одного
+   * actor'а должна превысить baseline, чтобы считаться аномалией (см.
+   * `isRateAnomaly`). */
+  aiAnomalyRateMultiplier: number;
+  /** Сколько подряд 429 в скользящем окне (`aiCapacitySnapshotIntervalMs`)
+   * считать всплеском retry, а не разовой неудачей. */
+  aiAnomalyRetrySpikeThreshold: number;
+
+  /** Как часто пересчитывать рекомендации (§24 brief'а: "AI не должен
+   * анализировать каждый request" — периодически/по событию, не на каждый
+   * запрос). Дефолт — 30 минут, как в собственном примере задачи. */
+  aiRecommendationIntervalMs: number;
 }
 
 export default (): { app: AppConfig } => ({
@@ -38,10 +113,42 @@ export default (): { app: AppConfig } => ({
     sitesBaseDomain: process.env.SITES_BASE_DOMAIN ?? 'localhost',
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    stripeSubscriptionsWebhookSecret: process.env.STRIPE_SUBSCRIPTIONS_WEBHOOK_SECRET,
     geminiApiKey: process.env.GEMINI_API_KEY,
     // `gemini-2.5-flash` вернул 404 "no longer available to new users" при
     // реальном тесте (2026-08-29) — Google сам называет замену в тексте
     // ошибки. Вынесено в конфиг именно на случай следующей такой миграции.
     geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.6-flash',
+    geminiRpmLimit: Number(process.env.GEMINI_RPM_LIMIT ?? 15),
+    geminiRpmSafetyLimit: Number(process.env.GEMINI_RPM_SAFETY_LIMIT ?? 12),
+    geminiRpdLimit: Number(process.env.GEMINI_RPD_LIMIT ?? 1500),
+    geminiRpdSafetyLimit: Number(process.env.GEMINI_RPD_SAFETY_LIMIT ?? 1350),
+    geminiMaxRetries: Number(process.env.GEMINI_MAX_RETRIES ?? 2),
+    geminiRetryBaseDelayMs: Number(process.env.GEMINI_RETRY_BASE_DELAY_MS ?? 1000),
+    geminiQueueMaxWaitMs: Number(process.env.GEMINI_QUEUE_MAX_WAIT_MS ?? 20_000),
+
+    geminiInputPricePerMillionUsd: process.env.GEMINI_INPUT_PRICE_PER_MILLION_USD
+      ? Number(process.env.GEMINI_INPUT_PRICE_PER_MILLION_USD)
+      : undefined,
+    geminiOutputPricePerMillionUsd: process.env.GEMINI_OUTPUT_PRICE_PER_MILLION_USD
+      ? Number(process.env.GEMINI_OUTPUT_PRICE_PER_MILLION_USD)
+      : undefined,
+
+    aiCapacityWarningPercent: Number(process.env.AI_CAPACITY_WARNING_PERCENT ?? 70),
+    aiCapacityCriticalPercent: Number(process.env.AI_CAPACITY_CRITICAL_PERCENT ?? 85),
+    aiCapacityEmergencyPercent: Number(process.env.AI_CAPACITY_EMERGENCY_PERCENT ?? 95),
+    aiCapacitySnapshotIntervalMs: Number(
+      process.env.AI_CAPACITY_SNAPSHOT_INTERVAL_MS ?? 5 * 60_000,
+    ),
+
+    aiRawRequestRetentionDays: Number(process.env.AI_RAW_REQUEST_RETENTION_DAYS ?? 7),
+    aiAggregationIntervalMs: Number(process.env.AI_AGGREGATION_INTERVAL_MS ?? 60 * 60_000),
+
+    aiDedupCacheTtlMs: Number(process.env.AI_DEDUP_CACHE_TTL_MS ?? 60_000),
+
+    aiAnomalyRateMultiplier: Number(process.env.AI_ANOMALY_RATE_MULTIPLIER ?? 5),
+    aiAnomalyRetrySpikeThreshold: Number(process.env.AI_ANOMALY_RETRY_SPIKE_THRESHOLD ?? 5),
+
+    aiRecommendationIntervalMs: Number(process.env.AI_RECOMMENDATION_INTERVAL_MS ?? 30 * 60_000),
   },
 });

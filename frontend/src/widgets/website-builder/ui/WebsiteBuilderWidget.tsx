@@ -398,6 +398,7 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
               {activePane === 'library' && (
                 <ComponentLibraryPanel
                   className={styles.panel}
+                  businessId={businessId}
                   capabilities={data.business.capabilities}
                 />
               )}
@@ -455,7 +456,7 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
         />
       )}
 
-      <AddBlockModal capabilities={data.business.capabilities} />
+      <AddBlockModal businessId={businessId} capabilities={data.business.capabilities} />
 
       {/* Плавающее мини-окно AI, не вкладка панели — холст должен оставаться
        * полностью видимым, пока идёт диалог с AI (тот же принцип «холст

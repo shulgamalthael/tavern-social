@@ -1,0 +1,49 @@
+.status {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--tavern-line);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.row__email {
+  flex: 1;
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.row__points {
+  flex: 0 0 auto;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.row__tier {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  color: var(--tavern-ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}

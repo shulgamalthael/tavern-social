@@ -49,3 +49,17 @@ export interface NotificationsPage {
   items: Notification[];
   nextCursor: string | null;
 }
+
+/** Отдельная, лёгкая форма — не `Notification` с занулёнными полями. Business
+ * Logic Engine (AI_PLATFORM_ROADMAP.md §2.5/§13/§15.4) отправляет её
+ * владельцу бизнеса при срабатывании правила (`send_notification`-действие);
+ * у события нет человека-"актёра" (заказ/запись/форма пришли от анонимного
+ * посетителя витрины), поэтому это не `Notification` — тот же принцип, что у
+ * backend's `BusinessNotificationDto` (см. её комментарий в
+ * `notifications.types.ts`), две независимые копии одного контракта. */
+export interface BusinessNotification {
+  id: string;
+  summary: string;
+  isRead: boolean;
+  createdAt: string;
+}

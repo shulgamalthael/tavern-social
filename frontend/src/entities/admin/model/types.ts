@@ -130,3 +130,92 @@ export interface AdminStats {
   topGroups: AdminTopCircle[];
   topCommunities: AdminTopCircle[];
 }
+
+/** AI Capacity & Cost Manager — зеркалит `AiInfrastructureOverviewDto`
+ * (`backend/src/modules/ai/capacity/ai-capacity.types.ts`) один в один, без
+ * промежуточного маппинга: backend уже отдаёт данные в форме, готовой для
+ * рендера (проценты уже посчитаны, суммы уже в микро-USD), лишний слой
+ * трансформации здесь был бы просто дублированием. */
+export type AiCapacityStatus = 'normal' | 'warning' | 'critical' | 'emergency';
+
+export interface AiCapacitySnapshot {
+  rpm: { used: number; safetyLimit: number; officialLimit: number; usedPercent: number };
+  rpd: { used: number; safetyLimit: number; officialLimit: number; usedPercent: number };
+  tpm: { used: number };
+  status: AiCapacityStatus;
+}
+
+export interface AiCostSummary {
+  todayCostMicros: number;
+  monthCostMicros: number;
+  todayRequestCount: number;
+  monthRequestCount: number;
+}
+
+export interface AiForecast {
+  sufficientData: boolean;
+  averageDailyGrowthPercent: number;
+  projectedRequestsIn30Days: number;
+  daysUntilCapacityInsufficient: number | null;
+}
+
+export interface AiBudgetStatus {
+  scope: 'global' | 'business';
+  businessId: string | null;
+  monthlyLimitCents: number;
+  spentMicros: number;
+  remainingMicros: number;
+  spentPercent: number;
+}
+
+export interface AiUsageByOperation {
+  operation: string;
+  requestCount: number;
+  totalTokens: number;
+  costMicros: number;
+}
+
+export interface AiUsageByBusiness {
+  businessId: string;
+  requestCount: number;
+  totalTokens: number;
+  costMicros: number;
+}
+
+export interface AiAlert {
+  id: string;
+  type: string;
+  severity: 'warning' | 'critical' | 'emergency';
+  message: string;
+  createdAt: string;
+}
+
+export interface AiAnomaly {
+  id: string;
+  type: string;
+  description: string;
+  detectedAt: string;
+}
+
+export interface AiRecommendation {
+  id: string;
+  type: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface AiInfrastructureOverview {
+  capacity: AiCapacitySnapshot;
+  cost: AiCostSummary;
+  forecast: AiForecast;
+  budgets: AiBudgetStatus[];
+  topOperations: AiUsageByOperation[];
+  topBusinesses: AiUsageByBusiness[];
+  recentAlerts: AiAlert[];
+  recentAnomalies: AiAnomaly[];
+  recommendations: AiRecommendation[];
+  tierInfo: {
+    providerTierDetectionAvailable: false;
+    currentLimits: { rpm: number; rpd: number };
+  };
+}

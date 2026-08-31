@@ -1,0 +1,87 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stages {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  position: relative;
+
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 28px;
+    width: 1px;
+    height: calc(100% - 20px);
+    background: var(--tavern-line);
+  }
+}
+
+.stage__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--tavern-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stage__number {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stage__title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stage__chevron {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--tavern-muted);
+  transition: transform 0.15s ease;
+}
+
+.stage__chevron--open {
+  transform: rotate(180deg);
+}
+
+.stage__description {
+  margin: 0 0 6px 30px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}

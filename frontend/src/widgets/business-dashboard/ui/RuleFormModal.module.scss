@@ -1,0 +1,91 @@
+@use '@/shared/styles/mixins' as *;
+
+.modal {
+  width: min(520px, 100%);
+}
+
+.title {
+  color: var(--tavern-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.input {
+  @include control;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.hint {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.condition {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.condition__remove {
+  @include control;
+  width: 38px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tavern-danger);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--tavern-danger);
+  }
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.error {
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

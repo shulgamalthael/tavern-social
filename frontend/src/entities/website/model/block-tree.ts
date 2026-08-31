@@ -16,6 +16,21 @@ export function createBlockId(): string {
   return crypto.randomUUID();
 }
 
+/** Пересобирает блок (и рекурсивно его `children`, если есть) со свежими
+ * `id` — используется при вставке готового набора блоков, откуда бы он ни
+ * пришёл (стартовый шаблон, сохранённый виджет), чтобы одна и та же
+ * заготовка, вставленная дважды, не породила два блока с одинаковым id (см.
+ * `website-store.ts`'s `insertWidgetBlocks`). Рекурсивная, не плоская — на
+ * случай будущего блока-виджета с `children`, хотя сегодняшние 4 curated
+ * типа (`heading`/`text`/`quote`/`spacer`) листовые. */
+export function remapBlockIds(block: WebsiteBlock): WebsiteBlock {
+  const remapped: WebsiteBlock = { ...block, id: createBlockId() };
+  if (block.children) {
+    remapped.children = block.children.map(remapBlockIds);
+  }
+  return remapped;
+}
+
 /** Рекурсивный поиск блока по id — глубина дерева на практике маленькая
  * (section → columns → column → блок, 3-4 уровня), линейный обход без
  * индекса более чем достаточен и не требует поддерживать отдельную

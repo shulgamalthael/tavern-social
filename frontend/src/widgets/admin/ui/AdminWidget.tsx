@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChartIcon, CommunitiesIcon, FeedIcon, FriendsIcon, GroupsIcon } from '@/shared/ui/icons';
+import {
+  ChartIcon,
+  CommunitiesIcon,
+  CpuIcon,
+  FeedIcon,
+  FriendsIcon,
+  GroupsIcon,
+} from '@/shared/ui/icons';
 import { PageHead } from '@/shared/ui/PageHead';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
+import { AdminAiInfrastructurePanel } from './AdminAiInfrastructurePanel';
 import { AdminCommunitiesPanel } from './AdminCommunitiesPanel';
 import { AdminDashboard } from './AdminDashboard';
 import { AdminGroupsPanel } from './AdminGroupsPanel';
@@ -12,7 +20,8 @@ import { AdminSidebar, type AdminSidebarTabConfig } from './AdminSidebar';
 import { AdminUsersPanel } from './AdminUsersPanel';
 import styles from './AdminWidget.module.scss';
 
-export type AdminTab = 'dashboard' | 'users' | 'posts' | 'groups' | 'communities';
+export type AdminTab =
+  'dashboard' | 'users' | 'posts' | 'groups' | 'communities' | 'ai-infrastructure';
 
 const TABS: AdminSidebarTabConfig[] = [
   { id: 'dashboard', label: 'Дашборд', icon: ChartIcon },
@@ -20,6 +29,7 @@ const TABS: AdminSidebarTabConfig[] = [
   { id: 'posts', label: 'Посты', icon: FeedIcon },
   { id: 'groups', label: 'Группы', icon: GroupsIcon },
   { id: 'communities', label: 'Сообщества', icon: CommunitiesIcon },
+  { id: 'ai-infrastructure', label: 'AI-инфраструктура', icon: CpuIcon },
 ];
 
 const TAB_DESCRIPTION: Record<AdminTab, string> = {
@@ -28,6 +38,7 @@ const TAB_DESCRIPTION: Record<AdminTab, string> = {
   posts: 'Поиск, фильтры и модерация записей',
   groups: 'Поиск и удаление групп',
   communities: 'Поиск и удаление сообществ',
+  'ai-infrastructure': 'Capacity, cost и quota AI Builder’а (Gemini)',
 };
 
 function isAdminTab(value: string): value is AdminTab {
@@ -79,6 +90,7 @@ export function AdminWidget() {
           {tab === 'posts' && <AdminPostsPanel />}
           {tab === 'groups' && <AdminGroupsPanel />}
           {tab === 'communities' && <AdminCommunitiesPanel />}
+          {tab === 'ai-infrastructure' && <AdminAiInfrastructurePanel />}
         </SectionContainer>
       </div>
     </div>

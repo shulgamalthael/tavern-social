@@ -1,41 +1,40 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, type OnModuleInit } from '@nestjs/common';
+import { PrismaService } from '@/infrastructure/database/prisma.service';
+import { MediaAssetsService } from '@/modules/media-assets/media-assets.service';
 import { WebsitesService } from '@/modules/websites/websites.service';
 import type { WebsiteBlock, WebsitePage } from '@/modules/websites/websites.types';
 import type { ToolContext, ToolDefinition } from '../ai.types';
+import { buildBlockRefs, needsBlockRefs } from './build-block-refs';
 import {
   ALLOWED_BLOCK_TYPES,
   BLOCK_SCHEMAS,
   buildValidatedProps,
   isAllowedBlockType,
   type AllowedBlockType,
+  type BuildValidatedPropsRefs,
 } from './lib/add-block-schemas';
 import { ToolRegistryService } from './tool-registry.service';
 
 /**
  * Второй записывающий AI-инструмент (AI_PLATFORM_ROADMAP.md, фаза AI-2,
  * продолжение после `create_page`, см. §7 роадмапа). Как и было
- * анонсировано там: `update_block_props`/`set_style` откладываются, пока
- * нет переносимого на backend валидатора `BlockDefinition.fields` (§3 —
- * AI-генерируемые `props` — untrusted input, а backend сегодня не может
- * прочитать frontend-реестр напрямую: React-компоненты рендереров туда
- * импортированы, backend их не может резолвить).
+ * анонсировано там: `update_block_props`/`set_style` откладывались, пока
+ * не появился переносимый на backend валидатор `BlockDefinition.fields` (§3
+ * — AI-генерируемые `props` — untrusted input, а backend не может прочитать
+ * frontend-реестр напрямую).
  *
- * Вместо переноса ВСЕГО реестра (все 12 категорий, `control: 'link'`/
- * `'dataSource'`/`'list'` с их структурными формами) — узкий allowlist
- * (mission §21 "allowlist > blocklist", уже применённый в этом плане к
- * custom-widget engine, §2.4): 4 самых простых типографических/layout-блока
- * без ссылок, медиа и data-binding — схемы вынесены в `lib/add-block-
- * schemas.ts` (юнит-тестируется отдельно от NestJS-обвязки) и СВЕРЕНЫ
- * построчно с настоящими `defaultProps`/`fields` в
- * `frontend/src/entities/website/blocks/{typography,layout}/index.tsx` —
- * блок, добавленный этим инструментом, открывается в инспекторе билдера
- * точно так же, как если бы его перетащили руками. Остальные типы блоков
- * (`image`/`gallery`/`button`/`productgrid`/...) НЕ поддержаны этим
- * инструментом намеренно, не как временный пробел: `image`/`button` тянут
- * за собой `LinkTarget` (структурный union, не просто строка) и/или
- * загрузку медиа, которых у AI-слоя пока нет вообще — расширять allowlist
- * стоит вместе с появлением соответствующих возможностей, не раньше.
+ * Вместо переноса ВСЕГО реестра (все 12 категорий, `control: 'dataSource'`/
+ * `'list'` с их структурными формами) — узкий allowlist (mission §21
+ * "allowlist > blocklist", уже применённый в этом плане к custom-widget
+ * engine, §2.4). `image`/`button` (AI_PLATFORM_ROADMAP.md §9.6/§16 —
+ * согласовано с пользователем сразу широким v1) добавлены поверх исходных
+ * 4 типографических/layout-блоков: `image.src` — только уже загруженный
+ * файл (`list_media_assets`, AI сам ничего не грузит), `link`/`url` —
+ * полный `LinkTarget` из 7 вариантов, включая `addToCart`/`bookAppointment`
+ * (см. `lib/link-target-schema.ts`). `productgrid`/`gallery`/data-bound
+ * блоки по-прежнему НЕ поддержаны — те требуют `control: 'dataSource'`,
+ * структурно другой формы, чем `LinkTarget`.
  */
 
 interface AddBlockInput {
@@ -54,6 +53,8 @@ interface AddBlockOutput {
 export class AddBlockTool implements OnModuleInit {
   constructor(
     private readonly websitesService: WebsitesService,
+    private readonly prisma: PrismaService,
+    private readonly mediaAssetsService: MediaAssetsService,
     private readonly toolRegistry: ToolRegistryService,
   ) {}
 
@@ -62,8 +63,8 @@ export class AddBlockTool implements OnModuleInit {
       name: 'add_block',
       description:
         'Добавляет новый блок контента в КОНЕЦ указанной страницы (сначала узнай id страницы через get_project_tree). ' +
-        'Поддерживает только простые типы без ссылок и медиа: heading (заголовок), text (абзац), quote (цитата), spacer (пустой отступ). ' +
-        'Для остальных типов блоков (изображения, кнопки, товары и т.п.) инструмента пока нет.',
+        'Поддерживает: heading (заголовок), text (абзац), quote (цитата), spacer (пустой отступ), image (изображение — src только из list_media_assets), button (кнопка со ссылкой). ' +
+        'Для остальных типов блоков (галереи, товарные сетки и т.п.) инструмента пока нет.',
       riskLevel: 'medium',
       parameters: {
         type: 'object',
@@ -79,7 +80,10 @@ export class AddBlockTool implements OnModuleInit {
             description:
               'Свойства блока (необязательны — каждое поле, которое не передано, берёт разумное значение по умолчанию). ' +
               'heading: text/level(h1|h2|h3)/size(sm|md|lg|xl)/color(default|primary|muted). ' +
-              'text: text/color(default|primary|muted). quote: text/author. spacer: height(sm|md|lg|xl).',
+              'text: text/color(default|primary|muted). quote: text/author. spacer: height(sm|md|lg|xl). ' +
+              'image: src(url из list_media_assets или null)/alt/objectFit(cover|contain)/radius(none|sm|md|lg|full)/width(auto|full)/link(LinkTarget). ' +
+              'button: label/url(LinkTarget)/variant(solid|outline|soft)/size(sm|md|lg)/target(_self|_blank). ' +
+              'LinkTarget — объект {type, ...}: {type:"external",url}, {type:"page",pageId}, {type:"anchor",anchor}, {type:"phone",phone}, {type:"email",email}, {type:"addToCart",productId}, {type:"bookAppointment",serviceId}.',
           },
         },
         required: ['pageId', 'blockType'],
@@ -110,7 +114,16 @@ export class AddBlockTool implements OnModuleInit {
         }
 
         const schema = BLOCK_SCHEMAS[input.blockType];
-        const props = buildValidatedProps(schema, input.props);
+        const refs: BuildValidatedPropsRefs | undefined = needsBlockRefs(input.blockType)
+          ? await buildBlockRefs(
+              this.prisma,
+              this.mediaAssetsService,
+              ctx.businessId,
+              ctx.actorId,
+              draft.document.pages,
+            )
+          : undefined;
+        const props = buildValidatedProps(schema, input.props, undefined, refs);
 
         const newBlock: WebsiteBlock = { id: randomUUID(), type: input.blockType, props };
 

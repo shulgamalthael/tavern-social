@@ -2,7 +2,8 @@ import { Injectable, Logger, type MessageEvent } from '@nestjs/common';
 import { from, map, type Observable } from 'rxjs';
 import type { AiStreamEvent, AuditLogListItem, ChatResult } from './ai.types';
 import { AuditLogService } from './audit-log.service';
-import { LlmProvider, type LlmMessage } from './llm-provider';
+import { AiGatewayService } from './capacity/ai-gateway.service';
+import type { LlmMessage } from './llm-provider';
 import { ToolRegistryService } from './tools/tool-registry.service';
 
 /** Жёсткий потолок на число раундов «модель просит инструмент(ы) →
@@ -41,7 +42,7 @@ export class AiService {
   private readonly logger = new Logger(AiService.name);
 
   constructor(
-    private readonly llmProvider: LlmProvider,
+    private readonly aiGateway: AiGatewayService,
     private readonly toolRegistry: ToolRegistryService,
     private readonly auditLog: AuditLogService,
   ) {}
@@ -103,9 +104,13 @@ export class AiService {
     let executedAny = false;
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration++) {
-      let result: Awaited<ReturnType<LlmProvider['chat']>>;
+      let result: Awaited<ReturnType<AiGatewayService['chat']>>;
       try {
-        result = await this.llmProvider.chat(messages, toolSchemas, SYSTEM_INSTRUCTION);
+        result = await this.aiGateway.chat(messages, toolSchemas, SYSTEM_INSTRUCTION, {
+          operation: 'business_chat',
+          businessId,
+          actorId,
+        });
       } catch (error) {
         // Инструмент(ы) уже реально выполнились в предыдущих итерациях этого
         // же хода (мутация уже закоммичена в БД) — сбой ИМЕННО этого,

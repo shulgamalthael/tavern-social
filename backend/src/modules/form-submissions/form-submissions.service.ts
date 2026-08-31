@@ -32,7 +32,16 @@ export class FormSubmissionsService {
     private readonly analyticsService: AnalyticsService,
   ) {}
 
-  async createFromRequest(businessId: string, dto: CreateFormSubmissionDto): Promise<void> {
+  /** Возвращает `null`, когда honeypot сработал (см. ниже) — "успех" для
+   * анонимного клиента (не выдаём боту, что поле распознано), но без строки
+   * в БД и БЕЗ срабатывания `form_submitted` (`PublicSitesController`
+   * проверяет `null` перед вызовом `RulesService.evaluate` — тот же принцип,
+   * что и honeypot сам по себе: боту не за что зацепиться, значит и
+   * автоматизация владельца не должна реагировать на фиктивную заявку). */
+  async createFromRequest(
+    businessId: string,
+    dto: CreateFormSubmissionDto,
+  ): Promise<FormSubmissionDto | null> {
     const business = await this.prisma.business.findUnique({
       where: { id: businessId },
       select: { id: true },
@@ -41,11 +50,11 @@ export class FormSubmissionsService {
 
     // Бот заполнил honeypot — "успех" без записи, чтобы не выдать, что поле
     // распознано (см. комментарий поля в DTO).
-    if (dto.honeypot) return;
+    if (dto.honeypot) return null;
 
     this.assertValidData(dto.data);
 
-    await this.prisma.formSubmission.create({
+    const row = await this.prisma.formSubmission.create({
       data: {
         businessId,
         formType: dto.formType,
@@ -54,6 +63,7 @@ export class FormSubmissionsService {
       },
     });
     await this.analyticsService.record(businessId, 'form_submission', { formType: dto.formType });
+    return this.toDto(row);
   }
 
   async list(businessId: string, ownerId: string): Promise<FormSubmissionDto[]> {

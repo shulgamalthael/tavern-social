@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
   NotFoundException,
   Param,
   Post,
@@ -30,6 +31,7 @@ import type { OrderDto } from '@/modules/orders/orders.types';
 import { OrdersService } from '@/modules/orders/orders.service';
 import { ProductsService } from '@/modules/products/products.service';
 import type { PublicProductDto } from '@/modules/products/products.types';
+import { RulesService } from '@/modules/rules/rules.service';
 import { ServicesService } from '@/modules/services/services.service';
 import type { PublicServiceDto } from '@/modules/services/services.types';
 import { WebsitesService } from '@/modules/websites/websites.service';
@@ -53,6 +55,8 @@ import type { WebsitePublicDto } from '@/modules/websites/websites.types';
  */
 @Controller('sites')
 export class PublicSitesController {
+  private readonly logger = new Logger(PublicSitesController.name);
+
   constructor(
     private readonly domainResolver: DomainResolverService,
     private readonly websitesService: WebsitesService,
@@ -64,6 +68,7 @@ export class PublicSitesController {
     private readonly formSubmissionsService: FormSubmissionsService,
     private readonly analyticsService: AnalyticsService,
     private readonly discountsService: DiscountsService,
+    private readonly rulesService: RulesService,
   ) {}
 
   @Get('resolve')
@@ -113,14 +118,42 @@ export class PublicSitesController {
    * немногих ЗАПИСЫВАЮЩИХ анонимных эндпоинтов во всём проекте (создаёт
    * реальную запись в БД без какой-либо аутентификации, см. также
    * `createAppointment`/`createFormSubmission` ниже), поэтому лимит
-   * заметно строже, чем у остальных публичных `GET` здесь. */
+   * заметно строже, чем у остальных публичных `GET` здесь.
+   *
+   * `rulesService.evaluate('order_completed', ...)` — Business Logic Engine
+   * v1 (AI_PLATFORM_ROADMAP.md §2.5/AI-5) — вызывается ЗДЕСЬ, ПОСЛЕ того как
+   * заказ уже реально создан и закоммичен, тем же "Controller решает,
+   * Service не знает" принципом, что и у Socket.IO-эмиссий в проекте (см.
+   * `AGENTS.md` backend). Обёрнут в try/catch на этом уровне ДОПОЛНИТЕЛЬНО
+   * к тому, что `RulesService.evaluate` уже сама не бросает исключения из-за
+   * упавшего ДЕЙСТВИЯ одного правила (см. её комментарий) — эта обёртка
+   * защищает от любой другой неожиданной ошибки движка, чтобы уже созданный
+   * и оплаченный (в будущем) заказ никогда не превращался в 500 для
+   * покупателя из-за проблемы в автоматизации, которая покупателя вообще не
+   * касается. */
   @Post(':businessId/orders')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  createOrder(
+  async createOrder(
     @Param('businessId') businessId: string,
     @Body() dto: CreateOrderDto,
   ): Promise<OrderDto> {
-    return this.ordersService.createFromCart(businessId, dto);
+    const order = await this.ordersService.createFromCart(businessId, dto);
+
+    try {
+      await this.rulesService.evaluate('order_completed', businessId, {
+        totalCents: order.totalCents,
+        subtotalCents: order.subtotalCents,
+        currency: order.currency,
+        status: order.status,
+        customerEmail: order.customerEmail,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Business Logic Engine упал на order_completed для заказа ${order.id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    return order;
   }
 
   /** Предпросмотр промокода (Pricing Engine, Phase 17, см.
@@ -178,14 +211,34 @@ export class PublicSitesController {
   /** Заявка на запись с анонимной витрины — тот же принцип, что и
    * `createOrder`: цена/название/длительность пересчитываются на backend из
    * актуальной `Service`, не берутся из тела запроса. Тот же более строгий
-   * `@Throttle`, что и у заказов. */
+   * `@Throttle`, что и у заказов. `rulesService.evaluate('appointment_booked',
+   * ...)` — тот же принцип и та же try/catch-обёртка, что у `order_completed`
+   * в `createOrder` выше (второй bounded-слайс AI-5, см. её комментарий там
+   * и `RuleTrigger`'s комментарий в схеме). */
   @Post(':businessId/appointments')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  createAppointment(
+  async createAppointment(
     @Param('businessId') businessId: string,
     @Body() dto: CreateAppointmentDto,
   ): Promise<AppointmentDto> {
-    return this.appointmentsService.createFromRequest(businessId, dto);
+    const appointment = await this.appointmentsService.createFromRequest(businessId, dto);
+
+    try {
+      await this.rulesService.evaluate('appointment_booked', businessId, {
+        priceCents: appointment.priceCents,
+        durationMinutes: appointment.durationMinutes,
+        currency: appointment.currency,
+        status: appointment.status,
+        serviceName: appointment.serviceName,
+        customerEmail: appointment.customerEmail,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Business Logic Engine упал на appointment_booked для записи ${appointment.id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    return appointment;
   }
 
   /** Отправка формы (`contactform`/`newsletterform`/`simpleform`, см.
@@ -196,15 +249,32 @@ export class PublicSitesController {
    * более строгий `@Throttle`, что и у заказов/записей — третий и
    * последний анонимный ЗАПИСЫВАЮЩИЙ эндпоинт во всём проекте. Возвращает
    * `204` без тела — форме на frontend нечего показать в ответе, только
-   * факт успеха/ошибки (см. `FormBlock.tsx`). */
+   * факт успеха/ошибки (см. `FormBlock.tsx`). `rulesService.evaluate(
+   * 'form_submitted', ...)` — тот же принцип, что у `order_completed`/
+   * `appointment_booked` выше, но пропускается целиком, если сервис вернул
+   * `null` (honeypot — см. `FormSubmissionsService.createFromRequest`'s
+   * комментарий: фиктивная заявка бота не должна запускать автоматизацию
+   * владельца). */
   @Post(':businessId/form-submissions')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.NO_CONTENT)
-  createFormSubmission(
+  async createFormSubmission(
     @Param('businessId') businessId: string,
     @Body() dto: CreateFormSubmissionDto,
   ): Promise<void> {
-    return this.formSubmissionsService.createFromRequest(businessId, dto);
+    const submission = await this.formSubmissionsService.createFromRequest(businessId, dto);
+    if (!submission) return;
+
+    try {
+      await this.rulesService.evaluate('form_submitted', businessId, {
+        formType: submission.formType,
+        formLabel: submission.formLabel,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Business Logic Engine упал на form_submitted для заявки ${submission.id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /** Витрина постов блога для блока `bloggrid` (см. `entities/website/

@@ -8,6 +8,13 @@ import {
   type LlmToolCall,
   type LlmToolSchema,
 } from '../llm-provider';
+import { GeminiRetriesExhaustedError } from '../quota/gemini-quota.errors';
+import { GeminiQuotaService } from '../quota/gemini-quota.service';
+import {
+  computeGeminiBackoffDelayMs,
+  parseGeminiRetryAfterMs,
+  sleep,
+} from '../quota/gemini-quota.lib';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -35,6 +42,16 @@ interface GeminiGenerateContentResponse {
     finishReason?: string;
   }>;
   promptFeedback?: { blockReason?: string };
+  /** Реальный расход токенов ЭТОГО вызова, как его считает сам Gemini — не
+   * задокументировано в типах, но реально присутствует в ответе
+   * `generateContent` (проверено на реальном ответе API, не по памяти) —
+   * источник `LlmChatResult.usage` для Cost Engine/TPM-учёта
+   * (`AiRequestAccountingService`). */
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
 }
 
 /**
@@ -55,12 +72,19 @@ export class GeminiAdapter extends LlmProvider {
   private readonly logger = new Logger(GeminiAdapter.name);
   private readonly apiKey: string | undefined;
   private readonly model: string;
+  private readonly maxRetries: number;
+  private readonly retryBaseDelayMs: number;
 
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly quota: GeminiQuotaService,
+  ) {
     super();
     const config = configService.get<AppConfig>('app')!;
     this.apiKey = config.geminiApiKey;
     this.model = config.geminiModel;
+    this.maxRetries = config.geminiMaxRetries;
+    this.retryBaseDelayMs = config.geminiRetryBaseDelayMs;
 
     if (!this.apiKey) {
       this.logger.warn('GEMINI_API_KEY не задан — AI-чат отключён (см. AI_PLATFORM_ROADMAP.md §5)');
@@ -75,6 +99,7 @@ export class GeminiAdapter extends LlmProvider {
     messages: LlmMessage[],
     tools: LlmToolSchema[],
     systemInstruction: string,
+    operation: string,
   ): Promise<LlmChatResult> {
     if (!this.apiKey) {
       throw new Error('GeminiAdapter.chat вызван без настроенного GEMINI_API_KEY');
@@ -98,21 +123,7 @@ export class GeminiAdapter extends LlmProvider {
         : {}),
     };
 
-    const response = await fetch(`${GEMINI_API_BASE}/${this.model}:generateContent`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': this.apiKey,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API ответил ${response.status}: ${errorText}`);
-    }
-
-    const payload = (await response.json()) as GeminiGenerateContentResponse;
+    const payload = await this.sendWithQuotaAndRetry(body, operation);
 
     if (payload.promptFeedback?.blockReason) {
       throw new Error(`Gemini заблокировал запрос: ${payload.promptFeedback.blockReason}`);
@@ -136,10 +147,88 @@ export class GeminiAdapter extends LlmProvider {
         providerMetadata: part.thoughtSignature,
       }));
 
+    const usage = payload.usageMetadata
+      ? {
+          inputTokens: payload.usageMetadata.promptTokenCount ?? 0,
+          outputTokens: payload.usageMetadata.candidatesTokenCount ?? 0,
+          totalTokens:
+            payload.usageMetadata.totalTokenCount ??
+            (payload.usageMetadata.promptTokenCount ?? 0) +
+              (payload.usageMetadata.candidatesTokenCount ?? 0),
+        }
+      : undefined;
+
     return {
       message: textParts.length > 0 ? textParts.join('\n') : null,
       toolCalls,
+      usage,
     };
+  }
+
+  /** Единственное место, где реально идёт `fetch` к Gemini — резервирует
+   * RPM/RPD-слот через `GeminiQuotaService` ПЕРЕД каждой попыткой (включая
+   * повторные после 429, см. её комментарий) и ограниченно ретраит 429 с
+   * backoff'ом, а не падает на первом же отказе (GEMINI OPTIMIZATION §26-27:
+   * "никогда не делать retry без строгого ограничения", "если RPD исчерпан —
+   * не отправлять дополнительные запросы"). Не-429 ошибки (сеть, 5xx,
+   * заблокированный промпт) НЕ ретраятся — они не про квоту и повтор с тем же
+   * телом с высокой вероятностью повторит тот же результат. */
+  private async sendWithQuotaAndRetry(
+    body: unknown,
+    operation: string,
+  ): Promise<GeminiGenerateContentResponse> {
+    let attempt = 0;
+
+    for (;;) {
+      // Бросает `GeminiRpdExceededError`/`GeminiRpmQueueTimeoutError`, если
+      // слот получить не удалось (дневной лимит исчерпан или очередь на RPM
+      // не рассосалась за отведённое время) — оба уже `HttpException` с
+      // понятным сообщением, дальше их незачем оборачивать.
+      await this.quota.waitForSlot(operation);
+
+      let response: Response;
+      try {
+        response = await fetch(`${GEMINI_API_BASE}/${this.model}:generateContent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': this.apiKey!,
+          },
+          body: JSON.stringify(body),
+        });
+      } catch (networkError) {
+        await this.quota.recordOutcome(operation, 'failed');
+        throw new Error(
+          `Gemini API недоступен: ${networkError instanceof Error ? networkError.message : String(networkError)}`,
+        );
+      }
+
+      if (response.status === 429) {
+        await this.quota.recordOutcome(operation, '429');
+        attempt += 1;
+        if (attempt > this.maxRetries) {
+          throw new GeminiRetriesExhaustedError();
+        }
+
+        const retryAfterMs =
+          parseGeminiRetryAfterMs(response.headers.get('retry-after')) ??
+          computeGeminiBackoffDelayMs(attempt, this.retryBaseDelayMs);
+        this.logger.warn(
+          `[${operation}] Gemini ответил 429, попытка ${attempt}/${this.maxRetries} через ${retryAfterMs}мс`,
+        );
+        await sleep(retryAfterMs);
+        continue;
+      }
+
+      if (!response.ok) {
+        await this.quota.recordOutcome(operation, 'failed');
+        const errorText = await response.text();
+        throw new Error(`Gemini API ответил ${response.status}: ${errorText}`);
+      }
+
+      await this.quota.recordOutcome(operation, 'success');
+      return (await response.json()) as GeminiGenerateContentResponse;
+    }
   }
 }
 

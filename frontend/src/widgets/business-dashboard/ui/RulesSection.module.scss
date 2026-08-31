@@ -1,0 +1,37 @@
+// Тот же приём переключателя, что `AiAssistantPanel.module.scss`'s
+// «Чат»/«История» — те же токены/размеры, для визуальной консистентности,
+// но отдельный файл (не переиспользование того модуля): это два разных
+// FSD-слайса (widgets/business-dashboard vs features/ai-chat), и правило
+// проекта — не импортировать чужие module.scss поперёк слайсов.
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--tavern-line);
+}
+
+.tab {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.tab--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-ink);
+}

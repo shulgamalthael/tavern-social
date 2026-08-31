@@ -14,9 +14,11 @@ import {
   CalendarIcon,
   ChartIcon,
   ClockIcon,
+  CpuIcon,
   EditIcon,
   ExternalLinkIcon,
   FileIcon,
+  GridIcon,
   MailIcon,
   NewspaperIcon,
   ReceiptIcon,
@@ -32,7 +34,9 @@ import { OrdersSection } from './OrdersSection';
 import { OverviewSection } from './OverviewSection';
 import { PagesSection } from './PagesSection';
 import { ProductsSection } from './ProductsSection';
+import { RulesSection } from './RulesSection';
 import { ServicesSection } from './ServicesSection';
+import { WidgetsSection } from './WidgetsSection';
 import styles from './BusinessDashboardWidget.module.scss';
 
 export interface BusinessDashboardWidgetProps {
@@ -48,7 +52,9 @@ type DashboardTab =
   | 'services'
   | 'appointments'
   | 'blog'
-  | 'forms';
+  | 'forms'
+  | 'rules'
+  | 'widgets';
 
 const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[] = [
   { id: 'overview', icon: ChartIcon, label: 'Обзор' },
@@ -60,6 +66,8 @@ const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[
   { id: 'appointments', icon: CalendarIcon, label: 'Записи' },
   { id: 'blog', icon: NewspaperIcon, label: 'Блог' },
   { id: 'forms', icon: MailIcon, label: 'Заявки' },
+  { id: 'widgets', icon: GridIcon, label: 'Виджеты' },
+  { id: 'rules', icon: CpuIcon, label: 'Автоматизация' },
 ];
 
 /**
@@ -94,6 +102,17 @@ const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[
  * комментарий модели `FormSubmission` в backend schema.prisma), поэтому
  * `FormsSection` не показывает экран "включить капабилити" — сразу список
  * заявок или пустое состояние.
+ *
+ * «Автоматизация» (Business Logic Engine v1, AI_PLATFORM_ROADMAP.md §2.5/
+ * §13/§15) — тоже без гейта капабилити, тот же принцип, что у «Заявок»:
+ * правило ссылается на поля конкретного события (заказ/запись/форма), но
+ * само создание правила не требует включённой `commerce`/`booking`.
+ *
+ * «Виджеты» (Custom Widget Engine v1, AI_PLATFORM_ROADMAP.md §2.4/§14/§16.2)
+ * — тот же принцип, что у «Автоматизации»: composition блоков не завязана
+ * ни на одну капабилити. Виджет пока нигде не встраивается на реальные
+ * страницы сайта (см. `WidgetsSection`'s комментарий) — вкладка позволяет
+ * только создавать/редактировать сохранённые композиции блоков впрок.
  */
 export function BusinessDashboardWidget({ businessId }: BusinessDashboardWidgetProps) {
   const businessFetcher = useCallback(() => getBusiness(businessId), [businessId]);
@@ -217,6 +236,8 @@ export function BusinessDashboardWidget({ businessId }: BusinessDashboardWidgetP
             <BlogSection business={data} onCapabilityEnabled={() => void business.refetch()} />
           )}
           {tab === 'forms' && <FormsSection businessId={businessId} />}
+          {tab === 'rules' && <RulesSection businessId={businessId} />}
+          {tab === 'widgets' && <WidgetsSection businessId={businessId} />}
         </div>
       </div>
     </div>

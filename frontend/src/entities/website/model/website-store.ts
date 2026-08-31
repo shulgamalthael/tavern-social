@@ -6,6 +6,7 @@ import {
   findParentId,
   insertBlock,
   moveBlock as moveBlockInTree,
+  remapBlockIds,
   removeBlock as removeBlockInTree,
   updateBlock as updateBlockInTree,
 } from './block-tree';
@@ -93,6 +94,19 @@ interface WebsiteBuilderActions {
    * невозможно (см. корневой план задачи — пользователь явно выбрал
    * авто-обёртку, а не «работает только внутри уже существующих Колонок»). */
   insertBlockBeside: (anchorId: string, side: 'left' | 'right', type: string) => string;
+  /** Вставляет ГОТОВЫЙ набор блоков (Custom Widget Engine, AI_PLATFORM_
+   * ROADMAP.md §2.4/§16.2) подряд, начиная с позиции `index` внутри
+   * `parentId` (или на верхнем уровне страницы, если `null`) — тот же
+   * "sibling"-режим позиционирования, что `addBlock`, но для НЕСКОЛЬКИХ
+   * блоков сразу вместо одного. Каждому блоку присваивается свежий id через
+   * `remapBlockIds` — тот же саженный виджет, вставленный дважды, не должен
+   * породить два блока с одинаковым id. Сознательно не поддерживает "boковую"
+   * (`insertBlockBeside`) вставку с авто-обёртыванием в колонки — виджет,
+   * это уже несколько блоков, а не один, и однозначного способа обернуть N
+   * блоков напротив анкора в одну колонку без произвольного решения о
+   * порядке нет; вызывающий код при side-вставке использует ту же sibling-
+   * позицию (сразу после анкора в его родителе), см. `AddBlockModal.tsx`. */
+  insertWidgetBlocks: (blocks: WebsiteBlock[], parentId: string | null, index: number) => string[];
   /** Подставляет блоки готового стартового шаблона (см. `templates/index.ts`,
    * `StarterTemplate.build`) на место текущей (пустой) страницы — только
    * для самого первого входа в билдер, пока на странице нет ни одного
@@ -292,6 +306,21 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderStore>()((set, get) =
       selectedBlockId: newBlockId,
     }));
     return newBlockId;
+  },
+
+  insertWidgetBlocks: (blocks, parentId, index) => {
+    const freshBlocks = blocks.map(remapBlockIds);
+    set((state) => ({
+      ...withHistory(state, (existing) => {
+        let result = existing;
+        for (const [offset, block] of freshBlocks.entries()) {
+          result = insertBlock(result, block, parentId, index + offset);
+        }
+        return result;
+      }),
+      selectedBlockId: freshBlocks[0]?.id ?? state.selectedBlockId,
+    }));
+    return freshBlocks.map((block) => block.id);
   },
 
   applyTemplate: (blocks) => {
