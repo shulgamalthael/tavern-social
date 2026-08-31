@@ -58,6 +58,7 @@ export type {
   ResponsiveValue,
   SectionSpacing,
   SpacingSize,
+  SpacingValue,
   TextAlign,
   ThemeCardBorder,
   ThemeCardShadow,

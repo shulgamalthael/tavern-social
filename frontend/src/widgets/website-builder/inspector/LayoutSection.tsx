@@ -12,7 +12,7 @@ import {
   type BlockStyle,
   type FieldSchema,
   type SelectOption,
-  type SpacingSize,
+  type SpacingValue,
 } from '@/entities/website';
 import { cn } from '@/shared/lib/cn';
 import { defaultValueForField } from './field-defaults';
@@ -24,28 +24,28 @@ const BASIC_FIELDS: FieldSchema[] = [
   {
     key: 'paddingY',
     label: 'Отступы сверху/снизу',
-    control: 'select',
+    control: 'spacing',
     responsive: true,
     options: SPACING_SIZE_OPTIONS,
   },
   {
     key: 'paddingX',
     label: 'Отступы слева/справа',
-    control: 'select',
+    control: 'spacing',
     responsive: true,
     options: SPACING_SIZE_OPTIONS,
   },
   {
     key: 'marginTop',
     label: 'Отступ до блока',
-    control: 'select',
+    control: 'spacing',
     responsive: true,
     options: SPACING_SIZE_OPTIONS,
   },
   {
     key: 'marginBottom',
     label: 'Отступ после блока',
-    control: 'select',
+    control: 'spacing',
     responsive: true,
     options: SPACING_SIZE_OPTIONS,
   },
@@ -156,19 +156,19 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
     const field: FieldSchema = {
       key,
       label,
-      control: 'select',
+      control: 'spacing',
       responsive: true,
       options: PADDING_SIDE_OPTIONS,
     };
     const rawValue = (style as Record<string, unknown> | undefined)?.[key];
-    const resolved = readResponsiveProp<SpacingSize | null>(rawValue, viewport, null);
+    const resolved = readResponsiveProp<SpacingValue | null>(rawValue, viewport, null);
 
     return {
       field,
       value: resolved ?? INHERIT,
       onChange: (next: unknown) => {
-        const nextValue: SpacingSize | null = next === INHERIT ? null : (next as SpacingSize);
-        const written = writeResponsiveProp<SpacingSize | null>(
+        const nextValue: SpacingValue | null = next === INHERIT ? null : (next as SpacingValue);
+        const written = writeResponsiveProp<SpacingValue | null>(
           rawValue,
           viewport,
           nextValue,

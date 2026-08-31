@@ -64,6 +64,31 @@ describe('buildValidatedStyle', () => {
     });
   });
 
+  it('accepts a numeric px value for a spacing field', () => {
+    expect(buildValidatedStyle(undefined, { paddingY: 18 })).toEqual({ paddingY: 18 });
+    expect(buildValidatedStyle(undefined, { marginBottom: 64 })).toEqual({ marginBottom: 64 });
+  });
+
+  it('accepts a numeric 0 for a spacing field, not confused with "no value"', () => {
+    expect(buildValidatedStyle(undefined, { paddingX: 0 })).toEqual({ paddingX: 0 });
+  });
+
+  it('rejects a negative or out-of-range numeric spacing value', () => {
+    expect(() => buildValidatedStyle(undefined, { paddingY: -5 })).toThrow(/от 0 до 400/);
+    expect(() => buildValidatedStyle(undefined, { paddingY: 401 })).toThrow(/от 0 до 400/);
+    expect(() => buildValidatedStyle(undefined, { paddingY: Infinity })).toThrow(/от 0 до 400/);
+  });
+
+  it('still rejects a non-numeric, non-enum spacing value', () => {
+    expect(() => buildValidatedStyle(undefined, { paddingY: 'huge' })).toThrow(
+      /должно быть одним из/,
+    );
+  });
+
+  it('rejects a numeric value for a field that is not a spacing field', () => {
+    expect(() => buildValidatedStyle(undefined, { background: 5 })).toThrow(/должно быть одним из/);
+  });
+
   it('leaves untouched fields alone across the whole allowed set', () => {
     const existing = {
       background: 'primary',

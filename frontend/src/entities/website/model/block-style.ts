@@ -1,7 +1,18 @@
 import type { CSSProperties } from 'react';
 import { readResponsiveProp } from './registry';
 import { SPACING_PX } from './theme-tokens';
-import type { BlockStyle, ContainerWidth, SpacingSize, StyleValue, Viewport } from './types';
+import type { BlockStyle, ContainerWidth, SpacingValue, StyleValue, Viewport } from './types';
+
+/** `SpacingValue` → CSS-длина — именованный пресет читает `SPACING_PX`
+ * (`theme-tokens.ts`), число — произвольный px (см. `SpacingValue` в
+ * `types.ts`). Возвращает `undefined` только для `undefined` на входе:
+ * `0` — валидный custom-отступ и не должен схлопываться в «нет значения»
+ * (`value ? ... : undefined` до этого инкремента ровно так и делал бы —
+ * `0` ложно, `'none'` истинно только потому, что это непустая строка). */
+function spacingToPx(value: SpacingValue | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return typeof value === 'number' ? `${value}px` : SPACING_PX[value];
+}
 
 const FIXED_CONTAINER_WIDTH: Partial<Record<ContainerWidth, string>> = {
   narrow: '640px',
@@ -79,13 +90,13 @@ export interface BlockWrapperStyle {
  * всех документов до этого инкремента), сторона всегда равна значению пары
  * — четыре новых поля просто не читаются вообще. */
 function resolveSide(
-  raw: StyleValue<SpacingSize | null> | undefined,
+  raw: StyleValue<SpacingValue | null> | undefined,
   viewport: Viewport,
   customPadding: boolean | undefined,
-  pairValue: SpacingSize | undefined,
-): SpacingSize | undefined {
+  pairValue: SpacingValue | undefined,
+): SpacingValue | undefined {
   if (!customPadding) return pairValue;
-  return readResponsiveProp<SpacingSize | null>(raw, viewport, null) ?? pairValue;
+  return readResponsiveProp<SpacingValue | null>(raw, viewport, null) ?? pairValue;
 }
 
 /**
@@ -112,22 +123,22 @@ export function computeBlockWrapperStyle(
 ): BlockWrapperStyle {
   const blockStyle = style ?? {};
 
-  const paddingY = readResponsiveProp<SpacingSize | undefined>(
+  const paddingY = readResponsiveProp<SpacingValue | undefined>(
     blockStyle.paddingY,
     viewport,
     undefined,
   );
-  const paddingX = readResponsiveProp<SpacingSize | undefined>(
+  const paddingX = readResponsiveProp<SpacingValue | undefined>(
     blockStyle.paddingX,
     viewport,
     undefined,
   );
-  const marginTop = readResponsiveProp<SpacingSize | undefined>(
+  const marginTop = readResponsiveProp<SpacingValue | undefined>(
     blockStyle.marginTop,
     viewport,
     undefined,
   );
-  const marginBottom = readResponsiveProp<SpacingSize | undefined>(
+  const marginBottom = readResponsiveProp<SpacingValue | undefined>(
     blockStyle.marginBottom,
     viewport,
     undefined,
@@ -157,10 +168,10 @@ export function computeBlockWrapperStyle(
     // старый тёмный цвет поверх тёмного фона — найдено живым тестом `hero`
     // блока с `background: 'custom'` на тёмном цвете.
     color: 'var(--site-text)',
-    paddingTop: top ? SPACING_PX[top] : undefined,
-    paddingBottom: bottom ? SPACING_PX[bottom] : undefined,
-    marginTop: marginTop ? SPACING_PX[marginTop] : undefined,
-    marginBottom: marginBottom ? SPACING_PX[marginBottom] : undefined,
+    paddingTop: spacingToPx(top),
+    paddingBottom: spacingToPx(bottom),
+    marginTop: spacingToPx(marginTop),
+    marginBottom: spacingToPx(marginBottom),
     ...contrastOverrides(blockStyle),
   };
 
@@ -169,8 +180,8 @@ export function computeBlockWrapperStyle(
       maxWidth === 'default' ? 'var(--site-container-width)' : FIXED_CONTAINER_WIDTH[maxWidth],
     marginLeft: 'auto',
     marginRight: 'auto',
-    paddingLeft: left ? SPACING_PX[left] : undefined,
-    paddingRight: right ? SPACING_PX[right] : undefined,
+    paddingLeft: spacingToPx(left),
+    paddingRight: spacingToPx(right),
     textAlign: blockStyle.textAlign,
   };
 

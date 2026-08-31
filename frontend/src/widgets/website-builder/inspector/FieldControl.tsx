@@ -27,6 +27,14 @@ export interface FieldControlProps {
   pages?: WebsitePage[];
 }
 
+/** Значение `<select>` у `control: 'spacing'`, когда выбран числовой px —
+ * ни один реальный `SpacingSize`/`INHERIT` (`LayoutSection.tsx`) не может
+ * совпасть с этой строкой, так что различить «выбрали пресет» от «выбрали
+ * свой px» можно просто сравнением: сам факт `typeof value === 'number'`
+ * уже достаточен (см. рендер ниже), эта константа нужна только как значение
+ * `<option>`, которое покажет `<select>` в этом состоянии. */
+const CUSTOM_SPACING_OPTION = '__custom_px__';
+
 /** `image`/`list`/`link` не сводятся к одному `<input>`, с которым можно
  * связать подпись через `htmlFor`/`id` (см. `ImageField`/`ListField`/
  * `LinkField` — своя составная разметка с несколькими полями сразу),
@@ -126,6 +134,38 @@ export function FieldControl({
             </option>
           ))}
         </select>
+      )}
+
+      {field.control === 'spacing' && (
+        <div className={styles.colorRow}>
+          <select
+            id={fieldId}
+            className={styles.select}
+            value={typeof value === 'number' ? CUSTOM_SPACING_OPTION : ((value as string) ?? '')}
+            onChange={(event) => {
+              const next = event.target.value;
+              onChange(next === CUSTOM_SPACING_OPTION ? 0 : next);
+            }}
+          >
+            {field.options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+            <option value={CUSTOM_SPACING_OPTION}>Свой (px)</option>
+          </select>
+          {typeof value === 'number' && (
+            <input
+              type="number"
+              min={0}
+              className={cn(styles.input, styles['input--inline'])}
+              value={value}
+              onChange={(event) =>
+                onChange(event.target.value === '' ? 0 : Number(event.target.value))
+              }
+            />
+          )}
+        </div>
       )}
 
       {field.control === 'color' && (

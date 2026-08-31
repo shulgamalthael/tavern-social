@@ -147,6 +147,7 @@ Handlers), никогда напрямую из браузера.
 | AI-9 — HIGH/CRITICAL-risk confirm-флоу | ✅ первый ограниченный слайс done, verified (`publish_website` — первый и пока единственный `high`-risk инструмент; полный quality-gate пересмотр остальных инструментов — вне этого слайса, см. `AI_PLATFORM_ROADMAP.md` §21) |
 | AI-10 — Universal Builder Expansion (новый под-трек, не одна фаза) | ✅ слайс 1 done, verified (`BlockStyle.background: 'custom'` + `customBackgroundColor`, свободный hex вместо только токенов темы; заодно найден и исправлен реальный pre-existing баг контраста текста на `dark`/`primary`/`custom` фоне — см. `AI_PLATFORM_ROADMAP.md` §23) |
 | AI-11 — тот же трек, слайс 2 | ✅ done, verified (`FontChoice: 'google'` + курируемый список из 10 Google Fonts, реальная загрузка через `<link>` и React 19 head-hoisting, оба слота — заголовок/текст — независимо; без бэкенд/AI-tool изменений, тема не пишется AI — см. `AI_PLATFORM_ROADMAP.md` §24) |
+| AI-12 — тот же трек, слайс 3 | ✅ done, verified (`SpacingValue = SpacingSize \| number` — произвольный px вместо только 5 пресетов, один общий `spacingToPx`/`'spacing'`-контрол на все 8 полей отступов сразу, а не 8 отдельных; `set_style` расширен с границей 0–400px; заодно пойман и исправлен falsy-zero баг до релиза — см. `AI_PLATFORM_ROADMAP.md` §25) |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за
 подробностями): дневная квота Gemini free-tier (сбрасывается по

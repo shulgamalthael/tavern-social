@@ -27,6 +27,14 @@ export type Background = 'none' | 'surface' | 'muted' | 'primary' | 'dark' | 'cu
 export type TextAlign = 'left' | 'center' | 'right';
 export type ContainerWidth = 'narrow' | 'default' | 'wide' | 'full';
 export type SpacingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
+/** Отступ — либо один из 5 именованных пресетов (`SpacingSize`), либо
+ * произвольное число пикселей (`number`, напр. `18` → `18px`) — см.
+ * `spacingToPx` в `block-style.ts`. Число — не отдельное поле-компаньон
+ * вроде `customBackgroundColor`/`googleFontHeading`, а прямо значение в
+ * том же слоте: `SpacingSize`/`number` уже различимы по `typeof`, так что
+ * ни отдельный тумблер «свой», ни второе поле не нужны — тот же слот
+ * `paddingY` и т. п. просто принимает более широкий тип. */
+export type SpacingValue = SpacingSize | number;
 
 /** Значение поля `BlockStyle`, которое (как и `ResponsiveValue<T>` выше)
  * может отличаться по вьюпортам — плоское `T` для старых документов и
@@ -54,10 +62,10 @@ export interface BlockStyle {
    * `block-style.ts`) — не нужно чистить поле при переключении обратно на
    * пресет, оно просто перестаёт использоваться. */
   customBackgroundColor?: string;
-  paddingY?: StyleValue<SpacingSize>;
-  paddingX?: StyleValue<SpacingSize>;
-  marginTop?: StyleValue<SpacingSize>;
-  marginBottom?: StyleValue<SpacingSize>;
+  paddingY?: StyleValue<SpacingValue>;
+  paddingX?: StyleValue<SpacingValue>;
+  marginTop?: StyleValue<SpacingValue>;
+  marginBottom?: StyleValue<SpacingValue>;
   textAlign?: TextAlign;
   /** Только для контейнерных блоков (`section`/`container`) — насколько
    * широко растягивается содержимое внутри полосы на всю ширину экрана. */
@@ -77,10 +85,10 @@ export interface BlockStyle {
    * автосохранения `{ desktop: undefined, mobile: 'sm' }` превратился бы в
    * `{ mobile: 'sm' }` и обманул бы эту проверку. `null` то же самое место в
    * JSON переживает без потерь. */
-  paddingTop?: StyleValue<SpacingSize | null>;
-  paddingRight?: StyleValue<SpacingSize | null>;
-  paddingBottom?: StyleValue<SpacingSize | null>;
-  paddingLeft?: StyleValue<SpacingSize | null>;
+  paddingTop?: StyleValue<SpacingValue | null>;
+  paddingRight?: StyleValue<SpacingValue | null>;
+  paddingBottom?: StyleValue<SpacingValue | null>;
+  paddingLeft?: StyleValue<SpacingValue | null>;
 }
 
 /**

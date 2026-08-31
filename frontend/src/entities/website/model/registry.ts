@@ -91,6 +91,14 @@ export type FieldSchema =
   | (FieldBase & { control: 'richtext' })
   | (FieldBase & { control: 'number'; min?: number; max?: number; step?: number; suffix?: string })
   | (FieldBase & { control: 'select'; options: SelectOption[] })
+  /** Отступ — тот же список `options`, что и у обычного `select`
+   * (`SPACING_SIZE_OPTIONS`/`PADDING_SIDE_OPTIONS`, см. `theme-tokens.ts`/
+   * `LayoutSection.tsx`), плюс сам контрол (`FieldControl.tsx`) добавляет
+   * пункт «Свой (px)», переключающий на числовой инпут — см. `SpacingValue`
+   * в `types.ts`. Отдельный `control`, а не modifier у `'select'`: логика
+   * переключения select/number специфична именно для отступов, ни одному
+   * другому `'select'`-полю она не нужна. */
+  | (FieldBase & { control: 'spacing'; options: SelectOption[] })
   | (FieldBase & { control: 'color' })
   | (FieldBase & { control: 'toggle' })
   | (FieldBase & { control: 'image' })

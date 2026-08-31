@@ -24,10 +24,11 @@
 export type EnumStyleFieldKey =
   'background' | 'paddingY' | 'paddingX' | 'marginTop' | 'marginBottom' | 'textAlign' | 'maxWidth';
 
-/** Единственное НЕ-enum поле style — произвольный hex вместо фиксированного
- * набора значений (см. `customBackgroundColor` в `BlockStyle`, `frontend/
- * src/entities/website/model/types.ts`), поэтому валидируется отдельной веткой
- * в `buildValidatedStyle` (регекспом `HEX_COLOR_RE`), а не через `ENUM_STYLE_FIELDS`. */
+/** Единственное НЕ-enum строковое поле style — произвольный hex вместо
+ * фиксированного набора значений (см. `customBackgroundColor` в
+ * `BlockStyle`, `frontend/src/entities/website/model/types.ts`), поэтому
+ * валидируется отдельной веткой в `buildValidatedStyle` (регекспом
+ * `HEX_COLOR_RE`), а не через `ENUM_STYLE_FIELDS`. */
 export type StyleFieldKey = EnumStyleFieldKey | 'customBackgroundColor';
 
 const ENUM_STYLE_FIELDS: Record<EnumStyleFieldKey, readonly string[]> = {
@@ -41,6 +42,25 @@ const ENUM_STYLE_FIELDS: Record<EnumStyleFieldKey, readonly string[]> = {
 };
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+/** `paddingY`/`paddingX`/`marginTop`/`marginBottom` also accept a plain
+ * number (px) in addition to their 5-value enum above — see `SpacingValue`
+ * in `frontend/src/entities/website/model/types.ts`. Only these 4: the
+ * `customPadding`/per-side fields aren't in this tool's scope at all (see
+ * the doc-comment above), so there's nothing else to widen. */
+const SPACING_FIELD_KEYS = new Set<EnumStyleFieldKey>([
+  'paddingY',
+  'paddingX',
+  'marginTop',
+  'marginBottom',
+]);
+
+/** Upper bound for a custom pixel spacing value — generous enough for any
+ * real layout need, but bounded rather than accepting literally any number:
+ * AI-authored input is untrusted (`AI_PLATFORM_ROADMAP.md` §3), and an
+ * unbounded value could push a block's spacing far enough to visually break
+ * the page (e.g. a many-thousand-pixel margin). */
+const MAX_CUSTOM_SPACING_PX = 400;
 
 export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
   ...(Object.keys(ENUM_STYLE_FIELDS) as EnumStyleFieldKey[]),
@@ -90,6 +110,16 @@ export function buildValidatedStyle(
       if (typeof value !== 'string' || !HEX_COLOR_RE.test(value)) {
         throw new Error(
           `Поле "customBackgroundColor" должно быть hex-цветом вида #rrggbb (или null, чтобы убрать)`,
+        );
+      }
+      result[key] = value;
+      continue;
+    }
+
+    if (SPACING_FIELD_KEYS.has(key) && typeof value === 'number') {
+      if (!Number.isFinite(value) || value < 0 || value > MAX_CUSTOM_SPACING_PX) {
+        throw new Error(
+          `Поле "${key}" как число (px) должно быть от 0 до ${MAX_CUSTOM_SPACING_PX} (или строкой из перечисленных значений, или null, чтобы убрать)`,
         );
       }
       result[key] = value;
