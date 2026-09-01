@@ -1,0 +1,117 @@
+// Цвета колец — сознательно не токены Таверны (`--tavern-*`), а
+// фиксированные orange/green/blue: та же узнаваемая раскраска box-model
+// схемы, что в devtools любого браузера (margin/padding/content) — люди,
+// уже видевшие её там, узнают эту схему сразу, не читая подписи.
+$margin-color: #ea7d3a;
+$padding-color: #3f9d63;
+
+.model {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
+}
+
+.margin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 22px 16px 14px;
+  border: 1.5px dashed color-mix(in srgb, $margin-color 55%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, $margin-color 6%, transparent);
+}
+
+.margin__label {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  color: color-mix(in srgb, $margin-color 80%, black);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.margin__value--top,
+.margin__value--bottom {
+  color: color-mix(in srgb, $margin-color 80%, black);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.padding {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    '.    top    .'
+    'left content right'
+    '.    bottom .';
+  align-items: center;
+  justify-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+  width: 100%;
+  padding: 22px 24px 14px;
+  border: 1.5px dashed color-mix(in srgb, $padding-color 55%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, $padding-color 8%, var(--tavern-surface));
+}
+
+.padding__label {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  color: color-mix(in srgb, $padding-color 75%, black);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.padding__value--top,
+.padding__value--right,
+.padding__value--bottom,
+.padding__value--left {
+  color: color-mix(in srgb, $padding-color 75%, black);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.padding__value--top {
+  grid-area: top;
+}
+
+.padding__value--right {
+  grid-area: right;
+}
+
+.padding__value--bottom {
+  grid-area: bottom;
+}
+
+.padding__value--left {
+  grid-area: left;
+}
+
+.content {
+  grid-area: content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 14px 20px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tavern-accent) 16%, var(--tavern-surface));
+  color: var(--tavern-accent);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}

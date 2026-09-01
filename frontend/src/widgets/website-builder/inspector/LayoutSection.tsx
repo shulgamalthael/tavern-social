@@ -7,6 +7,7 @@ import {
   BORDER_WIDTH_OPTIONS,
   CONTAINER_WIDTH_OPTIONS,
   GRADIENT_TYPE_OPTIONS,
+  SPACING_PX,
   SPACING_SIZE_OPTIONS,
   TEXT_ALIGN_OPTIONS,
   readResponsiveProp,
@@ -21,6 +22,20 @@ import { cn } from '@/shared/lib/cn';
 import { defaultValueForField } from './field-defaults';
 import { FieldGroup, type FieldGroupItem } from './FieldGroup';
 import styles from './LayoutSection.module.scss';
+import { SpacingBoxModel } from './SpacingBoxModel';
+
+/** `SpacingValue` резолвленного поля (см. `basicItems` ниже) → число px для
+ * визуальной схемы `SpacingBoxModel` — именованный пресет читает
+ * `SPACING_PX`, число уже само по себе px. `undefined`/что угодно
+ * неожиданное → `0`, схема не должна падать на промежуточном состоянии
+ * поля. */
+function toPx(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string' && value in SPACING_PX) {
+    return parseInt(SPACING_PX[value as keyof typeof SPACING_PX], 10);
+  }
+  return 0;
+}
 
 const BASIC_FIELDS: FieldSchema[] = [
   { key: 'background', label: 'Фон', control: 'select', options: BACKGROUND_OPTIONS },
@@ -296,7 +311,17 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
       </div>
 
       {tab === 'basic' && (
-        <FieldGroup resetKey={blockId} businessId={businessId} items={basicItems} />
+        <>
+          <SpacingBoxModel
+            paddingTop={toPx(basicItems.find((item) => item.field.key === 'paddingY')?.value)}
+            paddingBottom={toPx(basicItems.find((item) => item.field.key === 'paddingY')?.value)}
+            paddingLeft={toPx(basicItems.find((item) => item.field.key === 'paddingX')?.value)}
+            paddingRight={toPx(basicItems.find((item) => item.field.key === 'paddingX')?.value)}
+            marginTop={toPx(basicItems.find((item) => item.field.key === 'marginTop')?.value)}
+            marginBottom={toPx(basicItems.find((item) => item.field.key === 'marginBottom')?.value)}
+          />
+          <FieldGroup resetKey={blockId} businessId={businessId} items={basicItems} />
+        </>
       )}
 
       {tab === 'advanced' && (
