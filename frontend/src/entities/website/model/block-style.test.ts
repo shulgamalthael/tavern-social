@@ -70,6 +70,33 @@ describe('computeBlockWrapperStyle — gradient background', () => {
     expect(outer.background).toBeUndefined();
   });
 
+  it('renders a radial-gradient and ignores the angle when gradientType is "radial"', () => {
+    const { outer } = computeBlockWrapperStyle(
+      {
+        background: 'gradient',
+        gradientType: 'radial',
+        gradientFrom: '#111111',
+        gradientTo: '#eeeeee',
+        gradientAngle: 45,
+      },
+      'desktop',
+    );
+    expect(outer.background).toBe('radial-gradient(circle, #111111, #eeeeee)');
+  });
+
+  it('renders a linear-gradient when gradientType is explicitly "linear"', () => {
+    const { outer } = computeBlockWrapperStyle(
+      {
+        background: 'gradient',
+        gradientType: 'linear',
+        gradientFrom: '#111111',
+        gradientTo: '#eeeeee',
+      },
+      'desktop',
+    );
+    expect(outer.background).toBe('linear-gradient(135deg, #111111, #eeeeee)');
+  });
+
   it('switches to light text only when both gradient stops are dark', () => {
     const bothDark = computeBlockWrapperStyle(
       { background: 'gradient', gradientFrom: '#0a0a0a', gradientTo: '#111111' },

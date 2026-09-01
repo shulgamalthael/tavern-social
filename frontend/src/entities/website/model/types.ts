@@ -62,18 +62,22 @@ export interface BlockStyle {
    * `block-style.ts`) — не нужно чистить поле при переключении обратно на
    * пресет, оно просто перестаёт использоваться. */
   customBackgroundColor?: string;
-  /** Только когда `background === 'gradient'` — линейный градиент из двух
-   * hex-цветов (`#rrggbb`), угол в градусах (`0` — снизу вверх, `90` —
-   * слева направо, CSS `linear-gradient()`-соглашение). Как и
-   * `customBackgroundColor`, игнорируется рендерером при любом другом
-   * значении `background`. Только двухцветный линейный градиент в этом
-   * инкременте — не радиальный/конический и не 3+ цветов, узкий v1 из
-   * того, что просил бриф про "background engine" (см. AI_PLATFORM_
-   * ROADMAP.md §27). */
+  /** Только когда `background === 'gradient'` — градиент из двух hex-цветов
+   * (`#rrggbb`). Как и `customBackgroundColor`, игнорируется рендерером при
+   * любом другом значении `background`. Только двухцветный градиент в этом
+   * инкременте — не 3+ цветов, узкий v1 из того, что просил бриф про
+   * "background engine" (см. AI_PLATFORM_ROADMAP.md §27/§28). */
   gradientFrom?: string;
   gradientTo?: string;
-  /** `undefined` — фолбэк `135` (диагональ сверху-слева вниз-направо),
-   * см. `backgroundValue` в `block-style.ts`. */
+  /** `undefined` — фолбэк `'linear'` (см. `backgroundValue` в
+   * `block-style.ts`). `'radial'` игнорирует `gradientAngle` ниже — угол
+   * осмысленен только для линейного направления, у круга его нет (см.
+   * AI_PLATFORM_ROADMAP.md §28). */
+  gradientType?: 'linear' | 'radial';
+  /** Только для `gradientType: 'linear'` (или когда он не задан — линейный
+   * по умолчанию) — угол в градусах (`0` — снизу вверх, `90` — слева
+   * направо, CSS `linear-gradient()`-соглашение). `undefined` — фолбэк
+   * `135` (диагональ сверху-слева вниз-направо). */
   gradientAngle?: number;
   paddingY?: StyleValue<SpacingValue>;
   paddingX?: StyleValue<SpacingValue>;

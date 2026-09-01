@@ -116,6 +116,21 @@ describe('buildValidatedStyle', () => {
     expect(() => buildValidatedStyle(undefined, { gradientAngle: 'deg' })).toThrow(/от 0 до 360/);
   });
 
+  it('accepts a valid gradientType', () => {
+    expect(buildValidatedStyle(undefined, { gradientType: 'radial' })).toEqual({
+      gradientType: 'radial',
+    });
+    expect(buildValidatedStyle(undefined, { gradientType: 'linear' })).toEqual({
+      gradientType: 'linear',
+    });
+  });
+
+  it('rejects an invalid gradientType', () => {
+    expect(() => buildValidatedStyle(undefined, { gradientType: 'conic' })).toThrow(
+      /должно быть одним из/,
+    );
+  });
+
   it('removes gradient fields when given null', () => {
     const existing = {
       background: 'gradient',

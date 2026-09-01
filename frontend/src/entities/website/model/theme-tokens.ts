@@ -1,6 +1,7 @@
 import { googleFontFamily, type GoogleFontId } from './google-fonts';
 import type {
   Background,
+  BlockStyle,
   ButtonStyle,
   ContainerWidth,
   FontChoice,
@@ -151,6 +152,14 @@ export const BACKGROUND_OPTIONS: { value: Background; label: string }[] = [
   { value: 'dark', label: 'Тёмный' },
   { value: 'custom', label: 'Свой цвет' },
   { value: 'gradient', label: 'Градиент' },
+];
+
+export const GRADIENT_TYPE_OPTIONS: {
+  value: NonNullable<BlockStyle['gradientType']>;
+  label: string;
+}[] = [
+  { value: 'linear', label: 'Линейный' },
+  { value: 'radial', label: 'Радиальный' },
 ];
 
 export const TEXT_ALIGN_OPTIONS: { value: TextAlign; label: string }[] = [

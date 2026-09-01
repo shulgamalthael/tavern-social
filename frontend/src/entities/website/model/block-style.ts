@@ -36,7 +36,9 @@ function backgroundValue(blockStyle: BlockStyle): string | undefined {
       return blockStyle.customBackgroundColor || undefined;
     case 'gradient':
       if (!blockStyle.gradientFrom || !blockStyle.gradientTo) return undefined;
-      return `linear-gradient(${blockStyle.gradientAngle ?? DEFAULT_GRADIENT_ANGLE}deg, ${blockStyle.gradientFrom}, ${blockStyle.gradientTo})`;
+      return blockStyle.gradientType === 'radial'
+        ? `radial-gradient(circle, ${blockStyle.gradientFrom}, ${blockStyle.gradientTo})`
+        : `linear-gradient(${blockStyle.gradientAngle ?? DEFAULT_GRADIENT_ANGLE}deg, ${blockStyle.gradientFrom}, ${blockStyle.gradientTo})`;
     default:
       return undefined;
   }

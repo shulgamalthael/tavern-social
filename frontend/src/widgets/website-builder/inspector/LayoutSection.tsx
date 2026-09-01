@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   BACKGROUND_OPTIONS,
   CONTAINER_WIDTH_OPTIONS,
+  GRADIENT_TYPE_OPTIONS,
   SPACING_SIZE_OPTIONS,
   TEXT_ALIGN_OPTIONS,
   readResponsiveProp,
@@ -151,10 +152,17 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
     });
   }
 
-  // Градиент — та же условная вставка, что «Свой цвет» выше, только три
-  // поля вместо одного (два цвета + угол): показывать их всем, у кого
-  // background не 'gradient', было бы тем же лишним шумом.
+  // Градиент — та же условная вставка, что «Свой цвет» выше, только
+  // несколько полей вместо одного (тип + два цвета + угол — угол только для
+  // линейного, у радиального (круг) направления нет): показывать их всем, у
+  // кого background не 'gradient', было бы тем же лишним шумом.
   if (style?.background === 'gradient') {
+    const gradientTypeField: FieldSchema = {
+      key: 'gradientType',
+      label: 'Тип градиента',
+      control: 'select',
+      options: GRADIENT_TYPE_OPTIONS,
+    };
     const gradientFromField: FieldSchema = {
       key: 'gradientFrom',
       label: 'Градиент — от',
@@ -165,17 +173,12 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
       label: 'Градиент — до',
       control: 'color',
     };
-    const gradientAngleField: FieldSchema = {
-      key: 'gradientAngle',
-      label: 'Угол градиента',
-      control: 'number',
-      min: 0,
-      max: 360,
-      suffix: '°',
-    };
-    basicItems.splice(
-      1,
-      0,
+    const gradientItems: FieldGroupItem[] = [
+      {
+        field: gradientTypeField,
+        value: style.gradientType ?? 'linear',
+        onChange: (next: unknown) => onChange({ gradientType: next as BlockStyle['gradientType'] }),
+      },
       {
         field: gradientFromField,
         value: style.gradientFrom,
@@ -186,12 +189,23 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
         value: style.gradientTo,
         onChange: (next: unknown) => onChange({ gradientTo: next as string }),
       },
-      {
+    ];
+    if ((style.gradientType ?? 'linear') === 'linear') {
+      const gradientAngleField: FieldSchema = {
+        key: 'gradientAngle',
+        label: 'Угол градиента',
+        control: 'number',
+        min: 0,
+        max: 360,
+        suffix: '°',
+      };
+      gradientItems.push({
         field: gradientAngleField,
         value: style.gradientAngle ?? 135,
         onChange: (next: unknown) => onChange({ gradientAngle: next as number }),
-      },
-    );
+      });
+    }
+    basicItems.splice(1, 0, ...gradientItems);
   }
 
   const customPadding = Boolean(style?.customPadding);

@@ -31,7 +31,14 @@ export type EnumStyleFieldKey =
  * ключа, а не через `ENUM_STYLE_FIELDS` — так TS сужает тип `key` после
  * `continue`, чего не сделал бы `Set.has()`). */
 export type StyleFieldKey =
-  EnumStyleFieldKey | 'customBackgroundColor' | 'gradientFrom' | 'gradientTo' | 'gradientAngle';
+  | EnumStyleFieldKey
+  | 'customBackgroundColor'
+  | 'gradientFrom'
+  | 'gradientTo'
+  | 'gradientAngle'
+  | 'gradientType';
+
+const GRADIENT_TYPE_VALUES = ['linear', 'radial'] as const;
 
 const ENUM_STYLE_FIELDS: Record<EnumStyleFieldKey, readonly string[]> = {
   background: ['none', 'surface', 'muted', 'primary', 'dark', 'custom', 'gradient'],
@@ -70,6 +77,7 @@ export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
   'gradientFrom',
   'gradientTo',
   'gradientAngle',
+  'gradientType',
 ];
 
 /**
@@ -125,6 +133,19 @@ export function buildValidatedStyle(
       if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 360) {
         throw new Error(
           `Поле "gradientAngle" должно быть числом от 0 до 360 (или null, чтобы убрать)`,
+        );
+      }
+      result[key] = value;
+      continue;
+    }
+
+    if (key === 'gradientType') {
+      if (
+        typeof value !== 'string' ||
+        !GRADIENT_TYPE_VALUES.includes(value as 'linear' | 'radial')
+      ) {
+        throw new Error(
+          `Поле "gradientType" должно быть одним из: ${GRADIENT_TYPE_VALUES.join(', ')} (или null, чтобы убрать)`,
         );
       }
       result[key] = value;
