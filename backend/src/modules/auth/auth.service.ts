@@ -17,6 +17,7 @@ import type { RegisterDto } from './dto/register.dto';
 @Injectable()
 export class AuthService {
   private readonly frontendUrl: string;
+  private readonly allowedOauthOrigins: ReadonlySet<string>;
 
   constructor(
     private readonly usersService: UsersService,
@@ -27,7 +28,35 @@ export class AuthService {
     private readonly oauthExchangeService: OAuthExchangeService,
     configService: ConfigService,
   ) {
-    this.frontendUrl = configService.get<AppConfig>('app')!.frontendUrl;
+    const config = configService.get<AppConfig>('app')!;
+    this.frontendUrl = config.frontendUrl;
+    this.allowedOauthOrigins = new Set(config.allowedOauthOrigins);
+  }
+
+  /** `requestedOrigin` — присланный frontend'ом адрес, с которого реально
+   * начали вход (см. `AuthController.googleLogin`'s `origin` query-параметр
+   * и `app/auth/google/route.ts` на frontend, который его подставляет).
+   * Используется, только если буква-в-букву совпадает с `frontendUrl` или
+   * входит в `ALLOWED_OAUTH_ORIGINS` — НЕ доверяем произвольному значению
+   * из query string слепо: иначе это открытый редирект (ссылка вида
+   * `/auth/google?origin=https://evil.example` увела бы одноразовый код
+   * обмена, который меняется на настоящую сессию, на чужой домен). Любое
+   * значение вне allowlist тихо откатывается на `frontendUrl` — тот же
+   * результат, что и раньше, до появления этого параметра, а не отказ. */
+  private resolveOAuthOrigin(requestedOrigin: string | undefined): string {
+    if (!requestedOrigin) {
+      return this.frontendUrl;
+    }
+    let normalized: string;
+    try {
+      normalized = new URL(requestedOrigin).origin;
+    } catch {
+      return this.frontendUrl;
+    }
+    if (normalized === this.frontendUrl || this.allowedOauthOrigins.has(normalized)) {
+      return normalized;
+    }
+    return this.frontendUrl;
   }
 
   async register(dto: RegisterDto): Promise<AuthSession> {
@@ -74,22 +103,25 @@ export class AuthService {
     return this.socketTicketsService.issue(userId);
   }
 
-  /** `GET /auth/google` — выдаёт CSRF `state` и строит URL Google-согласия. */
-  async buildGoogleAuthorizationUrl(): Promise<string> {
-    const state = await this.oauthStateService.issue();
+  /** `GET /auth/google` — выдаёт CSRF `state` (несущий, куда потом вернуть
+   * браузер — см. `resolveOAuthOrigin`) и строит URL Google-согласия. */
+  async buildGoogleAuthorizationUrl(requestedOrigin: string | undefined): Promise<string> {
+    const origin = this.resolveOAuthOrigin(requestedOrigin);
+    const state = await this.oauthStateService.issue(origin);
     return this.googleOAuthAdapter.buildAuthorizationUrl(state);
   }
 
   /**
    * `GET /auth/google/callback` — проверяет `state`, меняет `code` на
    * профиль, находит/заводит пользователя, выпускает сессию и возвращает
-   * ГОТОВЫЙ URL для редиректа браузера на frontend (`/auth/callback?code=`)
-   * с ОДНОРАЗОВЫМ кодом обмена, не сам session-токен (см.
-   * `OAuthExchangeService`'s комментарий).
+   * ГОТОВЫЙ URL для редиректа браузера на ТОТ ЖЕ origin, с которого вход
+   * начался (`/auth/callback?code=`, origin взят из `state`, см.
+   * `resolveOAuthOrigin`) — с ОДНОРАЗОВЫМ кодом обмена, не сам
+   * session-токен (см. `OAuthExchangeService`'s комментарий).
    */
   async completeGoogleLogin(code: string, state: string): Promise<string> {
-    const stateValid = await this.oauthStateService.consume(state);
-    if (!stateValid) {
+    const origin = await this.oauthStateService.consume(state);
+    if (!origin) {
       throw new UnauthorizedException(
         'OAuth state недействителен или истёк — попробуйте войти заново',
       );
@@ -103,7 +135,7 @@ export class AuthService {
     const user = await this.findOrCreateOAuthUser('google', profile);
     const token = await this.sessionsService.create(user.id);
     const exchangeCode = await this.oauthExchangeService.issue(token);
-    return `${this.frontendUrl}/auth/callback?code=${exchangeCode}`;
+    return `${origin}/auth/callback?code=${exchangeCode}`;
   }
 
   /** Куда редиректить браузер, если OAuth-flow сорвался на любом шаге

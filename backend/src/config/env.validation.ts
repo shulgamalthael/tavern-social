@@ -88,6 +88,13 @@ class EnvironmentVariables {
   @IsString()
   OAUTH_CALLBACK_BASE_URL?: string;
 
+  /** Список через запятую (например `http://192.168.1.5:3000,https://
+   * staging.example.com`) — необязателен, по умолчанию пусто (см.
+   * `AppConfig.allowedOauthOrigins`). */
+  @IsOptional()
+  @IsString()
+  ALLOWED_OAUTH_ORIGINS?: string;
+
   /** Сеть Alchemy (`eth-mainnet`, `eth-sepolia`, ...) — одна на весь
    * backend, не per-business (см. `web3.types.ts`'s комментарий). Ключ
    * платформенным не бывает — только собственный, у каждого бизнеса

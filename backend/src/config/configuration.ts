@@ -41,6 +41,16 @@ export interface AppConfig {
    * подходит для локальной разработки; в проде должен быть реальным
    * доменом backend (не тем же, что `frontendUrl`, если они разделены). */
   oauthCallbackBaseUrl: string;
+  /** Откуда разрешено начинать OAuth-вход и куда после него можно
+   * редиректить браузер, кроме `frontendUrl` самого по себе (тот входит
+   * всегда, добавлять его сюда не нужно) — см. `AuthService.resolveOAuthOrigin`.
+   * Нужен, когда дашборд открывают ещё откуда-то помимо `frontendUrl`
+   * (например, `http://192.168.x.x:3000` в локальной сети при `next start`)
+   * — без явного допуска редирект после входа тихо возвращал бы на
+   * `frontendUrl`, даже если вход начали с другого адреса. Дефолт — пустой
+   * список: без явной настройки поведение то же, что было (всегда
+   * `frontendUrl`). */
+  allowedOauthOrigins: string[];
 
   /** Одна сеть Alchemy на весь backend, не per-business (см.
    * `web3.types.ts`) — сам API-ключ платформенным не бывает, только
@@ -141,6 +151,10 @@ export default (): { app: AppConfig } => {
       googleOAuthClientId: process.env.GOOGLE_CLIENT_ID,
       googleOAuthClientSecret: process.env.GOOGLE_CLIENT_SECRET,
       oauthCallbackBaseUrl: process.env.OAUTH_CALLBACK_BASE_URL ?? `http://localhost:${port}`,
+      allowedOauthOrigins: (process.env.ALLOWED_OAUTH_ORIGINS ?? '')
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0),
       alchemyNetwork: process.env.ALCHEMY_NETWORK ?? 'eth-mainnet',
       // `gemini-2.5-flash` вернул 404 "no longer available to new users" при
       // реальном тесте (2026-08-29) — Google сам называет замену в тексте

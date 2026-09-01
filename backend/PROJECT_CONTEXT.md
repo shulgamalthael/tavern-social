@@ -29,7 +29,12 @@ Handlers), никогда напрямую из браузера.
   инициативы) — `passwordHash` теперь опционален (`User`), новая таблица
   `OAuthAccount` (provider+providerAccountId → userId), авто-линковка по
   подтверждённому Google email. Facebook/Apple зарезервированы в enum
-  `OAuthProvider`, адаптеров под них ещё нет.
+  `OAuthProvider`, адаптеров под них ещё нет (Facebook был реализован и
+  сознательно отревёртен по просьбе владельца — см. §36.4). Редирект после
+  входа возвращает на тот же origin, с которого вход начался (не всегда на
+  `FRONTEND_URL`) — `OAuthStateService`'s `state` несёт origin, допустимый
+  только если совпадает с `FRONTEND_URL` или входит в `ALLOWED_OAUTH_ORIGINS`
+  (см. `AuthService.resolveOAuthOrigin`, §36.5 — иначе открытый редирект).
 - `users` (`/users`) — профили.
 - `friends`, `groups`, `communities`, `threads`, `posts` — социальный граф,
   сообщения, лента, группы/сообщества.

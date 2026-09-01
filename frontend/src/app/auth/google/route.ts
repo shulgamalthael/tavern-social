@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /** Тот же `BACKEND_URL`, что и `shared/lib/backend-client.ts`/`proxy.ts` —
  * не импортирует их напрямую по тем же причинам, что описаны в `proxy.ts`
@@ -10,7 +11,16 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4000';
 
 /** Начало Google-входа — 302 на backend, тот сам редиректит дальше на
  * Google (см. `AuthController.googleLogin`). Реальная навигация браузера,
- * не Server Action: нужен обычный `<a href="/auth/google">`. */
-export function GET(): NextResponse {
-  return NextResponse.redirect(`${BACKEND_URL}/auth/google`);
+ * не Server Action: нужен обычный `<a href="/auth/google">`.
+ *
+ * `origin` в query string — реальный адрес, с которого пришёл этот запрос
+ * (`request.nextUrl.origin`, например `http://192.168.1.5:3000`, если
+ * дашборд открыли не с `localhost`) — backend вернёт браузер именно сюда
+ * после входа, если этот адрес есть в его `ALLOWED_OAUTH_ORIGINS`
+ * (см. `AuthService.resolveOAuthOrigin`), иначе тихо откатится на свой
+ * `FRONTEND_URL`, как было раньше. */
+export function GET(request: NextRequest): NextResponse {
+  const url = new URL(`${BACKEND_URL}/auth/google`);
+  url.searchParams.set('origin', request.nextUrl.origin);
+  return NextResponse.redirect(url);
 }

@@ -63,11 +63,18 @@ export class AuthController {
    * 302 на Google, а не JSON. Frontend никогда не строит этот URL сам —
    * только переходит на GET /auth/google (см. AGENTS.md, «браузер не
    * обращается к backend напрямую» — здесь это полноценная навигация, не
-   * REST-вызов). */
+   * REST-вызов). `origin` — адрес, с которого frontend реально начал вход
+   * (см. `app/auth/google/route.ts`), нужен, чтобы после входа вернуть
+   * браузер туда же, а не всегда на `FRONTEND_URL` (см.
+   * `AuthService.resolveOAuthOrigin` — сырое значение НЕ идёт в редирект
+   * напрямую, только через allowlist-проверку там). */
   @Get('google')
   @UseGuards(GoogleOAuthConfiguredGuard)
-  async googleLogin(@Res() res: Response): Promise<void> {
-    const url = await this.authService.buildGoogleAuthorizationUrl();
+  async googleLogin(
+    @Query('origin') origin: string | undefined,
+    @Res() res: Response,
+  ): Promise<void> {
+    const url = await this.authService.buildGoogleAuthorizationUrl(origin);
     res.redirect(url);
   }
 
