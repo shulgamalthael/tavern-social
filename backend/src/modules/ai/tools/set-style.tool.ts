@@ -54,7 +54,9 @@ export class SetStyleTool implements OnModuleInit {
               `только когда background="gradient" и gradientType="linear", игнорируется для radial), ` +
               `paddingY/paddingX/marginTop/marginBottom` +
               `(none|sm|md|lg|xl, либо число — свой отступ в px от 0 до 400), ` +
-              `textAlign(left|center|right), maxWidth(narrow|default|wide|full). Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}.`,
+              `textAlign(left|center|right), textColor(hex вида #rrggbb — свой цвет текста блока, ` +
+              `по умолчанию берётся из темы сайта), maxWidth(narrow|default|wide|full). ` +
+              `Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}.`,
           },
         },
         required: ['blockId', 'style'],

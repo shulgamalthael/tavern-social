@@ -73,8 +73,18 @@ function isDarkColor(hex: string): boolean {
  * неоднозначна для любого фиксированного выбора цвета текста, но
  * рисковать нечитаемым белым-на-белом хуже, чем нечитаемым тёмным-на-
  * тёмном участке — тот же принцип "безопаснее не переопределять при
- * сомнении", что и у `isDarkColor`'s фолбэка на `false`). */
+ * сомнении", что и у `isDarkColor`'s фолбэка на `false`).
+ *
+ * `blockStyle.textColor` — явный выбор пользователя (см. её комментарий в
+ * `types.ts`) — побеждает над всей эвристикой ниже: если человек сам
+ * выбрал цвет текста для блока, не нужно гадать по яркости фона поверх
+ * этого. Не трогает `--site-muted`/`--site-border` — это не полная замена
+ * автоматического контраста, а только цвет основного текста. */
 function contrastOverrides(blockStyle: BlockStyle): CSSProperties | undefined {
+  if (blockStyle.textColor) {
+    return { '--site-text': blockStyle.textColor } as CSSProperties;
+  }
+
   const isDark =
     blockStyle.background === 'primary' ||
     blockStyle.background === 'dark' ||

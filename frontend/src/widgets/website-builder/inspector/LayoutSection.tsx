@@ -57,6 +57,12 @@ const BASIC_FIELDS: FieldSchema[] = [
     options: TEXT_ALIGN_OPTIONS,
   },
   {
+    key: 'textColor',
+    label: 'Цвет текста',
+    control: 'color',
+    hint: 'Пусто — берётся из темы сайта (с автопереключением на светлый на тёмном фоне).',
+  },
+  {
     key: 'maxWidth',
     label: 'Ширина контента',
     control: 'select',

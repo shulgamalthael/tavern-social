@@ -112,6 +112,34 @@ describe('computeBlockWrapperStyle — gradient background', () => {
   });
 });
 
+describe('computeBlockWrapperStyle — per-block text color', () => {
+  it('applies an explicit textColor as --site-text', () => {
+    const { outer } = computeBlockWrapperStyle({ textColor: '#e63946' }, 'desktop');
+    expect(outer['--site-text' as keyof typeof outer]).toBe('#e63946');
+    expect(outer.color).toBe('var(--site-text)');
+  });
+
+  it('lets an explicit textColor win over the dark-background auto-contrast heuristic', () => {
+    const { outer } = computeBlockWrapperStyle(
+      { background: 'dark', textColor: '#123456' },
+      'desktop',
+    );
+    // Without textColor this would auto-switch to white (#ffffff) — the
+    // explicit choice must win, not the auto-contrast heuristic.
+    expect(outer['--site-text' as keyof typeof outer]).toBe('#123456');
+  });
+
+  it('falls back to the auto-contrast heuristic when textColor is not set', () => {
+    const { outer } = computeBlockWrapperStyle({ background: 'dark' }, 'desktop');
+    expect(outer['--site-text' as keyof typeof outer]).toBe('#ffffff');
+  });
+
+  it('does not set --site-text at all when neither textColor nor a dark background is present', () => {
+    const { outer } = computeBlockWrapperStyle({ textColor: '' }, 'desktop');
+    expect(outer['--site-text' as keyof typeof outer]).toBeUndefined();
+  });
+});
+
 describe('computeBlockWrapperStyle — custom pixel spacing', () => {
   it('renders a numeric paddingY/paddingX as literal px, not a preset', () => {
     const { outer, inner } = computeBlockWrapperStyle({ paddingY: 18, paddingX: 40 }, 'desktop');

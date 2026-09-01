@@ -131,6 +131,21 @@ describe('buildValidatedStyle', () => {
     );
   });
 
+  it('accepts a valid textColor', () => {
+    expect(buildValidatedStyle(undefined, { textColor: '#ffffff' })).toEqual({
+      textColor: '#ffffff',
+    });
+  });
+
+  it('rejects an invalid textColor', () => {
+    expect(() => buildValidatedStyle(undefined, { textColor: 'white' })).toThrow(/hex-цветом/);
+  });
+
+  it('removes textColor when given null', () => {
+    const existing = { textColor: '#ffffff', background: 'dark' };
+    expect(buildValidatedStyle(existing, { textColor: null })).toEqual({ background: 'dark' });
+  });
+
   it('removes gradient fields when given null', () => {
     const existing = {
       background: 'gradient',

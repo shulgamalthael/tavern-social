@@ -36,7 +36,8 @@ export type StyleFieldKey =
   | 'gradientFrom'
   | 'gradientTo'
   | 'gradientAngle'
-  | 'gradientType';
+  | 'gradientType'
+  | 'textColor';
 
 const GRADIENT_TYPE_VALUES = ['linear', 'radial'] as const;
 
@@ -78,6 +79,7 @@ export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
   'gradientTo',
   'gradientAngle',
   'gradientType',
+  'textColor',
 ];
 
 /**
@@ -119,7 +121,12 @@ export function buildValidatedStyle(
       continue;
     }
 
-    if (key === 'customBackgroundColor' || key === 'gradientFrom' || key === 'gradientTo') {
+    if (
+      key === 'customBackgroundColor' ||
+      key === 'gradientFrom' ||
+      key === 'gradientTo' ||
+      key === 'textColor'
+    ) {
       if (typeof value !== 'string' || !HEX_COLOR_RE.test(value)) {
         throw new Error(
           `Поле "${key}" должно быть hex-цветом вида #rrggbb (или null, чтобы убрать)`,

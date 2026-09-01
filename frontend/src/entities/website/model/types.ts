@@ -79,6 +79,14 @@ export interface BlockStyle {
    * направо, CSS `linear-gradient()`-соглашение). `undefined` — фолбэк
    * `135` (диагональ сверху-слева вниз-направо). */
   gradientAngle?: number;
+  /** Свой цвет текста этого блока (`#rrggbb`), независимый от темы сайта —
+   * первое поле «кастомизации виджета», не только глобальных стилей темы
+   * (AI_PLATFORM_ROADMAP.md §29.1/§30). Когда задан, побеждает над
+   * автоматическим light/dark-переключением `contrastOverrides` для фона
+   * ЭТОГО блока (`block-style.ts`) — осознанный выбор пользователя важнее
+   * эвристики по яркости фона. Не трогает `--site-muted`/`--site-border` —
+   * это только цвет основного текста, не полная цветовая тема блока. */
+  textColor?: string;
   paddingY?: StyleValue<SpacingValue>;
   paddingX?: StyleValue<SpacingValue>;
   marginTop?: StyleValue<SpacingValue>;
