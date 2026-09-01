@@ -71,12 +71,18 @@ Redis, без JWT.
   (`features/auth/api/actions.ts`) вызывают `POST /auth/login`/`/auth/register`
   через `backendFetch`, получают `{ token, user }`, кладут `token` как есть в
   httpOnly cookie `tavern_session` и редиректят на `/`.
-- **Google OAuth** (2026-09-02, backend `AI_PLATFORM_ROADMAP.md` §36) —
-  кнопка «Войти через Google» в `AuthForm.tsx`, реальный `<a href="/auth/google">`
-  (полноценная навигация, не Server Action), через тонкий Route Handler
-  `app/auth/google/route.ts` (302 на backend — браузер никогда не видит адрес
-  backend напрямую, тот же принцип, что у `proxy.ts`). Landing-точка после
-  Google — `app/auth/callback/route.ts`, **обязательно Route Handler, не
+- **OAuth-вход** (2026-09-02, backend `AI_PLATFORM_ROADMAP.md` §36) — кнопки
+  «Войти через Google»/«Войти через Facebook» в `AuthForm.tsx`
+  (`OAUTH_PROVIDERS`, новый провайдер — одна строка), рендерятся `next/link`
+  `<Link>` (не голый `<a>` — ESLint `no-html-link-for-pages` требует это для
+  внутренней навигации), реальная полноценная навигация, не Server Action.
+  Через тонкий динамический Route Handler `app/auth/[provider]/route.ts`
+  (302 на backend — браузер никогда не видит адрес backend напрямую, тот же
+  принцип, что у `proxy.ts`; список известных провайдеров здесь — не
+  источник истины, реальную проверку делает backend'ый `OAuthConfiguredGuard`).
+  Landing-точка после любого провайдера — одна и та же `app/auth/callback/
+route.ts` (backend уже знает, какой провайдер выпустил код обмена),
+  **обязательно Route Handler, не
   `page.tsx`**: `cookies().set()` можно вызывать только в Server
   Action/Route Handler, не в рендере обычного Server Component — вызов
   `'use server'`-функции напрямую из рендера страницы молча проглатывает

@@ -81,6 +81,16 @@ class EnvironmentVariables {
   @IsString()
   GOOGLE_CLIENT_SECRET?: string;
 
+  /** Необязательны — без них `FacebookOAuthAdapter.isConfigured()`
+   * возвращает `false`, тот же приём, что у `GOOGLE_CLIENT_ID`. */
+  @IsOptional()
+  @IsString()
+  FACEBOOK_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  FACEBOOK_CLIENT_SECRET?: string;
+
   /** Публичный адрес backend для `redirect_uri` в OAuth-flow — необязателен,
    * дефолт `http://localhost:{PORT}` (см. `configuration.ts`) подходит для
    * локальной разработки. */

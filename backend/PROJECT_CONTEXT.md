@@ -25,11 +25,16 @@ Handlers), никогда напрямую из браузера.
 
 **Идентичность и социальная часть** (не специфично для Business OS):
 - `auth` (`/auth`) — регистрация/логин/логаут, opaque Redis-сессии, плюс
-  Google OAuth (2026-09-02, `AI_PLATFORM_ROADMAP.md` §36 — НЕ часть AI-
+  OAuth-вход (2026-09-02, `AI_PLATFORM_ROADMAP.md` §36 — НЕ часть AI-
   инициативы) — `passwordHash` теперь опционален (`User`), новая таблица
   `OAuthAccount` (provider+providerAccountId → userId), авто-линковка по
-  подтверждённому Google email. Facebook/Apple зарезервированы в enum
-  `OAuthProvider`, адаптеров под них ещё нет.
+  подтверждённому email провайдера. `GET /auth/:provider`(`/callback`) —
+  generic-роуты, `OAuthProviderRegistry`/`OAuthAdapter` (`modules/auth/
+  providers/`) диспетчеризуют на конкретный адаптер. Google работает и
+  проверен живьём; Facebook реализован, ждёт реальных `FACEBOOK_CLIENT_ID`/
+  `_SECRET` от владельца для живой проверки; Apple зарезервирован в enum
+  `OAuthProvider`, адаптера ещё нет вообще (не входит даже в
+  `RegisteredOAuthProvider`).
 - `users` (`/users`) — профили.
 - `friends`, `groups`, `communities`, `threads`, `posts` — социальный граф,
   сообщения, лента, группы/сообщества.

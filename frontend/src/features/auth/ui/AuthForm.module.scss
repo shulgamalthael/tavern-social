@@ -63,10 +63,16 @@
   color: var(--tavern-danger);
 }
 
+.form__oauth-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 // Визуально повторяет `Button`'s `variant="outline" fullWidth` (см.
 // `shared/ui/Button/Button.module.scss`), но собственный класс, не импорт
-// оттуда — реальный `<a href>` нужен для полноценной навигации на backend
-// (см. `AuthForm.tsx`'s комментарий), а `Button` рендерит только `<button>`.
+// оттуда — реальная навигация на backend нужна тут (см. `AuthForm.tsx`'s
+// комментарий), а `Button` рендерит только `<button>`.
 .form__oauth-button {
   display: flex;
   align-items: center;

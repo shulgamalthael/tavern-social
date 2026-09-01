@@ -1,17 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { AppConfig } from '@/config/configuration';
+import type { OAuthAdapter, OAuthProfile } from './oauth-adapter';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo';
-
-export interface GoogleProfile {
-  providerAccountId: string;
-  email: string;
-  emailVerified: boolean;
-  name: string;
-}
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -34,7 +28,7 @@ interface GoogleUserInfoResponse {
  * Console, иначе Google отклонит запрос ДО показа экрана согласия.
  */
 @Injectable()
-export class GoogleOAuthAdapter {
+export class GoogleOAuthAdapter implements OAuthAdapter {
   private readonly logger = new Logger(GoogleOAuthAdapter.name);
   private readonly clientId: string | undefined;
   private readonly clientSecret: string | undefined;
@@ -75,7 +69,7 @@ export class GoogleOAuthAdapter {
    * профиль через userinfo endpoint. Не парсит/не проверяет подпись
    * `id_token` вручную — оба запроса идут напрямую в Google по HTTPS с
    * `client_secret`, так что сам факт успешного ответа уже аутентичен. */
-  async exchangeCodeForProfile(code: string): Promise<GoogleProfile> {
+  async exchangeCodeForProfile(code: string): Promise<OAuthProfile> {
     if (!this.isConfigured()) {
       throw new Error('GoogleOAuthAdapter вызван без настроенных client id/secret');
     }

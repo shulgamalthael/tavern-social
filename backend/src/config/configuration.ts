@@ -34,12 +34,19 @@ export interface AppConfig {
    * Create OAuth client ID (Web application). */
   googleOAuthClientId: string | undefined;
   googleOAuthClientSecret: string | undefined;
+  /** `undefined`, если вход через Facebook не настроен — см.
+   * `FacebookOAuthAdapter.isConfigured()`, тот же приём. Получить:
+   * developers.facebook.com → своё приложение → Facebook Login → Settings. */
+  facebookClientId: string | undefined;
+  facebookClientSecret: string | undefined;
   /** Публично достижимый адрес САМОГО backend (не `frontendUrl`) — нужен,
-   * чтобы построить `redirect_uri` для Google (`${oauthCallbackBaseUrl}/auth/
-   * google/callback`), который должен буква-в-букву совпадать с тем, что
-   * прописано в Google Cloud Console. Дефолт — `http://localhost:{PORT}`,
-   * подходит для локальной разработки; в проде должен быть реальным
-   * доменом backend (не тем же, что `frontendUrl`, если они разделены). */
+   * чтобы построить `redirect_uri` для OAuth-провайдеров
+   * (`${oauthCallbackBaseUrl}/auth/:provider/callback`), который должен
+   * буква-в-букву совпадать с тем, что прописано в консоли провайдера.
+   * Дефолт — `http://localhost:{PORT}`, подходит для локальной разработки;
+   * в проде должен быть реальным доменом backend (не тем же, что
+   * `frontendUrl`, если они разделены). Один и тот же адрес для всех
+   * провайдеров — только последний путь-сегмент отличается. */
   oauthCallbackBaseUrl: string;
 
   /** Одна сеть Alchemy на весь backend, не per-business (см.
@@ -140,6 +147,8 @@ export default (): { app: AppConfig } => {
       geminiApiKey: process.env.GEMINI_API_KEY,
       googleOAuthClientId: process.env.GOOGLE_CLIENT_ID,
       googleOAuthClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      facebookClientId: process.env.FACEBOOK_CLIENT_ID,
+      facebookClientSecret: process.env.FACEBOOK_CLIENT_SECRET,
       oauthCallbackBaseUrl: process.env.OAUTH_CALLBACK_BASE_URL ?? `http://localhost:${port}`,
       alchemyNetwork: process.env.ALCHEMY_NETWORK ?? 'eth-mainnet',
       // `gemini-2.5-flash` вернул 404 "no longer available to new users" при
