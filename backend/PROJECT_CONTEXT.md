@@ -24,7 +24,12 @@ Handlers), никогда напрямую из браузера.
 ## Карта модулей (`src/modules/*`, маршрут → назначение)
 
 **Идентичность и социальная часть** (не специфично для Business OS):
-- `auth` (`/auth`) — регистрация/логин/логаут, opaque Redis-сессии.
+- `auth` (`/auth`) — регистрация/логин/логаут, opaque Redis-сессии, плюс
+  Google OAuth (2026-09-02, `AI_PLATFORM_ROADMAP.md` §36 — НЕ часть AI-
+  инициативы) — `passwordHash` теперь опционален (`User`), новая таблица
+  `OAuthAccount` (provider+providerAccountId → userId), авто-линковка по
+  подтверждённому Google email. Facebook/Apple зарезервированы в enum
+  `OAuthProvider`, адаптеров под них ещё нет.
 - `users` (`/users`) — профили.
 - `friends`, `groups`, `communities`, `threads`, `posts` — социальный граф,
   сообщения, лента, группы/сообщества.

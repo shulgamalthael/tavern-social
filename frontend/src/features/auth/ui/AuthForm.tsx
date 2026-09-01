@@ -17,6 +17,16 @@ export function AuthForm() {
     registerAccount,
     INITIAL_STATE,
   );
+  // `?error=oauth_failed` — backend редиректит сюда напрямую, если Google
+  // flow сорвался (см. AuthController.googleCallback), не через
+  // useActionState. Читаем через window.location, а не useSearchParams() —
+  // тот же приём, что WebsiteBuilderWidget.tsx (см. его комментарий): чисто
+  // клиентское одноразовое значение, Suspense-граница ради него не нужна.
+  const [oauthFailed] = useState<boolean>(
+    () =>
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('error') === 'oauth_failed',
+  );
 
   const state = mode === 'login' ? loginState : registerState;
   const isPending = mode === 'login' ? isLoginPending : isRegisterPending;
@@ -24,6 +34,18 @@ export function AuthForm() {
 
   return (
     <>
+      {oauthFailed && (
+        <p className={styles['form__error']}>Не удалось войти через Google. Попробуйте ещё раз.</p>
+      )}
+
+      <a href="/auth/google" className={styles['form__oauth-button']}>
+        Войти через Google
+      </a>
+
+      <div className={styles['form__divider']} role="separator">
+        <span>или</span>
+      </div>
+
       <div className={styles['form__tabs']} role="tablist">
         <button
           type="button"

@@ -1,20 +1,37 @@
 import { Global, Module, type OnModuleDestroy } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import type Redis from 'ioredis';
+import { OAuthExchangeService } from './oauth-exchange.service';
+import { OAuthStateService } from './oauth-state.service';
 import { PresenceService } from './presence.service';
 import { REDIS_CLIENT, redisClientProvider } from './redis-client.provider';
 import { SessionsService } from './sessions.service';
 import { SocketTicketsService } from './socket-tickets.service';
 
 /**
- * Глобальный модуль — Redis нужен в auth (сессии), websocket-шлюзе
- * (presence, тикеты) и friends (онлайн-статус друзей). Провайдеры этого
- * модуля доступны везде без повторного импорта в каждый feature-модуль.
+ * Глобальный модуль — Redis нужен в auth (сессии, OAuth state/exchange),
+ * websocket-шлюзе (presence, тикеты) и friends (онлайн-статус друзей).
+ * Провайдеры этого модуля доступны везде без повторного импорта в каждый
+ * feature-модуль.
  */
 @Global()
 @Module({
-  providers: [redisClientProvider, SessionsService, SocketTicketsService, PresenceService],
-  exports: [REDIS_CLIENT, SessionsService, SocketTicketsService, PresenceService],
+  providers: [
+    redisClientProvider,
+    SessionsService,
+    SocketTicketsService,
+    PresenceService,
+    OAuthStateService,
+    OAuthExchangeService,
+  ],
+  exports: [
+    REDIS_CLIENT,
+    SessionsService,
+    SocketTicketsService,
+    PresenceService,
+    OAuthStateService,
+    OAuthExchangeService,
+  ],
 })
 export class RedisModule implements OnModuleDestroy {
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}

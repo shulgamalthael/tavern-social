@@ -62,3 +62,41 @@
   font-size: 13px;
   color: var(--tavern-danger);
 }
+
+// Визуально повторяет `Button`'s `variant="outline" fullWidth` (см.
+// `shared/ui/Button/Button.module.scss`), но собственный класс, не импорт
+// оттуда — реальный `<a href>` нужен для полноценной навигации на backend
+// (см. `AuthForm.tsx`'s комментарий), а `Button` рендерит только `<button>`.
+.form__oauth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tavern-ink);
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--tavern-accent);
+    color: var(--tavern-accent);
+  }
+}
+
+.form__divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--tavern-line);
+  }
+}

@@ -71,6 +71,19 @@ Redis, без JWT.
   (`features/auth/api/actions.ts`) вызывают `POST /auth/login`/`/auth/register`
   через `backendFetch`, получают `{ token, user }`, кладут `token` как есть в
   httpOnly cookie `tavern_session` и редиректят на `/`.
+- **Google OAuth** (2026-09-02, backend `AI_PLATFORM_ROADMAP.md` §36) —
+  кнопка «Войти через Google» в `AuthForm.tsx`, реальный `<a href="/auth/google">`
+  (полноценная навигация, не Server Action), через тонкий Route Handler
+  `app/auth/google/route.ts` (302 на backend — браузер никогда не видит адрес
+  backend напрямую, тот же принцип, что у `proxy.ts`). Landing-точка после
+  Google — `app/auth/callback/route.ts`, **обязательно Route Handler, не
+  `page.tsx`**: `cookies().set()` можно вызывать только в Server
+  Action/Route Handler, не в рендере обычного Server Component — вызов
+  `'use server'`-функции напрямую из рендера страницы молча проглатывает
+  ошибку установки cookie (реальный баг, пойманный только живым прогоном
+  через настоящий Google, не `npm run check`/`build` — см. roadmap §36.2 за
+  подробностями). `SESSION_COOKIE_OPTIONS` вынесен в `shared/config/session.ts`,
+  общий для этого Route Handler и `loginToAccount`/`registerAccount`.
 - **Сессия** — cookie хранит только opaque-токен, выданный backend (не JSON с
   данными пользователя и не JWT). Смысл токена известен только backend
   (`SessionsService` в Redis, TTL). DAL `getSessionUser()`

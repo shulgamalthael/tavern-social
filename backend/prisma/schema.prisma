@@ -92,7 +92,12 @@ enum BusinessCategory {
 model User {
   id                   String    @id @default(uuid())
   email                String    @unique
-  passwordHash         String
+  /// Опционально с появлением OAuth-входа (`OAuthAccount` ниже) —
+  /// пользователь, зарегистрированный только через Google/Facebook/Apple,
+  /// не имеет пароля вообще (не заводим фиктивный хеш). `AuthService.login`
+  /// явно отклоняет попытку входа паролем для такого пользователя, а не
+  /// падает на `argon2.verify(null, ...)`.
+  passwordHash         String?
   name                 String
   tagline              String    @default("")
   accent               String?
@@ -147,8 +152,37 @@ model User {
   businesses Business[]
   auditLogs  AuditLog[]
 
+  oauthAccounts OAuthAccount[]
+
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
   @@map("users")
+}
+
+enum OAuthProvider {
+  google
+  facebook
+  apple
+}
+
+/// Привязка внешнего провайдера входа к пользователю — отдельная таблица, а
+/// не плоские поля на `User` (`googleId`/`facebookId`/...), потому что один
+/// пользователь может привязать НЕСКОЛЬКО провайдеров к одному аккаунту
+/// (например, начал с Google, потом добавил Facebook) — см. `AuthService`'s
+/// find-or-create по email при первом входе через новый провайдер.
+/// `providerAccountId` — стабильный id пользователя у провайдера (Google
+/// `sub`), не email — email у провайдера в принципе может меняться.
+model OAuthAccount {
+  id                String        @id @default(uuid())
+  provider          OAuthProvider
+  providerAccountId String
+  userId            String
+  createdAt         DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
 }
 
 model Post {

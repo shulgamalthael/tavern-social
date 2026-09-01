@@ -28,6 +28,20 @@ export interface AppConfig {
    * тот же приём, что у `stripeSecretKey`. */
   geminiApiKey: string | undefined;
 
+  /** `undefined`, если вход через Google не настроен — см.
+   * `GoogleOAuthAdapter.isConfigured()`, тот же приём, что у `geminiApiKey`.
+   * Получить: Google Cloud Console → APIs & Services → Credentials →
+   * Create OAuth client ID (Web application). */
+  googleOAuthClientId: string | undefined;
+  googleOAuthClientSecret: string | undefined;
+  /** Публично достижимый адрес САМОГО backend (не `frontendUrl`) — нужен,
+   * чтобы построить `redirect_uri` для Google (`${oauthCallbackBaseUrl}/auth/
+   * google/callback`), который должен буква-в-букву совпадать с тем, что
+   * прописано в Google Cloud Console. Дефолт — `http://localhost:{PORT}`,
+   * подходит для локальной разработки; в проде должен быть реальным
+   * доменом backend (не тем же, что `frontendUrl`, если они разделены). */
+  oauthCallbackBaseUrl: string;
+
   /** Одна сеть Alchemy на весь backend, не per-business (см.
    * `web3.types.ts`) — сам API-ключ платформенным не бывает, только
    * собственный, у каждого бизнеса (`Business.web3AlchemyApiKey`,
@@ -106,56 +120,63 @@ export interface AppConfig {
   aiRecommendationIntervalMs: number;
 }
 
-export default (): { app: AppConfig } => ({
-  app: {
-    nodeEnv: (process.env.NODE_ENV as AppConfig['nodeEnv']) ?? 'development',
-    port: Number(process.env.PORT ?? 4000),
-    databaseUrl: process.env.DATABASE_URL ?? '',
-    redisUrl: process.env.REDIS_URL ?? '',
-    frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
-    sessionTtlSeconds: Number(process.env.SESSION_TTL_SECONDS ?? 60 * 60 * 24 * 30),
-    socketTicketTtlSeconds: Number(process.env.SOCKET_TICKET_TTL_SECONDS ?? 60),
-    logLevel: process.env.LOG_LEVEL,
-    sitesBaseDomain: process.env.SITES_BASE_DOMAIN ?? 'localhost',
-    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
-    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-    stripeSubscriptionsWebhookSecret: process.env.STRIPE_SUBSCRIPTIONS_WEBHOOK_SECRET,
-    geminiApiKey: process.env.GEMINI_API_KEY,
-    alchemyNetwork: process.env.ALCHEMY_NETWORK ?? 'eth-mainnet',
-    // `gemini-2.5-flash` вернул 404 "no longer available to new users" при
-    // реальном тесте (2026-08-29) — Google сам называет замену в тексте
-    // ошибки. Вынесено в конфиг именно на случай следующей такой миграции.
-    geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.6-flash',
-    geminiRpmLimit: Number(process.env.GEMINI_RPM_LIMIT ?? 15),
-    geminiRpmSafetyLimit: Number(process.env.GEMINI_RPM_SAFETY_LIMIT ?? 12),
-    geminiRpdLimit: Number(process.env.GEMINI_RPD_LIMIT ?? 1500),
-    geminiRpdSafetyLimit: Number(process.env.GEMINI_RPD_SAFETY_LIMIT ?? 1350),
-    geminiMaxRetries: Number(process.env.GEMINI_MAX_RETRIES ?? 2),
-    geminiRetryBaseDelayMs: Number(process.env.GEMINI_RETRY_BASE_DELAY_MS ?? 1000),
-    geminiQueueMaxWaitMs: Number(process.env.GEMINI_QUEUE_MAX_WAIT_MS ?? 20_000),
+export default (): { app: AppConfig } => {
+  const port = Number(process.env.PORT ?? 4000);
 
-    geminiInputPricePerMillionUsd: process.env.GEMINI_INPUT_PRICE_PER_MILLION_USD
-      ? Number(process.env.GEMINI_INPUT_PRICE_PER_MILLION_USD)
-      : undefined,
-    geminiOutputPricePerMillionUsd: process.env.GEMINI_OUTPUT_PRICE_PER_MILLION_USD
-      ? Number(process.env.GEMINI_OUTPUT_PRICE_PER_MILLION_USD)
-      : undefined,
+  return {
+    app: {
+      nodeEnv: (process.env.NODE_ENV as AppConfig['nodeEnv']) ?? 'development',
+      port,
+      databaseUrl: process.env.DATABASE_URL ?? '',
+      redisUrl: process.env.REDIS_URL ?? '',
+      frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+      sessionTtlSeconds: Number(process.env.SESSION_TTL_SECONDS ?? 60 * 60 * 24 * 30),
+      socketTicketTtlSeconds: Number(process.env.SOCKET_TICKET_TTL_SECONDS ?? 60),
+      logLevel: process.env.LOG_LEVEL,
+      sitesBaseDomain: process.env.SITES_BASE_DOMAIN ?? 'localhost',
+      stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+      stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+      stripeSubscriptionsWebhookSecret: process.env.STRIPE_SUBSCRIPTIONS_WEBHOOK_SECRET,
+      geminiApiKey: process.env.GEMINI_API_KEY,
+      googleOAuthClientId: process.env.GOOGLE_CLIENT_ID,
+      googleOAuthClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      oauthCallbackBaseUrl: process.env.OAUTH_CALLBACK_BASE_URL ?? `http://localhost:${port}`,
+      alchemyNetwork: process.env.ALCHEMY_NETWORK ?? 'eth-mainnet',
+      // `gemini-2.5-flash` вернул 404 "no longer available to new users" при
+      // реальном тесте (2026-08-29) — Google сам называет замену в тексте
+      // ошибки. Вынесено в конфиг именно на случай следующей такой миграции.
+      geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.6-flash',
+      geminiRpmLimit: Number(process.env.GEMINI_RPM_LIMIT ?? 15),
+      geminiRpmSafetyLimit: Number(process.env.GEMINI_RPM_SAFETY_LIMIT ?? 12),
+      geminiRpdLimit: Number(process.env.GEMINI_RPD_LIMIT ?? 1500),
+      geminiRpdSafetyLimit: Number(process.env.GEMINI_RPD_SAFETY_LIMIT ?? 1350),
+      geminiMaxRetries: Number(process.env.GEMINI_MAX_RETRIES ?? 2),
+      geminiRetryBaseDelayMs: Number(process.env.GEMINI_RETRY_BASE_DELAY_MS ?? 1000),
+      geminiQueueMaxWaitMs: Number(process.env.GEMINI_QUEUE_MAX_WAIT_MS ?? 20_000),
 
-    aiCapacityWarningPercent: Number(process.env.AI_CAPACITY_WARNING_PERCENT ?? 70),
-    aiCapacityCriticalPercent: Number(process.env.AI_CAPACITY_CRITICAL_PERCENT ?? 85),
-    aiCapacityEmergencyPercent: Number(process.env.AI_CAPACITY_EMERGENCY_PERCENT ?? 95),
-    aiCapacitySnapshotIntervalMs: Number(
-      process.env.AI_CAPACITY_SNAPSHOT_INTERVAL_MS ?? 5 * 60_000,
-    ),
+      geminiInputPricePerMillionUsd: process.env.GEMINI_INPUT_PRICE_PER_MILLION_USD
+        ? Number(process.env.GEMINI_INPUT_PRICE_PER_MILLION_USD)
+        : undefined,
+      geminiOutputPricePerMillionUsd: process.env.GEMINI_OUTPUT_PRICE_PER_MILLION_USD
+        ? Number(process.env.GEMINI_OUTPUT_PRICE_PER_MILLION_USD)
+        : undefined,
 
-    aiRawRequestRetentionDays: Number(process.env.AI_RAW_REQUEST_RETENTION_DAYS ?? 7),
-    aiAggregationIntervalMs: Number(process.env.AI_AGGREGATION_INTERVAL_MS ?? 60 * 60_000),
+      aiCapacityWarningPercent: Number(process.env.AI_CAPACITY_WARNING_PERCENT ?? 70),
+      aiCapacityCriticalPercent: Number(process.env.AI_CAPACITY_CRITICAL_PERCENT ?? 85),
+      aiCapacityEmergencyPercent: Number(process.env.AI_CAPACITY_EMERGENCY_PERCENT ?? 95),
+      aiCapacitySnapshotIntervalMs: Number(
+        process.env.AI_CAPACITY_SNAPSHOT_INTERVAL_MS ?? 5 * 60_000,
+      ),
 
-    aiDedupCacheTtlMs: Number(process.env.AI_DEDUP_CACHE_TTL_MS ?? 60_000),
+      aiRawRequestRetentionDays: Number(process.env.AI_RAW_REQUEST_RETENTION_DAYS ?? 7),
+      aiAggregationIntervalMs: Number(process.env.AI_AGGREGATION_INTERVAL_MS ?? 60 * 60_000),
 
-    aiAnomalyRateMultiplier: Number(process.env.AI_ANOMALY_RATE_MULTIPLIER ?? 5),
-    aiAnomalyRetrySpikeThreshold: Number(process.env.AI_ANOMALY_RETRY_SPIKE_THRESHOLD ?? 5),
+      aiDedupCacheTtlMs: Number(process.env.AI_DEDUP_CACHE_TTL_MS ?? 60_000),
 
-    aiRecommendationIntervalMs: Number(process.env.AI_RECOMMENDATION_INTERVAL_MS ?? 30 * 60_000),
-  },
-});
+      aiAnomalyRateMultiplier: Number(process.env.AI_ANOMALY_RATE_MULTIPLIER ?? 5),
+      aiAnomalyRetrySpikeThreshold: Number(process.env.AI_ANOMALY_RETRY_SPIKE_THRESHOLD ?? 5),
+
+      aiRecommendationIntervalMs: Number(process.env.AI_RECOMMENDATION_INTERVAL_MS ?? 30 * 60_000),
+    },
+  };
+};

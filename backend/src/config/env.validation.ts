@@ -69,6 +69,25 @@ class EnvironmentVariables {
   @IsString()
   GEMINI_API_KEY?: string;
 
+  /** Необязательны — без них `GoogleOAuthAdapter.isConfigured()` возвращает
+   * `false`, `GET /auth/google` отвечает 503 вместо падения при старте (тот
+   * же приём, что у `GEMINI_API_KEY`). Получить в Google Cloud Console →
+   * APIs & Services → Credentials → Create OAuth client ID. */
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_SECRET?: string;
+
+  /** Публичный адрес backend для `redirect_uri` в OAuth-flow — необязателен,
+   * дефолт `http://localhost:{PORT}` (см. `configuration.ts`) подходит для
+   * локальной разработки. */
+  @IsOptional()
+  @IsString()
+  OAUTH_CALLBACK_BASE_URL?: string;
+
   /** Сеть Alchemy (`eth-mainnet`, `eth-sepolia`, ...) — одна на весь
    * backend, не per-business (см. `web3.types.ts`'s комментарий). Ключ
    * платформенным не бывает — только собственный, у каждого бизнеса

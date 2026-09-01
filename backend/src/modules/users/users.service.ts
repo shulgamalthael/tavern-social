@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import type { OAuthProvider, User } from '@prisma/client';
 import { deleteUploadedFile } from '@/common/lib/upload';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
@@ -25,6 +25,56 @@ export class UsersService {
 
   async create(data: { email: string; passwordHash: string; name: string }): Promise<User> {
     return this.prisma.user.create({ data });
+  }
+
+  /** Находит пользователя по уже привязанному провайдеру входа (`OAuthAccount`,
+   * см. `schema.prisma`) — id провайдера (`sub` у Google), не email (тот у
+   * провайдера в принципе может смениться). */
+  async findByOAuthAccount(
+    provider: OAuthProvider,
+    providerAccountId: string,
+  ): Promise<User | null> {
+    const link = await this.prisma.oAuthAccount.findUnique({
+      where: { provider_providerAccountId: { provider, providerAccountId } },
+      include: { user: true },
+    });
+    return link?.user ?? null;
+  }
+
+  /** Привязывает провайдера к УЖЕ существующему пользователю (найденному по
+   * email) — авто-линковка при первом входе через новый провайдер на
+   * знакомый email, см. `AuthService.findOrCreateOAuthUser`. */
+  async linkOAuthAccount(
+    userId: string,
+    provider: OAuthProvider,
+    providerAccountId: string,
+  ): Promise<void> {
+    await this.prisma.oAuthAccount.create({ data: { userId, provider, providerAccountId } });
+  }
+
+  /** Заводит пользователя БЕЗ пароля (`passwordHash: null`) — единственный
+   * способ входа для него сначала — тот же провайдер, что создал аккаунт;
+   * пароль можно завести позже отдельным флоу (не реализован в этой
+   * итерации — см. AI_PLATFORM_ROADMAP.md). Создание пользователя и
+   * привязка провайдера — одна Prisma nested-write, не два отдельных
+   * запроса, чтобы никогда не оставить пользователя без единственного
+   * способа входа при сбое между шагами. */
+  async createFromOAuth(data: {
+    email: string;
+    name: string;
+    provider: OAuthProvider;
+    providerAccountId: string;
+  }): Promise<User> {
+    return this.prisma.user.create({
+      data: {
+        email: data.email,
+        name: data.name,
+        passwordHash: null,
+        oauthAccounts: {
+          create: { provider: data.provider, providerAccountId: data.providerAccountId },
+        },
+      },
+    });
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto): Promise<User> {

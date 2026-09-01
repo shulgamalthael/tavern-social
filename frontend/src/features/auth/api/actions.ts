@@ -3,18 +3,8 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { BackendError, backendFetch } from '@/shared/lib/backend-client';
-import { SESSION_COOKIE_NAME } from '@/shared/config/session';
+import { SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS } from '@/shared/config/session';
 import { getSessionToken } from '@/shared/lib/session-token.server';
-
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
-
-const SESSION_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  path: '/',
-  maxAge: SESSION_MAX_AGE_SECONDS,
-};
 
 interface AuthSessionResponse {
   token: string;
