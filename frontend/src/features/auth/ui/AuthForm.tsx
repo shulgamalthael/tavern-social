@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { Button } from '@/shared/ui/Button';
 import { cn } from '@/shared/lib/cn';
@@ -11,14 +10,6 @@ const INITIAL_STATE: AuthFormState = {};
 
 type AuthMode = 'login' | 'register';
 
-/** `href` ведёт на `app/auth/[provider]/route.ts` (302 на backend, см. его
- * комментарий) — новый провайдер добавляется одной строкой здесь и в
- * backend'ом `OAuthProviderRegistry`, без правки разметки формы. */
-const OAUTH_PROVIDERS = [
-  { provider: 'google', label: 'Войти через Google' },
-  { provider: 'facebook', label: 'Войти через Facebook' },
-] as const;
-
 export function AuthForm() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [loginState, loginAction, isLoginPending] = useActionState(loginToAccount, INITIAL_STATE);
@@ -26,9 +17,9 @@ export function AuthForm() {
     registerAccount,
     INITIAL_STATE,
   );
-  // `?error=oauth_failed` — backend редиректит сюда напрямую, если OAuth-flow
-  // сорвался (см. AuthController.oauthCallback), не через useActionState.
-  // Читаем через window.location, а не useSearchParams() —
+  // `?error=oauth_failed` — backend редиректит сюда напрямую, если Google
+  // flow сорвался (см. AuthController.googleCallback), не через
+  // useActionState. Читаем через window.location, а не useSearchParams() —
   // тот же приём, что WebsiteBuilderWidget.tsx (см. его комментарий): чисто
   // клиентское одноразовое значение, Suspense-граница ради него не нужна.
   const [oauthFailed] = useState<boolean>(
@@ -44,21 +35,12 @@ export function AuthForm() {
   return (
     <>
       {oauthFailed && (
-        <p className={styles['form__error']}>Не удалось войти. Попробуйте ещё раз.</p>
+        <p className={styles['form__error']}>Не удалось войти через Google. Попробуйте ещё раз.</p>
       )}
 
-      <div className={styles['form__oauth-list']}>
-        {OAUTH_PROVIDERS.map(({ provider, label }) => (
-          <Link
-            key={provider}
-            href={`/auth/${provider}`}
-            prefetch={false}
-            className={styles['form__oauth-button']}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
+      <a href="/auth/google" className={styles['form__oauth-button']}>
+        Войти через Google
+      </a>
 
       <div className={styles['form__divider']} role="separator">
         <span>или</span>

@@ -8,11 +8,8 @@ import { OAuthStateService } from '@/infrastructure/redis/oauth-state.service';
 import { SessionsService } from '@/infrastructure/redis/sessions.service';
 import { SocketTicketsService } from '@/infrastructure/redis/socket-tickets.service';
 import { UsersService } from '@/modules/users/users.service';
-import type { OAuthProfile } from './providers/oauth-adapter';
-import {
-  OAuthProviderRegistry,
-  type RegisteredOAuthProvider,
-} from './providers/oauth-provider-registry.service';
+import type { GoogleProfile } from './providers/google-oauth-adapter.service';
+import { GoogleOAuthAdapter } from './providers/google-oauth-adapter.service';
 import type { AuthSession } from './auth.types';
 import type { LoginDto } from './dto/login.dto';
 import type { RegisterDto } from './dto/register.dto';
@@ -25,7 +22,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly sessionsService: SessionsService,
     private readonly socketTicketsService: SocketTicketsService,
-    private readonly oauthProviderRegistry: OAuthProviderRegistry,
+    private readonly googleOAuthAdapter: GoogleOAuthAdapter,
     private readonly oauthStateService: OAuthStateService,
     private readonly oauthExchangeService: OAuthExchangeService,
     configService: ConfigService,
@@ -77,25 +74,20 @@ export class AuthService {
     return this.socketTicketsService.issue(userId);
   }
 
-  /** `GET /auth/:provider` — выдаёт CSRF `state` и строит URL согласия
-   * конкретного провайдера (`OAuthProviderRegistry`). */
-  async buildOAuthAuthorizationUrl(provider: RegisteredOAuthProvider): Promise<string> {
+  /** `GET /auth/google` — выдаёт CSRF `state` и строит URL Google-согласия. */
+  async buildGoogleAuthorizationUrl(): Promise<string> {
     const state = await this.oauthStateService.issue();
-    return this.oauthProviderRegistry.get(provider).buildAuthorizationUrl(state);
+    return this.googleOAuthAdapter.buildAuthorizationUrl(state);
   }
 
   /**
-   * `GET /auth/:provider/callback` — проверяет `state`, меняет `code` на
+   * `GET /auth/google/callback` — проверяет `state`, меняет `code` на
    * профиль, находит/заводит пользователя, выпускает сессию и возвращает
    * ГОТОВЫЙ URL для редиректа браузера на frontend (`/auth/callback?code=`)
    * с ОДНОРАЗОВЫМ кодом обмена, не сам session-токен (см.
    * `OAuthExchangeService`'s комментарий).
    */
-  async completeOAuthLogin(
-    provider: RegisteredOAuthProvider,
-    code: string,
-    state: string,
-  ): Promise<string> {
+  async completeGoogleLogin(code: string, state: string): Promise<string> {
     const stateValid = await this.oauthStateService.consume(state);
     if (!stateValid) {
       throw new UnauthorizedException(
@@ -103,23 +95,23 @@ export class AuthService {
       );
     }
 
-    const profile = await this.oauthProviderRegistry.get(provider).exchangeCodeForProfile(code);
+    const profile = await this.googleOAuthAdapter.exchangeCodeForProfile(code);
     if (!profile.emailVerified) {
-      throw new UnauthorizedException('Email в аккаунте должен быть подтверждён');
+      throw new UnauthorizedException('Email в Google-аккаунте должен быть подтверждён');
     }
 
-    const user = await this.findOrCreateOAuthUser(provider, profile);
+    const user = await this.findOrCreateOAuthUser('google', profile);
     const token = await this.sessionsService.create(user.id);
     const exchangeCode = await this.oauthExchangeService.issue(token);
     return `${this.frontendUrl}/auth/callback?code=${exchangeCode}`;
   }
 
   /** Куда редиректить браузер, если OAuth-flow сорвался на любом шаге
-   * (пользователь отклонил согласие, `state`/`code` невалидны, провайдер
-   * недоступен) — `AuthController` ловит исключение из `completeOAuthLogin`
+   * (пользователь отклонил согласие, `state`/`code` невалидны, Google
+   * недоступен) — `AuthController` ловит исключение из `completeGoogleLogin`
    * и всегда делает редирект, никогда не отдаёт голый JSON-error браузеру,
    * который сюда попал НАВИГАЦИЕЙ (а не программным вызовом API). */
-  oauthLoginErrorRedirectUrl(): string {
+  googleLoginErrorRedirectUrl(): string {
     return `${this.frontendUrl}/auth?error=oauth_failed`;
   }
 
@@ -139,14 +131,14 @@ export class AuthService {
     return { token, user: this.usersService.toMeProfile(user) };
   }
 
-  /** Единая find-or-create-or-link логика для ЛЮБОГО зарегистрированного
-   * провайдера (`OAuthProviderRegistry`) — сначала по уже привязанному
+  /** Единая find-or-create-or-link логика, переиспользуемая будущими
+   * провайдерами (Facebook/Apple) — сначала по уже привязанному
    * `OAuthAccount` (id провайдера, не email), иначе по email (авто-линковка:
-   * провайдер уже подтвердил владение email, см. `OAuthProfile.emailVerified`
+   * провайдер уже подтвердил владение email, см. `GoogleProfile.emailVerified`
    * проверку выше), иначе — новый пользователь без пароля. */
   private async findOrCreateOAuthUser(
     provider: OAuthProvider,
-    profile: OAuthProfile,
+    profile: GoogleProfile,
   ): Promise<User> {
     const existingLink = await this.usersService.findByOAuthAccount(
       provider,

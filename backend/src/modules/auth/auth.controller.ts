@@ -1,12 +1,10 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   Logger,
-  Param,
   Post,
   Query,
   Req,
@@ -24,17 +22,13 @@ import { AuthService } from './auth.service';
 import { ExchangeOAuthCodeDto } from './dto/exchange-oauth-code.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { OAuthConfiguredGuard } from './guards/oauth-configured.guard';
-import { OAuthProviderRegistry } from './providers/oauth-provider-registry.service';
+import { GoogleOAuthConfiguredGuard } from './guards/google-oauth-configured.guard';
 
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(
-    private readonly authService: AuthService,
-    private readonly oauthProviderRegistry: OAuthProviderRegistry,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -65,54 +59,43 @@ export class AuthController {
     return { ticket };
   }
 
-  /** Начало OAuth-входа (`:provider` — `google`/`facebook`, см.
-   * `OAuthProviderRegistry`) — реальная навигация браузера (не AJAX),
-   * поэтому 302 на провайдера, а не JSON. Frontend никогда не строит этот
-   * URL сам — только переходит на GET /auth/:provider (см. AGENTS.md,
-   * «браузер не обращается к backend напрямую» — здесь это полноценная
-   * навигация, не REST-вызов). */
-  @Get(':provider')
-  @UseGuards(OAuthConfiguredGuard)
-  async oauthLogin(@Param('provider') provider: string, @Res() res: Response): Promise<void> {
-    if (!this.oauthProviderRegistry.isKnownProvider(provider)) {
-      // Недостижимо на практике — OAuthConfiguredGuard уже отклонил бы
-      // неизвестного провайдера раньше — но сужает тип для TS без `as`.
-      throw new BadRequestException(`Неизвестный провайдер входа: "${provider}"`);
-    }
-    const url = await this.authService.buildOAuthAuthorizationUrl(provider);
+  /** Начало Google-входа — реальная навигация браузера (не AJAX), поэтому
+   * 302 на Google, а не JSON. Frontend никогда не строит этот URL сам —
+   * только переходит на GET /auth/google (см. AGENTS.md, «браузер не
+   * обращается к backend напрямую» — здесь это полноценная навигация, не
+   * REST-вызов). */
+  @Get('google')
+  @UseGuards(GoogleOAuthConfiguredGuard)
+  async googleLogin(@Res() res: Response): Promise<void> {
+    const url = await this.authService.buildGoogleAuthorizationUrl();
     res.redirect(url);
   }
 
-  /** Callback провайдера — тоже реальная навигация браузера, поэтому ЛЮБОЙ
-   * исход (успех или ошибка) заканчивается редиректом на frontend, никогда
-   * не голым JSON/500 — пользователь не может «обработать» JSON-ответ,
-   * попавший сюда по ссылке из письма/кнопки согласия провайдера. */
-  @Get(':provider/callback')
-  @UseGuards(OAuthConfiguredGuard)
-  async oauthCallback(
-    @Param('provider') provider: string,
+  /** Callback Google — тоже реальная навигация браузера, поэтому ЛЮБОЙ исход
+   * (успех или ошибка) заканчивается редиректом на frontend, никогда не
+   * голым JSON/500 — пользователь не может «обработать» JSON-ответ,
+   * попавший сюда по ссылке из письма Google/кнопки согласия. */
+  @Get('google/callback')
+  @UseGuards(GoogleOAuthConfiguredGuard)
+  async googleCallback(
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,
     @Query('error') error: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    if (!this.oauthProviderRegistry.isKnownProvider(provider)) {
-      res.redirect(this.authService.oauthLoginErrorRedirectUrl());
-      return;
-    }
     if (error || !code || !state) {
-      res.redirect(this.authService.oauthLoginErrorRedirectUrl());
+      res.redirect(this.authService.googleLoginErrorRedirectUrl());
       return;
     }
 
     try {
-      const redirectUrl = await this.authService.completeOAuthLogin(provider, code, state);
+      const redirectUrl = await this.authService.completeGoogleLogin(code, state);
       res.redirect(redirectUrl);
     } catch (caught) {
       this.logger.warn(
-        `${provider} OAuth callback failed: ${caught instanceof Error ? caught.message : String(caught)}`,
+        `Google OAuth callback failed: ${caught instanceof Error ? caught.message : String(caught)}`,
       );
-      res.redirect(this.authService.oauthLoginErrorRedirectUrl());
+      res.redirect(this.authService.googleLoginErrorRedirectUrl());
     }
   }
 
