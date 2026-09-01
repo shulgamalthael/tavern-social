@@ -14,16 +14,30 @@
  * страница/товар/услуга), которую эта функция сама не делает (остаётся
  * чистой, без Prisma) — вызывающий тул обязан собрать `BuildValidatedPropsRefs`
  * через уже существующие сервисы ДО вызова.
+ *
+ * `web3wallet` (AI_PLATFORM_ROADMAP.md §35, AI-20) — первый блок с ЖИВЫМИ
+ * данными в этом allowlist: `props` — только текстовая обвязка и `nftLimit`
+ * (новый вид поля `'number'`), сам баланс/NFT дозагружается на публичной
+ * странице заново при каждом рендере, ничего из этого не хранится в
+ * `props` и не требует `refs` — тот же принцип, что и у `mediaAsset`/
+ * `linkTarget`, только без внешней проверки существования вообще.
  */
 
 import { validateLinkTarget, type LinkTargetRefs } from './link-target-schema';
 
-export type AllowedBlockType = 'heading' | 'text' | 'quote' | 'spacer' | 'image' | 'button';
+export type AllowedBlockType =
+  'heading' | 'text' | 'quote' | 'spacer' | 'image' | 'button' | 'web3wallet';
 
 interface CuratedField {
-  kind: 'string' | 'enum' | 'linkTarget' | 'mediaAsset';
+  kind: 'string' | 'enum' | 'linkTarget' | 'mediaAsset' | 'number';
   maxLength?: number;
   values?: readonly string[];
+  /** Только для `kind: 'number'` — та же пара `min`/`max`, что и у
+   * фронтового `FieldSchema` с `control: 'number'` (см. `registry.ts`),
+   * сверено 1:1 со значением конкретного блока (например, `web3wallet`'s
+   * `nftLimit`, `web3/index.tsx`). */
+  min?: number;
+  max?: number;
 }
 
 /** Множества id/URL, против которых проверяются `linkTarget`/`mediaAsset`
@@ -144,6 +158,26 @@ const BUTTON_SCHEMA: CuratedBlockSchema = {
   },
 };
 
+/** Сверено 1:1 с `web3WalletFields`/`defaultProps` в `blocks/web3/index.tsx`
+ * (AI-13, AI_PLATFORM_ROADMAP.md §26) — первый добавленный сюда блок с
+ * ЖИВЫМИ данными: сам `web3wallet` не хранит баланс/NFT в `props` вообще
+ * (только текстовую обвязку и `nftLimit`), дозагружает их заново при каждом
+ * рендере через анонимный `getPublicWalletInfo` — поэтому, в отличие от
+ * `image`/`button`, ему НЕ нужны `refs` вообще (`needsBlockRefs` в
+ * `build-block-refs.ts` возвращает `false` для всего, кроме `image`/
+ * `button`): нет ни `mediaAsset`, ни `linkTarget` полей, только `string`/
+ * `number`. */
+const WEB3WALLET_SCHEMA: CuratedBlockSchema = {
+  label: 'Кошелёк Web3',
+  fields: {
+    eyebrow: { kind: 'string', maxLength: 60 },
+    heading: { kind: 'string', maxLength: 200 },
+    description: { kind: 'string', maxLength: 400 },
+    nftLimit: { kind: 'number', min: 0, max: 24 },
+  },
+  defaultProps: { eyebrow: 'WEB3', heading: 'Наш кошелёк', description: '', nftLimit: 6 },
+};
+
 export const BLOCK_SCHEMAS: Record<AllowedBlockType, CuratedBlockSchema> = {
   heading: HEADING_SCHEMA,
   text: TEXT_SCHEMA,
@@ -151,6 +185,7 @@ export const BLOCK_SCHEMAS: Record<AllowedBlockType, CuratedBlockSchema> = {
   spacer: SPACER_SCHEMA,
   image: IMAGE_SCHEMA,
   button: BUTTON_SCHEMA,
+  web3wallet: WEB3WALLET_SCHEMA,
 };
 
 export const ALLOWED_BLOCK_TYPES = Object.keys(BLOCK_SCHEMAS) as AllowedBlockType[];
@@ -198,6 +233,17 @@ export function buildValidatedProps(
     } else if (field.kind === 'mediaAsset') {
       if (value !== null && (typeof value !== 'string' || !refs.mediaAssetUrls.has(value))) {
         throw new Error(`Поле "${key}" должно быть null или ссылкой на уже загруженный файл`);
+      }
+      result[key] = value;
+    } else if (field.kind === 'number') {
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error(`Поле "${key}" должно быть числом`);
+      }
+      if (field.min !== undefined && value < field.min) {
+        throw new Error(`Поле "${key}" не может быть меньше ${field.min}`);
+      }
+      if (field.max !== undefined && value > field.max) {
+        throw new Error(`Поле "${key}" не может быть больше ${field.max}`);
       }
       result[key] = value;
     } else {

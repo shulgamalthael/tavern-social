@@ -32,9 +32,12 @@ import { ToolRegistryService } from './tool-registry.service';
  * 4 типографических/layout-блоков: `image.src` — только уже загруженный
  * файл (`list_media_assets`, AI сам ничего не грузит), `link`/`url` —
  * полный `LinkTarget` из 7 вариантов, включая `addToCart`/`bookAppointment`
- * (см. `lib/link-target-schema.ts`). `productgrid`/`gallery`/data-bound
- * блоки по-прежнему НЕ поддержаны — те требуют `control: 'dataSource'`,
- * структурно другой формы, чем `LinkTarget`.
+ * (см. `lib/link-target-schema.ts`). `web3wallet` (AI_PLATFORM_ROADMAP.md
+ * §35, AI-20) — первый живой-данными блок в этом allowlist, без
+ * `mediaAsset`/`linkTarget` полей вообще, см. `add-block-schemas.ts`.
+ * `productgrid`/`gallery`/остальные `control: 'dataSource'`-блоки
+ * по-прежнему НЕ поддержаны — та форма (`{limit, sort}` + `entity`) требует
+ * отдельного вида поля, не заведённого здесь ради одного этого блока.
  */
 
 interface AddBlockInput {
@@ -63,7 +66,7 @@ export class AddBlockTool implements OnModuleInit {
       name: 'add_block',
       description:
         'Добавляет новый блок контента в КОНЕЦ указанной страницы (сначала узнай id страницы через get_project_tree). ' +
-        'Поддерживает: heading (заголовок), text (абзац), quote (цитата), spacer (пустой отступ), image (изображение — src только из list_media_assets), button (кнопка со ссылкой). ' +
+        'Поддерживает: heading (заголовок), text (абзац), quote (цитата), spacer (пустой отступ), image (изображение — src только из list_media_assets), button (кнопка со ссылкой), web3wallet (баланс и NFT кошелька бизнеса из раздела Web3 дашборда — работает только если владелец уже указал адрес кошелька). ' +
         'Для остальных типов блоков (галереи, товарные сетки и т.п.) инструмента пока нет.',
       riskLevel: 'medium',
       parameters: {
@@ -83,6 +86,7 @@ export class AddBlockTool implements OnModuleInit {
               'text: text/color(default|primary|muted). quote: text/author. spacer: height(sm|md|lg|xl). ' +
               'image: src(url из list_media_assets или null)/alt/objectFit(cover|contain)/radius(none|sm|md|lg|full)/width(auto|full)/link(LinkTarget). ' +
               'button: label/url(LinkTarget)/variant(solid|outline|soft)/size(sm|md|lg)/target(_self|_blank). ' +
+              'web3wallet: eyebrow/heading/description/nftLimit(число, 0-24, сколько NFT показать). ' +
               'LinkTarget — объект {type, ...}: {type:"external",url}, {type:"page",pageId}, {type:"anchor",anchor}, {type:"phone",phone}, {type:"email",email}, {type:"addToCart",productId}, {type:"bookAppointment",serviceId}.',
           },
         },

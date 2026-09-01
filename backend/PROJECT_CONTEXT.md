@@ -148,7 +148,7 @@ Handlers), никогда напрямую из браузера.
 | AI-3 — SSE-стриминг, live-canvas apply, activity timeline | ✅ done, verified |
 | AI-4 — разговорный онбординг бизнеса | ✅ done, verified |
 | AI-5 — Business Logic Engine v1 | ✅ done, verified (3 действия: `send_notification`/`add_loyalty_points`/`set_membership_tier`) |
-| AI-6 — Custom Widget Engine v1 | ✅ done, verified (`dataBindings`/`capabilities` ждут AI-7) |
+| AI-6 — Custom Widget Engine v1 | ✅ done, verified (`dataBindings`/`capabilities` — первый живой-данными блок в allowlist теперь есть, см. AI-20) |
 | AI-7 — Web3-провайдер | ✅ первый ограниченный слайс done, verified (read-only баланс/NFT, `AlchemyAdapter`; wallet-connect/подпись транзакций — вне скоупа, см. `AI_PLATFORM_ROADMAP.md` §19) |
 | AI-8 — Custom database builder | ✅ первый ограниченный слайс done, verified (декларативная EAV-модель, `create_entity`/`add_field`/`list_entities`; поля только добавляются, никогда не удаляются, см. `AI_PLATFORM_ROADMAP.md` §20) |
 | AI-9 — HIGH/CRITICAL-risk confirm-флоу | ✅ первый ограниченный слайс done, verified (`publish_website` — первый и пока единственный `high`-risk инструмент; полный quality-gate пересмотр остальных инструментов — вне этого слайса, см. `AI_PLATFORM_ROADMAP.md` §21) |
@@ -162,6 +162,7 @@ Handlers), никогда напрямую из браузера.
 | AI-17 — тот же трек, слайс 7 (рамка/тень на весь блок) | ✅ done, verified (`BlockStyle.borderWidth`/`borderColor`/`shadow` — отдельно от темного `cardBorder`/`cardShadow`, те только для карточных поверхностей ВНУТРИ блока; выбран владельцем из 4 кандидатов после второго, ещё большего брифа «переписать конструктор с нуля» — см. `AI_PLATFORM_ROADMAP.md` §31/§32) |
 | AI-18 — тот же трек, слайс 8 (визуальная схема margin/padding) | ✅ done, verified (`SpacingBoxModel` — живая, read-only схема отступов блока поверх уже существующих контролов, чисто frontend, без изменений `BlockStyle`/backend — см. `AI_PLATFORM_ROADMAP.md` §33) |
 | AI-19 — тот же трек, слайс 9, последний из 4 кандидатов (§31) — первый реальный слайс «Builder Introspection API» (бриф §15A) | ✅ done, verified (два новых read-only AI-инструмента, `get_page_blocks` и `get_block` — закрывают пробел, который оставлял `get_project_tree` (AI-1): реальные id/type/вложенность блоков страницы и реальные props/style/hidden одного блока по id, вместо того чтобы модель угадывала id по памяти диалога; живая проверка через два реальных многоходовых разговора с Gemini — см. `AI_PLATFORM_ROADMAP.md` §34) |
+| AI-20 — `web3wallet` в curated allowlist `add_block`/`CustomWidget` (§29.5) | ✅ done, verified (новый вид поля `CuratedField.kind: 'number'`, `web3wallet` добавлен в `ALLOWED_BLOCK_TYPES` — первый блок с живыми данными, который AI может добавить сам через `add_block`/встроить в `CustomWidget`; `productgrid`/`servicegrid` и остальные `control: 'dataSource'`-блоки по-прежнему не поддержаны (нужен отдельный вид поля); живая проверка через реальный разговор с Gemini на CryptoVault — модель добавила блок с 8 NFT в конец страницы, тестовый дубль удалён после проверки — см. `AI_PLATFORM_ROADMAP.md` §35) |
 
 **Известные внешние блокеры** (не код-гэпы, см. `AI_PLATFORM_ROADMAP.md` за
 подробностями): дневная квота Gemini free-tier (сбрасывается по

@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { BLOCK_SCHEMAS, buildValidatedProps, isAllowedBlockType } from './add-block-schemas';
 
 describe('isAllowedBlockType', () => {
-  it('accepts the six curated types', () => {
+  it('accepts the seven curated types', () => {
     expect(isAllowedBlockType('heading')).toBe(true);
     expect(isAllowedBlockType('text')).toBe(true);
     expect(isAllowedBlockType('quote')).toBe(true);
     expect(isAllowedBlockType('spacer')).toBe(true);
     expect(isAllowedBlockType('image')).toBe(true);
     expect(isAllowedBlockType('button')).toBe(true);
+    expect(isAllowedBlockType('web3wallet')).toBe(true);
   });
 
   it('rejects anything outside the allowlist', () => {
@@ -176,6 +177,45 @@ describe('buildValidatedProps', () => {
           url: { type: 'email', email: 'not-an-email' },
         }),
       ).toThrow(/должен быть корректным email/);
+    });
+  });
+
+  describe('number field (web3wallet.nftLimit)', () => {
+    it('falls back to the default when no props are given', () => {
+      expect(buildValidatedProps(BLOCK_SCHEMAS.web3wallet, undefined)).toEqual({
+        eyebrow: 'WEB3',
+        heading: 'Наш кошелёк',
+        description: '',
+        nftLimit: 6,
+      });
+    });
+
+    it('accepts a value within range, no refs needed', () => {
+      const props = buildValidatedProps(BLOCK_SCHEMAS.web3wallet, { nftLimit: 12 });
+      expect(props.nftLimit).toBe(12);
+    });
+
+    it('rejects a non-number value', () => {
+      expect(() => buildValidatedProps(BLOCK_SCHEMAS.web3wallet, { nftLimit: '12' })).toThrow(
+        /должно быть числом/,
+      );
+    });
+
+    it('rejects a value below min', () => {
+      expect(() => buildValidatedProps(BLOCK_SCHEMAS.web3wallet, { nftLimit: -1 })).toThrow(
+        /не может быть меньше/,
+      );
+    });
+
+    it('rejects a value above max', () => {
+      expect(() => buildValidatedProps(BLOCK_SCHEMAS.web3wallet, { nftLimit: 25 })).toThrow(
+        /не может быть больше/,
+      );
+    });
+
+    it('accepts the boundary values exactly', () => {
+      expect(buildValidatedProps(BLOCK_SCHEMAS.web3wallet, { nftLimit: 0 }).nftLimit).toBe(0);
+      expect(buildValidatedProps(BLOCK_SCHEMAS.web3wallet, { nftLimit: 24 }).nftLimit).toBe(24);
     });
   });
 });

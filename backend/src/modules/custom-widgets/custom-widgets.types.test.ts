@@ -51,4 +51,15 @@ describe('parseWidgetSchema', () => {
   it('rejects a malformed item (not an object)', () => {
     expect(() => parseWidgetSchema(['heading'])).toThrow('должен быть объектом');
   });
+
+  it('accepts web3wallet — a live-data block with no refs-requiring fields', () => {
+    const result = parseWidgetSchema([{ blockType: 'web3wallet', props: { nftLimit: 10 } }]);
+    expect(result[0].type).toBe('web3wallet');
+    expect(result[0].props).toEqual({
+      eyebrow: 'WEB3',
+      heading: 'Наш кошелёк',
+      description: '',
+      nftLimit: 10,
+    });
+  });
 });

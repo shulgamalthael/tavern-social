@@ -53,6 +53,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * ложное принятие. Прокинуть `businessId`-scoped `refs` сюда — отдельное
  * расширение (`CustomWidgetsService.create/update` уже знают `businessId`,
  * этой функции просто нужно его передать), не сделано в этой итерации.
+ *
+ * `web3wallet` (AI_PLATFORM_ROADMAP.md §35, AI-20) не задевает это
+ * ограничение вообще — у него нет `mediaAsset`/`linkTarget` полей, только
+ * `string`/`number`, так что виджет с этим блоком проходит `EMPTY_REFS` без
+ * особого случая. Единственная живая ссылка, которую он несёт, —
+ * businessId самого виджета (уже есть в `CustomWidgetsService`), не что-то
+ * внутри `props`: собранный виджет с `web3wallet`, встроенный на страницу,
+ * покажет кошелёк ТОГО бизнеса, чья это страница — то же самое поведение,
+ * что у блока, добавленного напрямую через `add_block`/вручную.
  */
 export function parseWidgetSchema(raw: unknown): WebsiteBlock[] {
   if (!Array.isArray(raw) || raw.length === 0) {
