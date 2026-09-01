@@ -33,6 +33,8 @@ import { AddFieldTool } from './tools/add-field.tool';
 import { CreateCustomWidgetTool } from './tools/create-custom-widget.tool';
 import { CreateEntityTool } from './tools/create-entity.tool';
 import { CreatePageTool } from './tools/create-page.tool';
+import { GetBlockTool } from './tools/get-block.tool';
+import { GetPageBlocksTool } from './tools/get-page-blocks.tool';
 import { GetProjectTreeTool } from './tools/get-project-tree.tool';
 import { GetWalletInfoTool } from './tools/get-wallet-info.tool';
 import { ListEntitiesTool } from './tools/list-entities.tool';
@@ -84,6 +86,8 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
     // добавление нового инструмента = новый файл + строка здесь, без правки
     // AiService/ToolRegistryService.
     GetProjectTreeTool,
+    GetPageBlocksTool,
+    GetBlockTool,
     CreatePageTool,
     AddBlockTool,
     SetStyleTool,
