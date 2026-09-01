@@ -55,7 +55,10 @@ export class SetStyleTool implements OnModuleInit {
               `paddingY/paddingX/marginTop/marginBottom` +
               `(none|sm|md|lg|xl, либо число — свой отступ в px от 0 до 400), ` +
               `textAlign(left|center|right), textColor(hex вида #rrggbb — свой цвет текста блока, ` +
-              `по умолчанию берётся из темы сайта), maxWidth(narrow|default|wide|full). ` +
+              `по умолчанию берётся из темы сайта), maxWidth(narrow|default|wide|full), ` +
+              `borderWidth(none|thin|medium|thick — рамка вокруг всего блока), borderColor(hex вида #rrggbb — ` +
+              `только когда borderWidth не "none", по умолчанию берётся из темы), ` +
+              `shadow(none|soft|medium|strong|floating — тень всего блока). ` +
               `Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}.`,
           },
         },

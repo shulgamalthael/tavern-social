@@ -87,6 +87,20 @@ export interface BlockStyle {
    * эвристики по яркости фона. Не трогает `--site-muted`/`--site-border` —
    * это только цвет основного текста, не полная цветовая тема блока. */
   textColor?: string;
+  /** Рамка ВСЕГО блока (не путать с `ThemeCardBorder` — тот только для
+   * карточных поверхностей ВНУТРИ блоков вроде `.icon-card`, этот — обводка
+   * самого блока целиком, AI_PLATFORM_ROADMAP.md §31). `'none'`/не задано —
+   * без рамки, остальные значения — толщина в px (см. `BORDER_WIDTH_PX` в
+   * `theme-tokens.ts`). */
+  borderWidth?: 'none' | 'thin' | 'medium' | 'thick';
+  /** Только когда `borderWidth` не `'none'`/не задан. Пусто — берётся
+   * `var(--site-border)` темы сайта (тот же приём "явный выбор побеждает,
+   * иначе — из темы", что и у `textColor`). */
+  borderColor?: string;
+  /** Пресет тени всего блока — `'none'`/не задано значит без тени. Точные
+   * X/Y/Blur/Spread здесь намеренно не поддерживаются в этом инкременте —
+   * узкий v1 (см. AI_PLATFORM_ROADMAP.md §31). */
+  shadow?: 'none' | 'soft' | 'medium' | 'strong' | 'floating';
   paddingY?: StyleValue<SpacingValue>;
   paddingX?: StyleValue<SpacingValue>;
   marginTop?: StyleValue<SpacingValue>;

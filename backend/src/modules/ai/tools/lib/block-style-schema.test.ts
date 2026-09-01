@@ -146,6 +146,41 @@ describe('buildValidatedStyle', () => {
     expect(buildValidatedStyle(existing, { textColor: null })).toEqual({ background: 'dark' });
   });
 
+  it('accepts a valid borderWidth and shadow', () => {
+    expect(buildValidatedStyle(undefined, { borderWidth: 'thick' })).toEqual({
+      borderWidth: 'thick',
+    });
+    expect(buildValidatedStyle(undefined, { shadow: 'floating' })).toEqual({
+      shadow: 'floating',
+    });
+  });
+
+  it('rejects an invalid borderWidth or shadow', () => {
+    expect(() => buildValidatedStyle(undefined, { borderWidth: 'huge' })).toThrow(
+      /должно быть одним из/,
+    );
+    expect(() => buildValidatedStyle(undefined, { shadow: 'extreme' })).toThrow(
+      /должно быть одним из/,
+    );
+  });
+
+  it('accepts a valid borderColor', () => {
+    expect(buildValidatedStyle(undefined, { borderColor: '#123456' })).toEqual({
+      borderColor: '#123456',
+    });
+  });
+
+  it('rejects an invalid borderColor', () => {
+    expect(() => buildValidatedStyle(undefined, { borderColor: 'blue' })).toThrow(/hex-цветом/);
+  });
+
+  it('removes borderWidth/borderColor/shadow when given null', () => {
+    const existing = { borderWidth: 'thin', borderColor: '#123456', shadow: 'soft' };
+    expect(
+      buildValidatedStyle(existing, { borderWidth: null, borderColor: null, shadow: null }),
+    ).toEqual({});
+  });
+
   it('removes gradient fields when given null', () => {
     const existing = {
       background: 'gradient',

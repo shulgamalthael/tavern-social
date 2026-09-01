@@ -78,6 +78,26 @@ const CARD_SHADOW_VALUE: Record<ThemeCardShadow, string> = {
   md: '0 6px 20px rgba(15, 23, 42, 0.12)',
 };
 
+/** Рамка/тень ВСЕГО блока (`BlockStyle.borderWidth`/`.shadow`,
+ * AI_PLATFORM_ROADMAP.md §31) — отдельная шкала от `CARD_BORDER_PX`/
+ * `CARD_SHADOW_VALUE` выше (те — только для карточных поверхностей внутри
+ * блоков, эта — обводка самого блока). Экспортируются: нужны и
+ * `block-style.ts` (резолвинг в инлайн-стили), и инспектору (лейблы). */
+export const BORDER_WIDTH_PX: Record<Exclude<BlockStyle['borderWidth'], undefined>, string> = {
+  none: '0px',
+  thin: '1px',
+  medium: '2px',
+  thick: '4px',
+};
+
+export const BLOCK_SHADOW_VALUE: Record<Exclude<BlockStyle['shadow'], undefined>, string> = {
+  none: 'none',
+  soft: '0 1px 3px rgba(15, 23, 42, 0.06)',
+  medium: '0 6px 20px rgba(15, 23, 42, 0.12)',
+  strong: '0 12px 32px rgba(15, 23, 42, 0.2)',
+  floating: '0 24px 48px rgba(15, 23, 42, 0.24)',
+};
+
 /** Общая шкала отступов для `BlockStyle.paddingY`/`paddingX`/`marginTop`/
  * `marginBottom` — один и тот же токен на всех блоках (см. `types.ts`,
  * `SpacingSize`), поэтому «средний» отступ значит одно и то же visually
@@ -160,6 +180,24 @@ export const GRADIENT_TYPE_OPTIONS: {
 }[] = [
   { value: 'linear', label: 'Линейный' },
   { value: 'radial', label: 'Радиальный' },
+];
+
+export const BORDER_WIDTH_OPTIONS: {
+  value: NonNullable<BlockStyle['borderWidth']>;
+  label: string;
+}[] = [
+  { value: 'none', label: 'Без рамки' },
+  { value: 'thin', label: 'Тонкая' },
+  { value: 'medium', label: 'Средняя' },
+  { value: 'thick', label: 'Толстая' },
+];
+
+export const BLOCK_SHADOW_OPTIONS: { value: NonNullable<BlockStyle['shadow']>; label: string }[] = [
+  { value: 'none', label: 'Без тени' },
+  { value: 'soft', label: 'Мягкая' },
+  { value: 'medium', label: 'Средняя' },
+  { value: 'strong', label: 'Сильная' },
+  { value: 'floating', label: 'Парящая' },
 ];
 
 export const TEXT_ALIGN_OPTIONS: { value: TextAlign; label: string }[] = [

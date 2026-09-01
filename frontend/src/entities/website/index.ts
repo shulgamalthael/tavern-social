@@ -35,6 +35,8 @@ export { resolveSiteMetadataDefaults } from './lib/resolve-site-metadata';
 export type { SiteMetadataDefaults } from './lib/resolve-site-metadata';
 export {
   BACKGROUND_OPTIONS,
+  BLOCK_SHADOW_OPTIONS,
+  BORDER_WIDTH_OPTIONS,
   BUTTON_STYLE_OPTIONS,
   CARD_BORDER_OPTIONS,
   CARD_SHADOW_OPTIONS,

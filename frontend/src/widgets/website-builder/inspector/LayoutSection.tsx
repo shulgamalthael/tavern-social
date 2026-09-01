@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import {
   BACKGROUND_OPTIONS,
+  BLOCK_SHADOW_OPTIONS,
+  BORDER_WIDTH_OPTIONS,
   CONTAINER_WIDTH_OPTIONS,
   GRADIENT_TYPE_OPTIONS,
   SPACING_SIZE_OPTIONS,
@@ -68,6 +70,18 @@ const BASIC_FIELDS: FieldSchema[] = [
     control: 'select',
     responsive: true,
     options: CONTAINER_WIDTH_OPTIONS,
+  },
+  {
+    key: 'borderWidth',
+    label: 'Рамка',
+    control: 'select',
+    options: BORDER_WIDTH_OPTIONS,
+  },
+  {
+    key: 'shadow',
+    label: 'Тень',
+    control: 'select',
+    options: BLOCK_SHADOW_OPTIONS,
   },
 ];
 
@@ -212,6 +226,26 @@ export function LayoutSection({ blockId, style, onChange, businessId }: LayoutSe
       });
     }
     basicItems.splice(1, 0, ...gradientItems);
+  }
+
+  // Цвет рамки — условная вставка сразу после «Рамка», тот же приём, что и
+  // выше: показывать её, пока рамка выключена ('none'), было бы лишним
+  // шумом. Ищем позицию `borderWidth` по ключу, а не по фиксированному
+  // индексу — он сдвигается на количество уже вставленных выше полей
+  // фона/градиента.
+  if (style?.borderWidth && style.borderWidth !== 'none') {
+    const borderColorField: FieldSchema = {
+      key: 'borderColor',
+      label: 'Цвет рамки',
+      control: 'color',
+      hint: 'Пусто — берётся из темы сайта.',
+    };
+    const borderWidthIndex = basicItems.findIndex((item) => item.field.key === 'borderWidth');
+    basicItems.splice(borderWidthIndex + 1, 0, {
+      field: borderColorField,
+      value: style.borderColor,
+      onChange: (next: unknown) => onChange({ borderColor: next as string }),
+    });
   }
 
   const customPadding = Boolean(style?.customPadding);

@@ -22,7 +22,15 @@
  */
 
 export type EnumStyleFieldKey =
-  'background' | 'paddingY' | 'paddingX' | 'marginTop' | 'marginBottom' | 'textAlign' | 'maxWidth';
+  | 'background'
+  | 'paddingY'
+  | 'paddingX'
+  | 'marginTop'
+  | 'marginBottom'
+  | 'textAlign'
+  | 'maxWidth'
+  | 'borderWidth'
+  | 'shadow';
 
 /** Свободный hex вместо фиксированного набора значений (см.
  * `customBackgroundColor`/`gradientFrom`/`gradientTo` в `BlockStyle`,
@@ -37,7 +45,8 @@ export type StyleFieldKey =
   | 'gradientTo'
   | 'gradientAngle'
   | 'gradientType'
-  | 'textColor';
+  | 'textColor'
+  | 'borderColor';
 
 const GRADIENT_TYPE_VALUES = ['linear', 'radial'] as const;
 
@@ -49,6 +58,8 @@ const ENUM_STYLE_FIELDS: Record<EnumStyleFieldKey, readonly string[]> = {
   marginBottom: ['none', 'sm', 'md', 'lg', 'xl'],
   textAlign: ['left', 'center', 'right'],
   maxWidth: ['narrow', 'default', 'wide', 'full'],
+  borderWidth: ['none', 'thin', 'medium', 'thick'],
+  shadow: ['none', 'soft', 'medium', 'strong', 'floating'],
 };
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
@@ -80,6 +91,7 @@ export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
   'gradientAngle',
   'gradientType',
   'textColor',
+  'borderColor',
 ];
 
 /**
@@ -125,7 +137,8 @@ export function buildValidatedStyle(
       key === 'customBackgroundColor' ||
       key === 'gradientFrom' ||
       key === 'gradientTo' ||
-      key === 'textColor'
+      key === 'textColor' ||
+      key === 'borderColor'
     ) {
       if (typeof value !== 'string' || !HEX_COLOR_RE.test(value)) {
         throw new Error(

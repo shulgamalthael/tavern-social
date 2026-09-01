@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { readResponsiveProp } from './registry';
-import { SPACING_PX } from './theme-tokens';
+import { BLOCK_SHADOW_VALUE, BORDER_WIDTH_PX, SPACING_PX } from './theme-tokens';
 import type { BlockStyle, ContainerWidth, SpacingValue, StyleValue, Viewport } from './types';
 
 /** `SpacingValue` → CSS-длина — именованный пресет читает `SPACING_PX`
@@ -104,6 +104,29 @@ function contrastOverrides(blockStyle: BlockStyle): CSSProperties | undefined {
   } as CSSProperties;
 }
 
+/** Рамка/тень ВСЕГО блока (AI_PLATFORM_ROADMAP.md §31) — отдельная
+ * возможность от рамки/тени карточных поверхностей ВНУТРИ блока (та —
+ * `--site-card-border-width`/`--site-card-shadow`, тема сайта, см.
+ * `theme-tokens.ts`). Скругление ставим здесь же (`var(--site-radius)`),
+ * когда активна рамка ИЛИ тень — так у блока с любой из них сразу
+ * получается визуальный язык, согласованный с карточками сайта, без
+ * отдельного per-block поля радиуса (узкий v1, см. её обоснование в
+ * `types.ts`). */
+function borderAndShadowStyle(blockStyle: BlockStyle): CSSProperties {
+  const hasBorder = Boolean(blockStyle.borderWidth) && blockStyle.borderWidth !== 'none';
+  const hasShadow = Boolean(blockStyle.shadow) && blockStyle.shadow !== 'none';
+
+  return {
+    border: hasBorder
+      ? `${BORDER_WIDTH_PX[blockStyle.borderWidth as NonNullable<BlockStyle['borderWidth']>]} solid ${blockStyle.borderColor || 'var(--site-border)'}`
+      : undefined,
+    borderRadius: hasBorder || hasShadow ? 'var(--site-radius)' : undefined,
+    boxShadow: hasShadow
+      ? BLOCK_SHADOW_VALUE[blockStyle.shadow as NonNullable<BlockStyle['shadow']>]
+      : undefined,
+  };
+}
+
 export interface BlockWrapperStyle {
   outer: CSSProperties;
   inner: CSSProperties;
@@ -200,6 +223,7 @@ export function computeBlockWrapperStyle(
     paddingBottom: spacingToPx(bottom),
     marginTop: spacingToPx(marginTop),
     marginBottom: spacingToPx(marginBottom),
+    ...borderAndShadowStyle(blockStyle),
     ...contrastOverrides(blockStyle),
   };
 

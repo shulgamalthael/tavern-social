@@ -140,6 +140,54 @@ describe('computeBlockWrapperStyle — per-block text color', () => {
   });
 });
 
+describe('computeBlockWrapperStyle — block border and shadow', () => {
+  it('renders no border/shadow/radius when neither is set', () => {
+    const { outer } = computeBlockWrapperStyle({}, 'desktop');
+    expect(outer.border).toBeUndefined();
+    expect(outer.boxShadow).toBeUndefined();
+    expect(outer.borderRadius).toBeUndefined();
+  });
+
+  it('renders a border with the preset width and a custom color', () => {
+    const { outer } = computeBlockWrapperStyle(
+      { borderWidth: 'thick', borderColor: '#ff0000' },
+      'desktop',
+    );
+    expect(outer.border).toBe('4px solid #ff0000');
+    expect(outer.borderRadius).toBe('var(--site-radius)');
+  });
+
+  it('falls back to the theme border color when borderColor is not set', () => {
+    const { outer } = computeBlockWrapperStyle({ borderWidth: 'thin' }, 'desktop');
+    expect(outer.border).toBe('1px solid var(--site-border)');
+  });
+
+  it('ignores borderColor when borderWidth is "none" or unset', () => {
+    const { outer } = computeBlockWrapperStyle(
+      { borderWidth: 'none', borderColor: '#ff0000' },
+      'desktop',
+    );
+    expect(outer.border).toBeUndefined();
+    expect(outer.borderRadius).toBeUndefined();
+  });
+
+  it('renders a shadow preset and applies the theme radius', () => {
+    const { outer } = computeBlockWrapperStyle({ shadow: 'floating' }, 'desktop');
+    expect(outer.boxShadow).toBe('0 24px 48px rgba(15, 23, 42, 0.24)');
+    expect(outer.borderRadius).toBe('var(--site-radius)');
+  });
+
+  it('supports border and shadow together', () => {
+    const { outer } = computeBlockWrapperStyle(
+      { borderWidth: 'medium', shadow: 'soft' },
+      'desktop',
+    );
+    expect(outer.border).toBe('2px solid var(--site-border)');
+    expect(outer.boxShadow).toBe('0 1px 3px rgba(15, 23, 42, 0.06)');
+    expect(outer.borderRadius).toBe('var(--site-radius)');
+  });
+});
+
 describe('computeBlockWrapperStyle — custom pixel spacing', () => {
   it('renders a numeric paddingY/paddingX as literal px, not a preset', () => {
     const { outer, inner } = computeBlockWrapperStyle({ paddingY: 18, paddingX: 40 }, 'desktop');
