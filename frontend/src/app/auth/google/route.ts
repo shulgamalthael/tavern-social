@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getRequestOrigin } from '@/shared/lib/request-origin';
 
 /** Тот же `BACKEND_URL`, что и `shared/lib/backend-client.ts`/`proxy.ts` —
  * не импортирует их напрямую по тем же причинам, что описаны в `proxy.ts`
@@ -13,28 +14,15 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4000';
  * Google (см. `AuthController.googleLogin`). Реальная навигация браузера,
  * не Server Action: нужен обычный `<a href="/auth/google">`.
  *
- * `origin` в query string — реальный адрес, с которого пришёл этот запрос,
- * собран из заголовков, а НЕ из `request.nextUrl.origin`/`.host` — та
- * всегда отдаёт адрес, на котором в буквальном смысле слушает сам Next.js
- * (`localhost:3000`), даже если запрос реально пришёл через ngrok-туннель
- * или с LAN-адреса с другим `Host`-заголовком (проверено вживую: curl с
- * `Host: <туннель>.ngrok-free.dev` всё равно вернул `nextUrl.origin ===
- * 'http://localhost:3000'`). Та же причина, по которой `proxy.ts` читает
- * хост через `request.headers.get('host')`, а не `nextUrl` — см. его
- * комментарий. `x-forwarded-proto` — ngrok и любой другой обратный прокси
- * перед Next.js его выставляет; без туннеля просто нет, тогда берём
- * протокол из `nextUrl` (сам процесс Next.js всегда знает, HTTP он или
- * HTTPS с реальным TLS-терминированием на СЕБЕ). Backend вернёт браузер
- * именно на этот адрес после входа, только если он есть в его
- * `ALLOWED_OAUTH_ORIGINS` (см. `AuthService.resolveOAuthOrigin`), иначе
- * тихо откатится на свой `FRONTEND_URL`, как было раньше. */
+ * `origin` в query string — реальный адрес, с которого пришёл этот запрос
+ * (`getRequestOrigin`, см. её комментарий — например
+ * `https://<tunnel>.ngrok-free.dev`, если дашборд открыли через туннель, а
+ * не с `localhost`) — backend вернёт браузер именно сюда после входа, если
+ * этот адрес есть в его `ALLOWED_OAUTH_ORIGINS` (см.
+ * `AuthService.resolveOAuthOrigin`), иначе тихо откатится на свой
+ * `FRONTEND_URL`, как было раньше. */
 export function GET(request: NextRequest): NextResponse {
-  const host = request.headers.get('host');
-  const protocol =
-    request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '');
-  const origin = host ? `${protocol}://${host}` : request.nextUrl.origin;
-
   const url = new URL(`${BACKEND_URL}/auth/google`);
-  url.searchParams.set('origin', origin);
+  url.searchParams.set('origin', getRequestOrigin(request));
   return NextResponse.redirect(url);
 }
