@@ -113,9 +113,17 @@ function BusinessHeaderRenderer({
       )}
       <HeaderActions
         businessId={business.businessId}
-        showSearch={props.showSearch}
-        showFavorites={props.showFavorites}
-        showCart={props.showCart}
+        // `?? true`/`?? false` — та же пара значений, что и `defaultProps`
+        // ниже, но `defaultProps` подставляется только при СОЗДАНИИ блока
+        // (`add_block`/библиотека компонентов); сайты, чей `businessheader`
+        // сохранён ДО появления этих трёх полей, хранят `props` вообще без
+        // них — без фолбэка `props.showSearch` было бы `undefined`, все три
+        // читались бы как `false`, и `HeaderActions` целиком скрывал бы
+        // строку действий (`if (!showSearch && !showFavorites && !showCart)
+        // return null`) на каждом уже существующем сайте.
+        showSearch={props.showSearch ?? true}
+        showFavorites={props.showFavorites ?? true}
+        showCart={props.showCart ?? false}
         isEditing={isEditing}
       />
     </header>

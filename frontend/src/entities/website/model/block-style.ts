@@ -207,7 +207,7 @@ function layoutStyle(blockStyle: BlockStyle, viewport: Viewport): CSSProperties 
  * flex/grid-контекста. */
 function childLayoutStyle(blockStyle: BlockStyle): CSSProperties {
   const sizing: CSSProperties =
-    blockStyle.grow === 'fixed' && blockStyle.fixedWidth
+    blockStyle.grow === 'fixed' && blockStyle.fixedWidth !== undefined
       ? { flex: `0 0 ${blockStyle.fixedWidth}px` }
       : blockStyle.grow === 'grow'
         ? { flex: '1 1 0%', minWidth: 0 }

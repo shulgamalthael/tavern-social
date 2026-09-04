@@ -152,6 +152,22 @@ export class WebsitesService {
     });
     if (!website) throw new NotFoundException('Сайт не найден');
 
+    // `published` — сырой JSON-снимок, собранный ПРОШЛЫМ вызовом `publish()`
+    // (см. её комментарий) — не проходит через `assembleDocument`, поэтому
+    // требует той же повторной санации, что и там, по той же причине (см. её
+    // комментарий): снимок мог быть опубликован до появления
+    // `sanitizeRichBlocks`.
+    const rawDocument = website.published as unknown as WebsiteDocument | null;
+    const document: WebsiteDocument | null = rawDocument
+      ? {
+          ...rawDocument,
+          pages: rawDocument.pages.map((page) => ({
+            ...page,
+            blocks: sanitizeRichBlocks(page.blocks),
+          })),
+        }
+      : null;
+
     return {
       business: {
         id: website.business.id,
@@ -164,7 +180,7 @@ export class WebsitesService {
         seoDescription: website.business.seoDescription,
         currency: website.business.currency,
       },
-      document: website.published as unknown as WebsiteDocument | null,
+      document,
       isPublished: website.publishedAt !== null,
       publishedAt: website.publishedAt?.toISOString() ?? null,
     };
@@ -199,11 +215,20 @@ export class WebsitesService {
     pages: WebsitePageRow[],
   ): WebsiteDocument {
     return {
+      // `sanitizeRichBlocks` тоже на ЧТЕНИИ, не только на `saveDraft` (см. её
+      // вызов там) — та санация появилась позже, чем сам builder, и
+      // `text`/`richtext`/`quote` теперь рендерятся через
+      // `dangerouslySetInnerHTML` (`EditableRichText.tsx`). Без повторной
+      // санации здесь любая страница, чей блок был сохранён ДО этого поля
+      // (когда HTML в нём был безопасен просто потому, что React его
+      // экранировал, а не рендерил как разметку), отдавала бы клиенту
+      // непросанированную строку — XSS на каждый рендер, даже без
+      // повторного сохранения страницы.
       pages: pages.map((page): WebsitePage => ({
         id: page.id,
         slug: page.slug,
         title: page.title,
-        blocks: (page.content ?? []) as unknown as WebsitePage['blocks'],
+        blocks: sanitizeRichBlocks((page.content ?? []) as unknown as WebsitePage['blocks']),
         seoTitle: page.seoTitle,
         seoDescription: page.seoDescription,
         ogImage: page.ogImage,

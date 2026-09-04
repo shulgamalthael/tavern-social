@@ -18,6 +18,22 @@ import {
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+/** `CHAT_ATTACHMENT_MIME_EXTENSIONS` (`common/lib/upload.ts`) — что разрешено
+ * ЗАГРУЗИТЬ как вложение чата — шире, чем то, что Gemini реально принимает
+ * как `inlineData`: офисные бинарные форматы (`.doc`/`.xls`/`.xlsx`) и `.zip`
+ * Gemini отклоняет целиком (400), а не игнорирует один part — без этого
+ * фильтра первое же сообщение с таким вложением валило бы весь запрос,
+ * притом ДО того, как успел выполниться хоть один tool call (см.
+ * `ai.service.ts` — его recovery на `executedAny` не спасает именно этот
+ * случай). Картинки/PDF/текст Gemini принимает напрямую. */
+const GEMINI_UNSUPPORTED_INLINE_DATA_MIME_TYPES = new Set([
+  'application/zip',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]);
+
 interface GeminiPart {
   text?: string;
   /** Картинка/файл как часть хода `role: 'user'` (`LlmMessage.attachments`)
@@ -240,6 +256,12 @@ function toGeminiContent(message: LlmMessage): GeminiContent {
   if (message.role === 'user') {
     const parts: GeminiPart[] = [{ text: message.content ?? '' }];
     for (const attachment of message.attachments ?? []) {
+      if (GEMINI_UNSUPPORTED_INLINE_DATA_MIME_TYPES.has(attachment.mimeType)) {
+        parts.push({
+          text: `[Вложение типа "${attachment.mimeType}" прикреплено, но ИИ не может прочитать содержимое файлов этого формата напрямую]`,
+        });
+        continue;
+      }
       parts.push({ inlineData: { mimeType: attachment.mimeType, data: attachment.data } });
     }
     return { role: 'user', parts };
