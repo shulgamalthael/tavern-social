@@ -6,6 +6,8 @@ import {
   type FieldSchema,
 } from '../../model/registry';
 import type { ResponsiveValue } from '../../model/types';
+import { EditableRichText } from '../../ui/EditableRichText';
+import { EditableText } from '../../ui/EditableText';
 import styles from './typography.module.scss';
 
 type TextColor = 'default' | 'primary' | 'muted';
@@ -34,19 +36,27 @@ const HEADING_SIZE_PX: Record<string, string> = {
   xl: '56px',
 };
 
-function HeadingRenderer({ props, viewport }: BlockRendererProps<HeadingProps>) {
+function HeadingRenderer({
+  props,
+  viewport,
+  isEditing,
+  onEditProp,
+}: BlockRendererProps<HeadingProps>) {
   const Tag = props.level;
   const sizeKey = readResponsiveProp(props.size, viewport, 'md');
   return (
-    <Tag
+    <EditableText
+      as={Tag}
+      value={props.text}
+      editable={Boolean(isEditing && onEditProp)}
+      onCommit={(next) => onEditProp?.('text', next)}
+      placeholder="Заголовок раздела"
       className={styles.heading}
       style={{
         fontSize: HEADING_SIZE_PX[sizeKey] ?? HEADING_SIZE_PX.md,
         color: colorVar(props.color),
       }}
-    >
-      {props.text}
-    </Tag>
+    />
   );
 }
 
@@ -111,16 +121,24 @@ interface TextProps {
   color: TextColor;
 }
 
-function TextRenderer({ props }: BlockRendererProps<TextProps>) {
+function TextRenderer({ props, isEditing, onEditProp }: BlockRendererProps<TextProps>) {
   return (
-    <p className={styles.text} style={{ color: colorVar(props.color) }}>
-      {props.text}
-    </p>
+    <EditableRichText
+      value={props.text}
+      editable={Boolean(isEditing && onEditProp)}
+      onCommit={(next) => onEditProp?.('text', next)}
+      placeholder="Расскажите о своём деле в паре предложений."
+      className={styles.text}
+      style={{ color: colorVar(props.color) }}
+    />
   );
 }
 
+// Своего поля `text` в форме инспектора больше нет — редактируется кликом
+// прямо по тексту на холсте (`EditableRichText`), см. форвард-комментарий у
+// `richtext` ниже про то, почему у этих трёх типов текстовое поле — только
+// на холсте, не дублируется в форме.
 const textFields: FieldSchema[] = [
-  { key: 'text', label: 'Текст', control: 'textarea', rows: 3 },
   {
     key: 'color',
     label: 'Цвет',
@@ -139,33 +157,39 @@ registerBlock<TextProps>({
   category: 'typography',
   icon: TagIcon,
   description: 'Обычный абзац текста',
-  defaultProps: { text: 'Расскажите о своём деле в паре предложений.', color: 'default' },
+  defaultProps: { text: '<p>Расскажите о своём деле в паре предложений.</p>', color: 'default' },
   fields: textFields,
   Renderer: TextRenderer,
 });
 
 // --- RichText --------------------------------------------------------------
-// Упрощённая версия «форматированного текста» для MVP — обычный plain-text
-// с сохранением переносов строк/абзацев (`white-space: pre-wrap`), НЕ HTML
-// через `dangerouslySetInnerHTML`. Полноценный WYSIWYG (как у Tiptap-
-// редактора постов, `features/publish-post`) требовал бы своей санитизации
-// на backend перед сохранением — тот же уровень работы, что и весь
-// remaining builder, поэтому осознанно отложено (см. корневой план фичи,
-// раздел про упрощения MVP). React сам экранирует текстовое содержимое —
-// здесь нет риска инъекции разметки, даже если пользователь напишет что-то
-// похожее на тег.
+// Настоящий форматированный текст (жирный/курсив/ссылка) через инлайн-
+// редактор на холсте (`EditableRichText`, кликните прямо по тексту) — то же
+// решение, что и у `text`/`quote` ниже, см. форвард-комментарий у `Editable
+// RichText` (`entities/website/ui/EditableRichText.tsx`) про переиспользование
+// Tiptap-редактора постов (`features/publish-post`) и санитизацию на backend
+// (`sanitizeRichBlockText`, `WebsitesService.saveDraft`) — то, чего раньше
+// здесь сознательно не было (см. AI_PLATFORM_ROADMAP.md, «билдер для
+// новичка»). Собственного поля в форме инспектора у `text` больше нет —
+// единственный способ его редактировать теперь клик по самому тексту на
+// холсте, чтобы не завести два независимых редактора одного и того же поля
+// с разной моделью хранения (HTML на холсте, обычная строка в форме).
 
 interface RichTextProps {
   text: string;
 }
 
-function RichTextRenderer({ props }: BlockRendererProps<RichTextProps>) {
-  return <div className={styles.richtext}>{props.text}</div>;
+function RichTextRenderer({ props, isEditing, onEditProp }: BlockRendererProps<RichTextProps>) {
+  return (
+    <EditableRichText
+      value={props.text}
+      editable={Boolean(isEditing && onEditProp)}
+      onCommit={(next) => onEditProp?.('text', next)}
+      placeholder="Первый абзац рассказывает главное."
+      className={styles.richtext}
+    />
+  );
 }
-
-const richTextFields: FieldSchema[] = [
-  { key: 'text', label: 'Текст', control: 'textarea', rows: 8 },
-];
 
 registerBlock<RichTextProps>({
   type: 'richtext',
@@ -174,9 +198,9 @@ registerBlock<RichTextProps>({
   icon: RowsIcon,
   description: 'Развёрнутый текст в несколько абзацев',
   defaultProps: {
-    text: 'Первый абзац рассказывает главное.\n\nВторой абзац добавляет подробности — историю, ценности или то, чем вы отличаетесь.',
+    text: '<p>Первый абзац рассказывает главное.</p><p>Второй абзац добавляет подробности — историю, ценности или то, чем вы отличаетесь.</p>',
   },
-  fields: richTextFields,
+  fields: [],
   Renderer: RichTextRenderer,
 });
 
@@ -187,20 +211,37 @@ interface QuoteProps {
   author: string;
 }
 
-function QuoteRenderer({ props }: BlockRendererProps<QuoteProps>) {
+function QuoteRenderer({ props, isEditing, onEditProp }: BlockRendererProps<QuoteProps>) {
+  const editable = Boolean(isEditing && onEditProp);
   return (
     <blockquote className={styles.quote}>
       <QuoteIcon className={styles.quote__icon} />
-      <p className={styles.quote__text}>{props.text}</p>
-      {props.author && <footer className={styles.quote__author}>{props.author}</footer>}
+      <EditableRichText
+        value={props.text}
+        editable={editable}
+        onCommit={(next) => onEditProp?.('text', next)}
+        placeholder="Отличный сервис и внимание к деталям."
+        className={styles.quote__text}
+      />
+      {(props.author || editable) && (
+        <EditableText
+          as="footer"
+          value={props.author}
+          editable={editable}
+          onCommit={(next) => onEditProp?.('author', next)}
+          placeholder="Имя, компания"
+          className={styles.quote__author}
+        />
+      )}
     </blockquote>
   );
 }
 
-const quoteFields: FieldSchema[] = [
-  { key: 'text', label: 'Цитата', control: 'textarea', rows: 3 },
-  { key: 'author', label: 'Автор', control: 'text' },
-];
+// `text` (сама цитата) больше не редактируется в форме — теперь это HTML
+// через `EditableRichText` на холсте (см. форвард-комментарий у `richtext`
+// выше). `author` остаётся — простая строка что там, что там, формат не
+// расходится, дублирование безопасно.
+const quoteFields: FieldSchema[] = [{ key: 'author', label: 'Автор', control: 'text' }];
 
 registerBlock<QuoteProps>({
   type: 'quote',

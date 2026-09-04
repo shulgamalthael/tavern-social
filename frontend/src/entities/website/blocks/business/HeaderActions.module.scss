@@ -1,0 +1,61 @@
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--site-text);
+  cursor: pointer;
+
+  svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  &:hover {
+    background: var(--site-surface);
+  }
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--site-primary);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.searchStub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  text-align: center;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}

@@ -1,0 +1,78 @@
+.editable {
+  cursor: text;
+  border-radius: 4px;
+  outline: 1px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.12s ease;
+
+  &:hover {
+    outline-color: color-mix(in srgb, #2563eb 35%, transparent);
+  }
+}
+
+.editable--empty {
+  color: color-mix(in srgb, currentcolor 45%, transparent);
+  font-style: italic;
+}
+
+.editing {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, #2563eb 6%, transparent);
+}
+
+.prose {
+  outline: none;
+
+  p {
+    margin: 0 0 0.6em;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  a {
+    color: var(--site-primary, #2563eb);
+    text-decoration: underline;
+  }
+}
+
+.bubbleMenu {
+  // Без явного z-index попадал за `BlockInsertCross`'s `.zone` (z-index: 5,
+  // `BlockInsertCross.module.scss`) — крест вставки блока рядом мог
+  // перекрыть тулбар форматирования и перехватить клик по нему. Тулбар,
+  // всплывающий поверх выделения текста, обязан быть выше любого другого
+  // хрома канваса.
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #111827;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 30%);
+}
+
+.bubbleButton {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(255 255 255 / 15%);
+  }
+}
+
+.bubbleButton--active {
+  background: color-mix(in srgb, #2563eb 55%, transparent);
+}

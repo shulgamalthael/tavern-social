@@ -33,12 +33,15 @@ import { AddFieldTool } from './tools/add-field.tool';
 import { CreateCustomWidgetTool } from './tools/create-custom-widget.tool';
 import { CreateEntityTool } from './tools/create-entity.tool';
 import { CreatePageTool } from './tools/create-page.tool';
+import { DeleteBlockTool } from './tools/delete-block.tool';
 import { GetBlockTool } from './tools/get-block.tool';
+import { GetBlockSchemaTool } from './tools/get-block-schema.tool';
 import { GetPageBlocksTool } from './tools/get-page-blocks.tool';
 import { GetProjectTreeTool } from './tools/get-project-tree.tool';
 import { GetWalletInfoTool } from './tools/get-wallet-info.tool';
 import { ListEntitiesTool } from './tools/list-entities.tool';
 import { ListMediaAssetsTool } from './tools/list-media-assets.tool';
+import { MoveBlockTool } from './tools/move-block.tool';
 import { PublishWebsiteTool } from './tools/publish-website.tool';
 import { SetStyleTool } from './tools/set-style.tool';
 import { ToolRegistryService } from './tools/tool-registry.service';
@@ -88,10 +91,13 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
     GetProjectTreeTool,
     GetPageBlocksTool,
     GetBlockTool,
+    GetBlockSchemaTool,
     CreatePageTool,
     AddBlockTool,
     SetStyleTool,
     UpdateBlockPropsTool,
+    DeleteBlockTool,
+    MoveBlockTool,
     ListMediaAssetsTool,
     CreateCustomWidgetTool,
     GetWalletInfoTool,

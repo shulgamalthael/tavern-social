@@ -32,12 +32,18 @@ describe('parseWidgetSchema', () => {
   });
 
   it('rejects a blockType outside the curated allowlist', () => {
-    expect(() => parseWidgetSchema([{ blockType: 'gallery' }])).toThrow(
+    expect(() => parseWidgetSchema([{ blockType: 'notarealblocktype' }])).toThrow(
       'blockType должен быть одним из',
     );
-    expect(() => parseWidgetSchema([{ blockType: 'productgrid' }])).toThrow(
-      'blockType должен быть одним из',
-    );
+    expect(() => parseWidgetSchema([{ blockType: '' }])).toThrow('blockType должен быть одним из');
+  });
+
+  it('accepts previously-unsupported types now that the allowlist covers the full registry', () => {
+    // `gallery`/`productgrid` теперь входят в `ALLOWED_BLOCK_TYPES`
+    // (`add-block-schemas.ts`) — виджет с ними больше не отклоняется на
+    // уровне типа, `mediaAsset`/`dataSource`-поля валидируются как обычно.
+    const result = parseWidgetSchema([{ blockType: 'productgrid' }]);
+    expect(result[0].type).toBe('productgrid');
   });
 
   it('rejects an unknown prop field, same error shape as add_block', () => {

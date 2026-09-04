@@ -145,21 +145,27 @@
   flex: 1;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   max-width: 160px;
   margin: 0 auto;
-  padding: 6px 4px;
+  // Было `6px 4px`/19px-иконка/11px-текст — заметно мельче, чем уже
+  // увеличенные тач-цели в `CanvasBlock.module.scss` (30px) и в самом
+  // `BlockInsertCross.module.scss` (26px) на этом же брейкпоинте. Это
+  // единственный постоянный навигационный элемент билдера на телефоне
+  // (переключатель «Страницы»/«Блоки»/«Настройки») — крупнее и читаемее
+  // соответствует его значимости.
+  padding: 8px 4px;
   border: 0;
   border-radius: 10px;
   background: none;
   color: var(--tavern-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 
   svg {
-    width: 19px;
-    height: 19px;
+    width: 22px;
+    height: 22px;
   }
 
   &:hover {

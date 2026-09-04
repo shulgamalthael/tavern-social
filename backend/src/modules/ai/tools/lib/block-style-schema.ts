@@ -30,7 +30,23 @@ export type EnumStyleFieldKey =
   | 'textAlign'
   | 'maxWidth'
   | 'borderWidth'
-  | 'shadow';
+  | 'shadow'
+  | 'display'
+  | 'direction'
+  | 'justify'
+  | 'align'
+  | 'gap'
+  | 'grow'
+  | 'entranceAnimation';
+
+/** Числовые (не enum) поля раскладки — `gridColumns`/`fixedWidth`/
+ * `stickyOffset`/`entranceDelay` не сводятся к именованному набору значений,
+ * у каждого своя граница диапазона (см. `NUMBER_STYLE_FIELD_BOUNDS`). */
+export type NumberStyleFieldKey = 'gridColumns' | 'fixedWidth' | 'stickyOffset' | 'entranceDelay';
+
+/** Булевы поля раскладки/позиции — `wrap`/`sticky`, единственный вид поля в
+ * этом валидаторе, который принимает `true`/`false`, а не строку/число/hex. */
+export type BooleanStyleFieldKey = 'wrap' | 'sticky';
 
 /** Свободный hex вместо фиксированного набора значений (см.
  * `customBackgroundColor`/`gradientFrom`/`gradientTo` в `BlockStyle`,
@@ -40,6 +56,8 @@ export type EnumStyleFieldKey =
  * `continue`, чего не сделал бы `Set.has()`). */
 export type StyleFieldKey =
   | EnumStyleFieldKey
+  | NumberStyleFieldKey
+  | BooleanStyleFieldKey
   | 'customBackgroundColor'
   | 'gradientFrom'
   | 'gradientTo'
@@ -60,7 +78,34 @@ const ENUM_STYLE_FIELDS: Record<EnumStyleFieldKey, readonly string[]> = {
   maxWidth: ['narrow', 'default', 'wide', 'full'],
   borderWidth: ['none', 'thin', 'medium', 'thick'],
   shadow: ['none', 'soft', 'medium', 'strong', 'floating'],
+  display: ['block', 'flex', 'grid'],
+  direction: ['row', 'column'],
+  justify: ['start', 'center', 'end', 'space-between', 'space-around'],
+  align: ['start', 'center', 'end', 'stretch'],
+  gap: ['none', 'sm', 'md', 'lg', 'xl'],
+  grow: ['grow', 'fixed'],
+  entranceAnimation: [
+    'none',
+    'fade',
+    'slide-up',
+    'slide-down',
+    'slide-left',
+    'slide-right',
+    'zoom-in',
+  ],
 };
+
+/** Верхняя/нижняя граница каждого числового поля раскладки — тот же принцип,
+ * что у `MAX_CUSTOM_SPACING_PX` ниже: AI-input untrusted, диапазон не даёт
+ * значению визуально сломать страницу (0 колонок, ширина в тысячи px). */
+const NUMBER_STYLE_FIELD_BOUNDS: Record<NumberStyleFieldKey, { min: number; max: number }> = {
+  gridColumns: { min: 1, max: 6 },
+  fixedWidth: { min: 20, max: 800 },
+  stickyOffset: { min: 0, max: 400 },
+  entranceDelay: { min: 0, max: 800 },
+};
+
+const BOOLEAN_STYLE_FIELDS: ReadonlySet<BooleanStyleFieldKey> = new Set(['wrap', 'sticky']);
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 
@@ -74,6 +119,7 @@ const SPACING_FIELD_KEYS = new Set<EnumStyleFieldKey>([
   'paddingX',
   'marginTop',
   'marginBottom',
+  'gap',
 ]);
 
 /** Upper bound for a custom pixel spacing value — generous enough for any
@@ -85,6 +131,8 @@ const MAX_CUSTOM_SPACING_PX = 400;
 
 export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
   ...(Object.keys(ENUM_STYLE_FIELDS) as EnumStyleFieldKey[]),
+  ...(Object.keys(NUMBER_STYLE_FIELD_BOUNDS) as NumberStyleFieldKey[]),
+  ...BOOLEAN_STYLE_FIELDS,
   'customBackgroundColor',
   'gradientFrom',
   'gradientTo',
@@ -166,6 +214,35 @@ export function buildValidatedStyle(
       ) {
         throw new Error(
           `Поле "gradientType" должно быть одним из: ${GRADIENT_TYPE_VALUES.join(', ')} (или null, чтобы убрать)`,
+        );
+      }
+      result[key] = value;
+      continue;
+    }
+
+    if (key === 'wrap' || key === 'sticky') {
+      if (typeof value !== 'boolean') {
+        throw new Error(`Поле "${key}" должно быть true/false (или null, чтобы убрать)`);
+      }
+      result[key] = value;
+      continue;
+    }
+
+    if (
+      key === 'gridColumns' ||
+      key === 'fixedWidth' ||
+      key === 'stickyOffset' ||
+      key === 'entranceDelay'
+    ) {
+      const bounds = NUMBER_STYLE_FIELD_BOUNDS[key];
+      if (
+        typeof value !== 'number' ||
+        !Number.isFinite(value) ||
+        value < bounds.min ||
+        value > bounds.max
+      ) {
+        throw new Error(
+          `Поле "${key}" должно быть числом от ${bounds.min} до ${bounds.max} (или null, чтобы убрать)`,
         );
       }
       result[key] = value;

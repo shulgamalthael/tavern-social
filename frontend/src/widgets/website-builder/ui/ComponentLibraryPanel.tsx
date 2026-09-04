@@ -5,10 +5,14 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   BLOCK_CATEGORY_LABELS,
   BLOCK_CATEGORY_ORDER,
+  BlockThumbnail,
+  LAYOUT_PATTERNS,
+  LayoutPatternThumbnail,
   listVisibleBlockDefinitions,
   useWebsiteBuilderStore,
   type BlockCategory,
   type BlockDefinition,
+  type LayoutPattern,
 } from '@/entities/website';
 import { getCustomWidgets, type CustomWidget } from '@/entities/custom-widget';
 import { cn } from '@/shared/lib/cn';
@@ -27,24 +31,66 @@ function LibraryItem({ definition, onAdd }: LibraryItemProps) {
     id: `library:${definition.type}`,
     data: { kind: 'library', blockType: definition.type },
   });
-  const Icon = definition.icon;
 
   return (
-    <button
+    // Не `<button>` — `BlockThumbnail` живьём рендерит сам блок (§Фаза 2), а
+    // у некоторых блоков внутри есть свои интерактивные элементы (например,
+    // `<button>` раскрытия вопроса у `faq`) — вложенный `<button>` внутри
+    // `<button>` недопустим в HTML и ловится React как ошибка гидратации.
+    // `role="button"` + свой `onKeyDown` дают ту же доступность с клавиатуры,
+    // что была у настоящей кнопки, без структурного конфликта.
+    <div
       ref={setNodeRef}
-      type="button"
       className={styles.item}
       data-dragging={isDragging || undefined}
       title={definition.description}
       onClick={() => onAdd(definition.type)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onAdd(definition.type);
+        }
+      }}
       {...listeners}
       {...attributes}
     >
-      <span className={styles['item__icon']}>
-        <Icon />
-      </span>
-      {definition.label}
-    </button>
+      <BlockThumbnail definition={definition} />
+      <span className={styles['item__label']}>{definition.label}</span>
+    </div>
+  );
+}
+
+interface LayoutPatternItemProps {
+  pattern: LayoutPattern;
+  onAdd: (pattern: LayoutPattern) => void;
+}
+
+/** Готовый составленный макет (§45.6 плана — «сайдбар/две-три колонки одним
+ * кликом» вместо ручной сборки section→columns→column) — карточка того же
+ * вида, что и у обычного блока, просто превью — целое дерево
+ * (`LayoutPatternThumbnail`), а клик вставляет НЕСКОЛЬКО блоков разом
+ * (`insertWidgetBlocks`, тот же путь, что и у «Моих виджетов» ниже). `<div
+ * role="button">`, не `<button>` — та же причина, что у `LibraryItem`: живой
+ * превью-рендер внутри может содержать что угодно, включая чужие
+ * интерактивные элементы. */
+function LayoutPatternItem({ pattern, onAdd }: LayoutPatternItemProps) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      className={styles.item}
+      title={pattern.description}
+      onClick={() => onAdd(pattern)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onAdd(pattern);
+        }
+      }}
+    >
+      <LayoutPatternThumbnail pattern={pattern} />
+      <span className={styles['item__label']}>{pattern.label}</span>
+    </div>
   );
 }
 
@@ -92,6 +138,10 @@ export interface ComponentLibraryPanelProps {
    * что вставка виджета вставляет НЕСКОЛЬКО блоков сразу
    * (`insertWidgetBlocks`), не один (`addBlock`). */
   onAddWidget?: (widget: CustomWidget) => void;
+  /** Тот же приём override, что `onAddWidget` — вставка готового макета
+   * (§45.6) тоже вставляет НЕСКОЛЬКО блоков разом (`insertWidgetBlocks`),
+   * не один. */
+  onAddPattern?: (pattern: LayoutPattern) => void;
   /** Капабилити текущего бизнеса (см. `Business.capabilities`) — блоки с
    * `BlockDefinition.capability`, которой здесь нет, не показываются (см.
    * `registry.ts`, комментарий про то, что фильтрация — только здесь, не в
@@ -123,6 +173,7 @@ export function ComponentLibraryPanel({
   businessId,
   onAdd: onAddOverride,
   onAddWidget: onAddWidgetOverride,
+  onAddPattern: onAddPatternOverride,
   capabilities = [],
 }: ComponentLibraryPanelProps) {
   const [query, setQuery] = useState('');
@@ -171,6 +222,18 @@ export function ComponentLibraryPanel({
       insertWidgetBlocks(widget.schema, null, page ? page.blocks.length : 0);
     });
 
+  const onAddPattern =
+    onAddPatternOverride ??
+    ((pattern: LayoutPattern) => {
+      const page = document?.pages.find((item) => item.id === activePageId);
+      insertWidgetBlocks(pattern.build(), null, page ? page.blocks.length : 0);
+    });
+
+  const lowerQuery = query.trim().toLowerCase();
+  const visiblePatterns = lowerQuery
+    ? LAYOUT_PATTERNS.filter((pattern) => pattern.label.toLowerCase().includes(lowerQuery))
+    : LAYOUT_PATTERNS;
+
   return (
     <div className={cn(styles.panel, className)}>
       <div className={styles.search}>
@@ -185,6 +248,16 @@ export function ComponentLibraryPanel({
       </div>
 
       <ScrollArea className={styles.scroll} viewportClassName={styles.categories}>
+        {visiblePatterns.length > 0 && (
+          <section className={styles.category}>
+            <h3 className={styles['category__title']}>Готовые макеты</h3>
+            <div className={styles['category__grid']}>
+              {visiblePatterns.map((pattern) => (
+                <LayoutPatternItem key={pattern.id} pattern={pattern} onAdd={onAddPattern} />
+              ))}
+            </div>
+          </section>
+        )}
         {widgets.status === 'error' && (
           <section className={styles.category}>
             <h3 className={styles['category__title']}>Мои виджеты</h3>

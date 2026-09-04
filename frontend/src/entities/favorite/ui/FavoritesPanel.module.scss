@@ -1,0 +1,105 @@
+// Тот же набор токенов/значений, что и `entities/cart/ui/CartWidget.module.scss`'s
+// `.empty`/`.list`/`.row`/`.remove` — визуальная согласованность двух панелей
+// одной и той же шапки (`HeaderActions.tsx`).
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  text-align: center;
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+}
+
+.row__image {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--tavern-soft);
+  color: var(--tavern-muted);
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.row__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.row__title {
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__price {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.remove {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: var(--tavern-danger, #e0245e);
+    background: var(--tavern-soft);
+  }
+}

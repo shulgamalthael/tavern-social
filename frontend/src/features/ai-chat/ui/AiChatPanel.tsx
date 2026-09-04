@@ -1,16 +1,39 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type FormEvent,
+} from 'react';
 import { cn } from '@/shared/lib/cn';
+import { formatFileSize } from '@/shared/lib/format-file-size';
 import { Button } from '@/shared/ui/Button';
-import { ForwardIcon, SparkleIcon } from '@/shared/ui/icons';
+import { AttachmentIcon, CloseIcon, FileIcon, ForwardIcon, SparkleIcon } from '@/shared/ui/icons';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
 import { confirmToolCall } from '../api/confirm-tool-call';
 import { rejectToolCall } from '../api/reject-tool-call';
 import { streamAiChat } from '../api/stream-ai-chat';
+import { uploadAiChatAttachment } from '../api/upload-ai-chat-attachment';
 import { riskLevelLabel, toolLabel } from '../lib/tool-labels';
-import type { AiChatMessage, PendingConfirmation, ToolExecutionSummary } from '../model/types';
+import type {
+  AiChatMessage,
+  ChatAttachment,
+  PendingConfirmation,
+  ToolExecutionSummary,
+} from '../model/types';
 import styles from './AiChatPanel.module.scss';
+
+/** То же ограничение, что и на backend (`MAX_IMAGE_BYTES` в
+ * `common/lib/upload.ts`) — проверка здесь только ради быстрой обратной
+ * связи до сетевого запроса, backend всё равно перепроверяет сам как
+ * последний рубеж (тот же приём, что `features/send-message/ui/
+ * MessageComposer.tsx`, которому это уже понадобилось для человеческого
+ * мессенджера — тут переиспользован тот же лимит и тот же UX). */
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENTS = 5;
 
 export interface AiChatPanelProps {
   businessId: string;
@@ -80,8 +103,17 @@ export function AiChatPanel({
    * рендере). `null`, пока инструмент не запущен (изначальные три точки)
    * или между инструментами. */
   const [pendingTool, setPendingTool] = useState<string | null>(null);
+  /** Уже загруженные (не только выбранные) вложения текущего, ещё не
+   * отправленного сообщения — загрузка стартует сразу по выбору/вставке
+   * файла (см. `attachFile` ниже), не откладывается до клика «Отправить»:
+   * так пользователь сразу видит превью или ошибку размера/типа, не ждёт
+   * этого одновременно с самим ответом ассистента. */
+  const [pendingAttachments, setPendingAttachments] = useState<ChatAttachment[]>([]);
+  const [isUploadingAttachment, setUploadingAttachment] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     viewportRef.current?.scrollTo({ top: viewportRef.current.scrollHeight, behavior: 'smooth' });
@@ -91,13 +123,82 @@ export function AiChatPanel({
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
+  /** Общий путь и для кнопки-скрепки, и для вставки картинки из буфера
+   * (`onPaste` ниже) — оба в конечном счёте просто получают `File` и грузят
+   * его тем же способом, дублировать логику загрузки под два источника
+   * незачем. */
+  async function attachFile(file: File) {
+    if (pendingAttachments.length >= MAX_ATTACHMENTS) {
+      setAttachmentError(`Не больше ${MAX_ATTACHMENTS} вложений за раз`);
+      return;
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError(`Файл «${file.name}» больше 5 МБ`);
+      return;
+    }
+
+    setAttachmentError(null);
+    setUploadingAttachment(true);
+    try {
+      const attachment = await uploadAiChatAttachment(businessId, file);
+      setPendingAttachments((prev) => [...prev, attachment]);
+    } catch (error) {
+      setAttachmentError(errorMessage(error));
+    } finally {
+      setUploadingAttachment(false);
+    }
+  }
+
+  function onFilesChosen(event: ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    chosen.forEach((file) => void attachFile(file));
+  }
+
+  /** Вставка картинки из буфера прямо в поле ввода — тот же путь, что и
+   * кнопка-скрепка (`attachFile`), просто источник `File` другой
+   * (`item.getAsFile()` вместо `<input type=file>`). `preventDefault()`
+   * только когда в буфере реально есть картинка — иначе обычная вставка
+   * текста продолжает работать как раньше. */
+  function onInputPaste(event: ClipboardEvent<HTMLInputElement>) {
+    const imageItem = Array.from(event.clipboardData.items).find((item) =>
+      item.type.startsWith('image/'),
+    );
+    if (!imageItem) return;
+
+    const file = imageItem.getAsFile();
+    if (!file) return;
+
+    event.preventDefault();
+    void attachFile(file);
+  }
+
+  function removeAttachment(id: string) {
+    setPendingAttachments((prev) => prev.filter((attachment) => attachment.id !== id));
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const text = input.trim();
-    if (!text || isSending) return;
+    const trimmed = input.trim();
+    if ((!trimmed && pendingAttachments.length === 0) || isSending || isUploadingAttachment) return;
 
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'user', content: text }]);
+    // Backend требует непустой `message` (`ChatRequestDto`) даже когда суть
+    // хода — просто картинка без подписи — плейсхолдер, а не запрет
+    // отправлять вложение без текста.
+    const text = trimmed || '[Вложение]';
+    const attachments = pendingAttachments;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: text,
+        attachments: attachments.length > 0 ? attachments : undefined,
+      },
+    ]);
     setInput('');
+    setPendingAttachments([]);
     setSending(true);
 
     const assistantId = crypto.randomUUID();
@@ -115,7 +216,11 @@ export function AiChatPanel({
     let warnedAboutDirty = false;
 
     try {
-      for await (const streamEvent of streamAiChat(businessId, text)) {
+      for await (const streamEvent of streamAiChat(
+        businessId,
+        text,
+        attachments.map((attachment) => attachment.id),
+      )) {
         if (streamEvent.type === 'tool_start') {
           setPendingTool(streamEvent.tool);
         } else if (streamEvent.type === 'tool_result') {
@@ -304,6 +409,21 @@ export function AiChatPanel({
                 message.isError && styles['message--error'],
               )}
             >
+              {message.attachments && message.attachments.length > 0 && (
+                <ul className={styles.attachments}>
+                  {message.attachments.map((attachment) => (
+                    <li key={attachment.id} className={styles.attachment}>
+                      {attachment.mimeType.startsWith('image/') ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- превью уже загруженного вложения чата, не контентная картинка сайта
+                        <img src={attachment.url} alt="" className={styles.attachment__thumb} />
+                      ) : (
+                        <FileIcon className={styles.attachment__icon} />
+                      )}
+                      <span className={styles.attachment__name}>{attachment.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
               {isStreamingPlaceholder ? (
                 <div className={cn(styles.message__bubble, styles['message__bubble--pending'])}>
                   {pendingTool ? (
@@ -388,19 +508,69 @@ export function AiChatPanel({
         })}
       </ScrollArea>
 
+      {attachmentError && <p className={styles.attachmentError}>{attachmentError}</p>}
+
+      {pendingAttachments.length > 0 && (
+        <ul className={styles.composerAttachments}>
+          {pendingAttachments.map((attachment) => (
+            <li key={attachment.id} className={styles.composerAttachment}>
+              {attachment.mimeType.startsWith('image/') ? (
+                // eslint-disable-next-line @next/next/no-img-element -- превью только что загруженного вложения до отправки
+                <img src={attachment.url} alt="" className={styles.composerAttachment__thumb} />
+              ) : (
+                <FileIcon className={styles.composerAttachment__icon} />
+              )}
+              <span className={styles.composerAttachment__name}>{attachment.name}</span>
+              <span className={styles.composerAttachment__size}>
+                {formatFileSize(attachment.sizeBytes)}
+              </span>
+              <button
+                type="button"
+                className={styles.composerAttachment__remove}
+                onClick={() => removeAttachment(attachment.id)}
+                aria-label={`Убрать вложение ${attachment.name}`}
+              >
+                <CloseIcon />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <form className={styles.form} onSubmit={handleSubmit}>
+        <button
+          type="button"
+          className={styles.attachButton}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={
+            isSending || isUploadingAttachment || pendingAttachments.length >= MAX_ATTACHMENTS
+          }
+          aria-label="Прикрепить файл"
+        >
+          <AttachmentIcon />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className={styles.fileInput}
+          onChange={onFilesChosen}
+          tabIndex={-1}
+        />
+
         <input
           ref={inputRef}
           className={styles.input}
           value={input}
           onChange={(event) => setInput(event.target.value)}
+          onPaste={onInputPaste}
           placeholder="Напишите ассистенту…"
           disabled={isSending}
           aria-label="Сообщение AI-ассистенту"
         />
         <Button
           type="submit"
-          disabled={isSending || input.trim().length === 0}
+          disabled={isSending || (input.trim().length === 0 && pendingAttachments.length === 0)}
           aria-label="Отправить"
         >
           <ForwardIcon />

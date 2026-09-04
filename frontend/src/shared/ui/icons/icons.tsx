@@ -706,3 +706,126 @@ export function NewspaperIcon(props: IconProps): ReactElement {
     </BaseIcon>
   );
 }
+
+export function AlignLeftIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 6h16M4 11h10M4 16h13M4 20h7" />
+    </BaseIcon>
+  );
+}
+
+export function AlignCenterIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 6h16M7 11h10M5.5 16h13M9 20h6" />
+    </BaseIcon>
+  );
+}
+
+export function AlignRightIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 6h16M10 11h10M7 16h13M13 20h7" />
+    </BaseIcon>
+  );
+}
+
+// Схематичные превью структурных блоков (`BlockThumbnail`, `entities/
+// website/ui/`) — рамка «страницы» + внутри неё лента, показывающая, как
+// именно этот блок займёт место на странице (во всю ширину/с полями/
+// колонками) — в отличие от обычных иконок выше, эти нужны только затем,
+// чтобы за один взгляд было видно СТРУКТУРУ, не просто узнаваемый значок.
+
+export function PreviewFullWidthIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={2.5} y={3.5} width={19} height={17} rx={1.5} />
+      <rect
+        x={2.5}
+        y={9.5}
+        width={19}
+        height={5}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+    </BaseIcon>
+  );
+}
+
+export function PreviewContainerIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={2.5} y={3.5} width={19} height={17} rx={1.5} />
+      <rect
+        x={6}
+        y={9.5}
+        width={12}
+        height={5}
+        rx={0.5}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+    </BaseIcon>
+  );
+}
+
+export function PreviewColumnsIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={2.5} y={3.5} width={19} height={17} rx={1.5} />
+      <rect
+        x={5}
+        y={7}
+        width={4.3}
+        height={10}
+        rx={0.5}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+      <rect
+        x={9.85}
+        y={7}
+        width={4.3}
+        height={10}
+        rx={0.5}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+      <rect
+        x={14.7}
+        y={7}
+        width={4.3}
+        height={10}
+        rx={0.5}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+    </BaseIcon>
+  );
+}
+
+export function PreviewSpacerIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={2.5} y={3.5} width={19} height={17} rx={1.5} />
+      <path d="M6 8h12" opacity={0.35} />
+      <path d="M6 16h12" opacity={0.35} />
+      <path d="M12 10.5v3" strokeDasharray="1.5 1.5" />
+    </BaseIcon>
+  );
+}
+
+export function PreviewDividerIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={2.5} y={3.5} width={19} height={17} rx={1.5} />
+      <path d="M6 12h12" />
+    </BaseIcon>
+  );
+}

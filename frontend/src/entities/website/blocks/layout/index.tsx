@@ -1,4 +1,14 @@
-import { ColumnsIcon, GridIcon, MinusIcon, RowsIcon } from '@/shared/ui/icons';
+import {
+  ColumnsIcon,
+  GridIcon,
+  MinusIcon,
+  PreviewColumnsIcon,
+  PreviewContainerIcon,
+  PreviewDividerIcon,
+  PreviewFullWidthIcon,
+  PreviewSpacerIcon,
+  RowsIcon,
+} from '@/shared/ui/icons';
 import { SPACING_PX } from '../../model/theme-tokens';
 import type { BlockRendererProps, FieldSchema } from '../../model/registry';
 import { registerBlock } from '../../model/registry';
@@ -15,8 +25,12 @@ interface EmptyProps {
   [key: string]: never;
 }
 
-function SectionRenderer({ children }: BlockRendererProps<EmptyProps>) {
-  return <div className={styles.section}>{children}</div>;
+function SectionRenderer({ children, layout }: BlockRendererProps<EmptyProps>) {
+  return (
+    <div className={styles.section} style={layout}>
+      {children}
+    </div>
+  );
 }
 
 registerBlock<EmptyProps>({
@@ -24,6 +38,7 @@ registerBlock<EmptyProps>({
   label: 'Секция',
   category: 'layout',
   icon: RowsIcon,
+  previewIcon: PreviewFullWidthIcon,
   description: 'Полноширинная полоса — основной строительный блок страницы',
   defaultProps: {},
   fields: [],
@@ -36,8 +51,12 @@ registerBlock<EmptyProps>({
 // удобен, чтобы внутри уже широкой секции завести отдельную более узкую
 // колонку контента (текстовый блок, форма), а не только на верхнем уровне.
 
-function ContainerRenderer({ children }: BlockRendererProps<EmptyProps>) {
-  return <div className={styles.container}>{children}</div>;
+function ContainerRenderer({ children, layout }: BlockRendererProps<EmptyProps>) {
+  return (
+    <div className={styles.container} style={layout}>
+      {children}
+    </div>
+  );
 }
 
 registerBlock<EmptyProps>({
@@ -45,6 +64,7 @@ registerBlock<EmptyProps>({
   label: 'Контейнер',
   category: 'layout',
   icon: GridIcon,
+  previewIcon: PreviewContainerIcon,
   description: 'Более узкая колонка контента внутри секции',
   defaultProps: {},
   defaultStyle: { maxWidth: 'narrow' },
@@ -55,8 +75,12 @@ registerBlock<EmptyProps>({
 
 // --- Column (внутренний, не в библиотеке) -----------------------------------
 
-function ColumnRenderer({ children }: BlockRendererProps<EmptyProps>) {
-  return <div className={styles.column}>{children}</div>;
+function ColumnRenderer({ children, layout }: BlockRendererProps<EmptyProps>) {
+  return (
+    <div className={styles.column} style={layout}>
+      {children}
+    </div>
+  );
 }
 
 registerBlock<EmptyProps>({
@@ -79,8 +103,12 @@ registerBlock<EmptyProps>({
 // кнопка «+ Добавить колонку» у выбранного блока `columns`) не должно
 // держать в синхроне никакой отдельный счётчик.
 
-function ColumnsRenderer({ children }: BlockRendererProps<EmptyProps>) {
-  return <div className={styles.columns}>{children}</div>;
+function ColumnsRenderer({ children, layout }: BlockRendererProps<EmptyProps>) {
+  return (
+    <div className={styles.columns} style={layout}>
+      {children}
+    </div>
+  );
 }
 
 registerBlock<EmptyProps>({
@@ -88,6 +116,7 @@ registerBlock<EmptyProps>({
   label: 'Колонки',
   category: 'layout',
   icon: ColumnsIcon,
+  previewIcon: PreviewColumnsIcon,
   description: 'Разбивает контент на несколько колонок рядом',
   defaultProps: {},
   fields: [],
@@ -129,6 +158,7 @@ registerBlock<SpacerProps>({
   label: 'Отступ',
   category: 'layout',
   icon: MinusIcon,
+  previewIcon: PreviewSpacerIcon,
   description: 'Пустое вертикальное пространство между блоками',
   defaultProps: { height: 'md' },
   fields: spacerFields,
@@ -162,6 +192,7 @@ registerBlock<DividerProps>({
   label: 'Разделитель',
   category: 'layout',
   icon: MinusIcon,
+  previewIcon: PreviewDividerIcon,
   description: 'Тонкая горизонтальная линия',
   defaultProps: { style: 'solid' },
   fields: dividerFields,

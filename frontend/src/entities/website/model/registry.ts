@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import type { IconProps } from '@/shared/ui/icons';
 import type {
   BlockStyle,
@@ -99,6 +99,27 @@ export type FieldSchema =
    * переключения select/number специфична именно для отступов, ни одному
    * другому `'select'`-полю она не нужна. */
   | (FieldBase & { control: 'spacing'; options: SelectOption[] })
+  /** Порядковая шкала (отступ/радиус/тень/толщина рамки — «меньше…больше»)
+   * как слайдер с засечками на именованных пресетах из `options` (тот же
+   * массив, что был бы у `'select'` для того же поля — один источник
+   * истины, `theme-tokens.ts`), а не выпадающий список: тактильнее двигать
+   * ползунок между соседними шагами, чем открывать список ради соседнего
+   * пункта. `allowCustomPx` — только там, где шаг реально означает пиксели
+   * (отступы) — добавляет крайний шаг «Свой», раскрывающий числовой инпут
+   * (тот же случай, что раньше решал `control: 'spacing'`, тут — тот же
+   * приём, но с слайдером вместо `select` под ним). Без `allowCustomPx`
+   * (радиус/тень/толщина рамки/интервалы секций) шкала остаётся сугубо
+   * токенной — так и должно быть, см. `AGENTS.md` §9. */
+  | (FieldBase & { control: 'scale'; options: SelectOption[]; allowCustomPx?: boolean })
+  /** Категориальный выбор из небольшого (≤5) набора вариантов как ряд
+   * icon/swatch-кнопок вместо `<select>` — нет «больше/меньше», зато есть
+   * видимая иконка/образец, которую полезно видеть сразу, не открывая
+   * список (выравнивание текста, тип фона, стиль кнопки). `options.length`
+   * больше 5 — сегменты читаются хуже списка, оставляйте `'select'`. */
+  | (FieldBase & {
+      control: 'segmented';
+      options: (SelectOption & { icon?: ComponentType<IconProps>; swatch?: string })[];
+    })
   | (FieldBase & { control: 'color' })
   | (FieldBase & { control: 'toggle' })
   | (FieldBase & { control: 'image' })
@@ -175,6 +196,20 @@ export interface BlockRendererProps<P = Record<string, unknown>> {
    * так рендерер не должен ничего заранее знать о том, есть ли у него
    * ссылки, это решает его собственная схема полей. */
   pages: WebsitePage[];
+  /** Раскладка блока для СВОИХ детей (`BlockWrapperStyle.layout`,
+   * `block-style.ts`) — только контейнерные блоки (`isContainer`) реально
+   * его используют (`section`/`container`/`columns`, `blocks/layout/
+   * index.tsx`, применяют на своей обёртке поверх SCSS-класса), остальные
+   * рендереры его просто не читают. Пустой объект — блок ведёт себя как до
+   * появления этого поля (`display` не задан/`'block'`). */
+  layout?: CSSProperties;
+  /** Инлайн-редактирование текста прямо на холсте (`EditableText`/
+   * `EditableRichText`, `entities/website/ui/`) — только внутри билдера
+   * (`CanvasBlock.tsx` — единственное место, откуда рендерер получает
+   * `isEditing`, прокидывает и это тоже), пишет через тот же `updateBlock
+   * Props`, что и форма в инспекторе, второй источник правды не появляется.
+   * Опционально, как `layout` — большинство рендереров его не читают. */
+  onEditProp?: (key: string, value: string) => void;
 }
 
 export interface BlockDefinition<P = Record<string, unknown>> {
@@ -184,6 +219,16 @@ export interface BlockDefinition<P = Record<string, unknown>> {
   icon: ComponentType<IconProps>;
   description: string;
   defaultProps: P;
+  /** Рукописная SVG-схема вместо живого превью в библиотеке блоков
+   * (`BlockThumbnail`, `entities/website/ui/`) — только для блоков, чей
+   * живой рендер с `defaultProps` либо пуст (структурные примитивы без
+   * своих полей — `section`/`container`/`columns`/`spacer`/`divider`),
+   * либо ушёл бы в реальный сетевой запрос (`control: 'dataSource'` —
+   * `productgrid`/`servicegrid`/`bloggrid` сами дозагружают данные по
+   * `businessId`, см. `BlockThumbnail`'s комментарий). Не задано —
+   * `BlockThumbnail` живьём рендерит сам блок, это подавляющее большинство
+   * типов. */
+  previewIcon?: ComponentType<IconProps>;
   /** Стартовые универсальные отступы/фон/ширина (см. `BlockStyle` в
    * `types.ts`) — например, `container` по умолчанию у́же `section`, хотя
    * оба редактируются одной и той же секцией инспектора. Не обязателен —

@@ -76,6 +76,44 @@
   cursor: pointer;
 }
 
+.colorControl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.colorControl__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.colorControl__swatch {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgb(0 0 0 / 12%);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    outline-color 0.12s ease,
+    transform 0.12s ease;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+
+  &:hover {
+    transform: scale(1.08);
+  }
+}
+
+.colorControl__swatch--active {
+  outline-color: var(--tavern-accent);
+}
+
+.colorControl__swatch--custom {
+  background: conic-gradient(from 0deg, red, yellow, lime, cyan, blue, magenta, red);
+}
+
 .toggle {
   display: flex;
   align-items: center;
@@ -136,5 +174,93 @@
 .toggle__label {
   color: var(--tavern-ink);
   font-size: 13px;
+  font-weight: 500;
+}
+
+.scale {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+// Слайдер и его подпись со значением — в столбец, а не рядом: в плотной
+// сетке инспектора (`FieldGroup.module.scss`, колонки от 180px) `<input
+// type="range">` как flex-item по умолчанию не сжимается уже своей
+// нативной ширины (`min-width: auto` на replaced-элементе считает её
+// «содержимым» — известная особенность flex/grid-раскладки с заменяемыми
+// элементами) — рядом с текстом значения это раздувало всю строку и
+// утекало в соседнюю колонку сетки. Ползунок на всю ширину колонки,
+// подпись под ним в одну строку с обрезкой — надёжно вписывается в любую
+// ширину колонки.
+.scale__range {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--tavern-line);
+  accent-color: var(--tavern-accent);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--tavern-accent);
+    outline-offset: 3px;
+  }
+}
+
+.scale__value {
+  overflow: hidden;
+  color: var(--tavern-muted);
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.segmented__item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border: 0;
+  border-radius: calc(var(--tavern-radius-control) - 3px);
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.segmented__item--active {
+  background: var(--tavern-surface);
+  color: var(--tavern-accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+}
+
+.segmented__swatch {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 50%;
+}
+
+.segmented__text {
+  font-size: 12px;
   font-weight: 500;
 }

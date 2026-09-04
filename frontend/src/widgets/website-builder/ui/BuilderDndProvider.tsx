@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
@@ -81,6 +82,7 @@ export interface BuilderDndProviderProps {
 export function BuilderDndProvider({ page, children }: BuilderDndProviderProps) {
   const addBlock = useWebsiteBuilderStore((state) => state.addBlock);
   const moveBlock = useWebsiteBuilderStore((state) => state.moveBlock);
+  const setDragOverTarget = useWebsiteBuilderStore((state) => state.setDragOverTarget);
 
   const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
 
@@ -100,8 +102,48 @@ export function BuilderDndProvider({ page, children }: BuilderDndProviderProps) 
     }
   }
 
+  /** Линия-индикатор «здесь окажется блок, если отпустить сейчас»
+   * (`CanvasBlock.tsx`, читает `store.dragOverTarget`) — единственное, чего
+   * не хватало в drag-and-drop: раньше единственной обратной связью была
+   * плавающая подпись за курсором (`DragOverlay` ниже), без всякого намёка
+   * на МЕСТО вставки до самого отпускания. Не трогает пустые drop-зоны
+   * (`data.kind === 'empty-zone'`) — та уже подсвечивается сама через
+   * `useDroppable`'s `isOver` (`EmptyDropZone.tsx`), второй индикатор поверх
+   * был бы лишним. Определяет «до» или «после» цели простым сравнением
+   * вертикальных центров перетаскиваемого элемента и цели — тот же приём,
+   * которым `verticalListSortingStrategy` сама решает, в какую сторону
+   * сдвигать соседей, просто здесь результат ещё и явно показывается
+   * пользователю, а не только незаметно участвует в раскладке. */
+  function onDragOver(event: DragOverEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      setDragOverTarget(null);
+      return;
+    }
+
+    const overEmptyData = over.data.current as EmptyZoneDropData | undefined;
+    if (overEmptyData?.kind === 'empty-zone') {
+      setDragOverTarget(null);
+      return;
+    }
+
+    const activeRect = active.rect.current.translated ?? active.rect.current.initial;
+    if (!activeRect) {
+      setDragOverTarget(null);
+      return;
+    }
+
+    const activeCenter = activeRect.top + activeRect.height / 2;
+    const overCenter = over.rect.top + over.rect.height / 2;
+    setDragOverTarget({
+      blockId: over.id as string,
+      position: activeCenter < overCenter ? 'before' : 'after',
+    });
+  }
+
   function onDragEnd(event: DragEndEvent) {
     setDraggedLabel(null);
+    setDragOverTarget(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -134,8 +176,12 @@ export function BuilderDndProvider({ page, children }: BuilderDndProviderProps) 
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={onDragStart}
+      onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      onDragCancel={() => setDraggedLabel(null)}
+      onDragCancel={() => {
+        setDraggedLabel(null);
+        setDragOverTarget(null);
+      }}
     >
       {children}
       <DragOverlay>

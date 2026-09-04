@@ -7,6 +7,7 @@ import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './infrastructure/database/prisma.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
+import { UploadsRetentionModule } from './infrastructure/uploads/uploads-retention.module';
 import { RealtimeModule } from './infrastructure/websocket/realtime.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AiModule } from './modules/ai/ai.module';
@@ -52,6 +53,7 @@ import { WebsitesModule } from './modules/websites/websites.module';
     PrismaModule,
     RedisModule,
     RealtimeModule,
+    UploadsRetentionModule,
     AuthModule,
     UsersModule,
     NotificationsModule,

@@ -61,7 +61,7 @@ export class UpdateBlockPropsTool implements OnModuleInit {
           props: {
             type: 'object',
             description:
-              'Новые значения полей (см. описание props в add_block для конкретного типа блока).',
+              'Новые значения полей — точный список и типы полей этого типа блока смотри через get_block_schema(blockType).',
           },
         },
         required: ['blockId', 'props'],

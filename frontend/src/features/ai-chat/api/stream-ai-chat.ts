@@ -60,6 +60,7 @@ function parseSseFrame(raw: string): { event: string; data: string } | null {
 export async function* streamAiChat(
   businessId: string,
   message: string,
+  attachmentIds: string[] = [],
   signal?: AbortSignal,
 ): AsyncGenerator<AiStreamEvent> {
   let response: Response;
@@ -67,7 +68,7 @@ export async function* streamAiChat(
     response = await fetch('/api/ai-chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ businessId, message }),
+      body: JSON.stringify({ businessId, message, attachmentIds }),
       signal,
     });
   } catch {

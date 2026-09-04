@@ -59,7 +59,7 @@ const GOOGLE_FONT_BODY_FIELD: FieldSchema = {
 const RADIUS_FIELD: FieldSchema = {
   key: 'radius',
   label: 'Скругление',
-  control: 'select',
+  control: 'scale',
   options: RADIUS_OPTIONS,
 };
 const BUTTON_STYLE_FIELD: FieldSchema = {
@@ -77,19 +77,19 @@ const CONTAINER_WIDTH_FIELD: FieldSchema = {
 const SECTION_SPACING_FIELD: FieldSchema = {
   key: 'sectionSpacing',
   label: 'Плотность секций',
-  control: 'select',
+  control: 'scale',
   options: SECTION_SPACING_OPTIONS,
 };
 const CARD_BORDER_FIELD: FieldSchema = {
   key: 'cardBorder',
   label: 'Рамка карточек',
-  control: 'select',
+  control: 'scale',
   options: CARD_BORDER_OPTIONS,
 };
 const CARD_SHADOW_FIELD: FieldSchema = {
   key: 'cardShadow',
   label: 'Тень карточек',
-  control: 'select',
+  control: 'scale',
   options: CARD_SHADOW_OPTIONS,
 };
 
@@ -168,7 +168,6 @@ export function ThemePanel({ theme, businessId }: ThemePanelProps) {
       <section className={styles.section}>
         <h3 className={styles.section__title}>Цвета</h3>
         <FieldGroup
-          resetKey="theme-colors"
           businessId={businessId}
           items={COLOR_FIELDS.map(({ key, label }) => ({
             field: { key, label, control: 'color' as const },
@@ -181,17 +180,12 @@ export function ThemePanel({ theme, businessId }: ThemePanelProps) {
 
       <section className={styles.section}>
         <h3 className={styles.section__title}>Шрифты</h3>
-        <FieldGroup
-          resetKey="theme-fonts"
-          businessId={businessId}
-          items={buildFontItems(theme, updateTheme)}
-        />
+        <FieldGroup businessId={businessId} items={buildFontItems(theme, updateTheme)} />
       </section>
 
       <section className={styles.section}>
         <h3 className={styles.section__title}>Форма и раскладка</h3>
         <FieldGroup
-          resetKey="theme-layout"
           businessId={businessId}
           items={[
             {
@@ -224,7 +218,6 @@ export function ThemePanel({ theme, businessId }: ThemePanelProps) {
       <section className={styles.section}>
         <h3 className={styles.section__title}>Карточки</h3>
         <FieldGroup
-          resetKey="theme-cards"
           businessId={businessId}
           items={[
             {

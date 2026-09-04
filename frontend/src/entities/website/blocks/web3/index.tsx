@@ -163,6 +163,14 @@ registerBlock<Web3WalletProps>({
   label: 'Кошелёк Web3',
   category: 'business',
   icon: WalletIcon,
+  // Живой рендер сам дозагружает баланс/NFT по `business.businessId`
+  // (`useAsyncData`, см. `Web3WalletRenderer` выше) — тот же риск лишнего
+  // сетевого запроса из превью в библиотеке блоков, что и у `control:
+  // 'dataSource'`-блоков (`productgrid` и т. п.), просто не через
+  // объявленное поле схемы, поэтому `BlockThumbnail` не может определить
+  // это автоматически — гасим тем же способом, готовой иконкой вместо
+  // живого рендера.
+  previewIcon: WalletIcon,
   description: 'Баланс и NFT кошелька из раздела «Web3» дашборда',
   defaultProps: {
     eyebrow: 'WEB3',

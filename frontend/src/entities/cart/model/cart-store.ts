@@ -9,6 +9,14 @@ interface CartState {
    * `null` — корзина ещё ни разу не инициализирована. */
   businessId: string | null;
   items: CartItem[];
+  /** Открыта ли панель корзины (`CartWidget`'s модалка) — эфемерное UI-
+   * состояние, НЕ персистится (см. `partialize` ниже, тот же принцип, что у
+   * `selectedBlockId` в билдере: пережить перезагрузку страницы с открытой
+   * корзиной было бы странно). Живёт в сторе, а не локальном `useState`
+   * `CartWidget`, потому что открыть корзину должна уметь и кнопка в шапке
+   * сайта (`HeaderActions.tsx`, вне дерева `CartWidget`), не только его
+   * собственный плавающий `.fab`. */
+  isOpen: boolean;
 }
 
 interface CartActions {
@@ -21,6 +29,8 @@ interface CartActions {
   removeItem: (productId: string) => void;
   setQuantity: (productId: string, quantity: number) => void;
   clear: () => void;
+  open: () => void;
+  closePanel: () => void;
 }
 
 export type CartStore = CartState & CartActions;
@@ -38,6 +48,10 @@ export const useCartStore = create<CartStore>()(
     (set) => ({
       businessId: null,
       items: [],
+      isOpen: false,
+
+      open: () => set({ isOpen: true }),
+      closePanel: () => set({ isOpen: false }),
 
       ensureBusiness: (businessId) =>
         set((state) => (state.businessId === businessId ? state : { businessId, items: [] })),
@@ -75,6 +89,9 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'tavern-cart',
       storage: createJSONStorage(() => localStorage),
+      // `isOpen` — эфемерное UI-состояние (см. её комментарий в `CartState`),
+      // не переживает перезагрузку страницы.
+      partialize: (state) => ({ businessId: state.businessId, items: state.items }),
     },
   ),
 );

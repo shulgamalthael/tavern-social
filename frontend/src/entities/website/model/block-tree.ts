@@ -147,12 +147,28 @@ export function insertBlock(
   });
 }
 
+/** `true`, если `candidateId` — это сам `block` или лежит где-то в его
+ * поддереве. `moveBlock` обязан проверить это ДО удаления: если целевой
+ * родитель — потомок самого перемещаемого блока, `removeBlock` вырежет его
+ * вместе с этим потомком, и последующая вставка молча не найдёт цель —
+ * не «ничего не делает», а безвозвратно теряет весь перемещаемый блок (см.
+ * следующий комментарий). */
+function isBlockOrDescendant(block: WebsiteBlock, candidateId: string): boolean {
+  if (block.id === candidateId) return true;
+  return (block.children ?? []).some((child) => isBlockOrDescendant(child, candidateId));
+}
+
 /** Недопустимое перемещение (см. `insertBlock`) отклоняется целиком —
  * возвращает исходный `blocks` НЕТРОНУТЫМ. Важно проверить это до вызова
  * `insertBlock`, а не полагаться только на её собственную защиту: та в
  * случае отказа вернула бы `blocks` уже БЕЗ перемещаемого блока (он к тому
  * моменту убран `removeBlock` ниже) — то есть недопустимый drop иначе не
- * «ничего не делает», а тихо удаляет блок. */
+ * «ничего не делает», а тихо удаляет блок. По той же причине отдельно
+ * проверяем `isBlockOrDescendant`: перенос блока-контейнера ВНУТРЬ
+ * собственного потомка — не другая ветка недопустимой вставки, а тот же
+ * риск тихой потери данных, независимо найденный и исправленный тем же
+ * приёмом в backend-версии этой функции (AI-инструмент `move_block`, см.
+ * `backend/.../tools/move-block.tool.ts`). */
 export function moveBlock(
   blocks: WebsiteBlock[],
   blockId: string,
@@ -163,6 +179,7 @@ export function moveBlock(
   if (!moving) return blocks;
 
   if (targetParentId !== null) {
+    if (isBlockOrDescendant(moving, targetParentId)) return blocks;
     const targetParent = findBlock(blocks, targetParentId);
     if (!targetParent || !canAcceptChild(targetParent.type, moving.type)) return blocks;
   }

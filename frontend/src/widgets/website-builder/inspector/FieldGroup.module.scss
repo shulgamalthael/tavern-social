@@ -1,34 +1,20 @@
+@use '@/shared/styles/mixins' as *;
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 14px;
+
+  // Раньше телефон/планшет показывал вместо этой сетки отдельный
+  // «компактный» режим — дропдаун «какое свойство настроить» + один контрол
+  // под ним (см. форвард-комментарий у `FieldGroup.tsx`). Теперь везде один
+  // и тот же список — на узком экране просто одна колонка вместо нескольких,
+  // обычный вертикальный скролл, как у топ-конкурентов.
+  @include mobileOrTablet {
+    grid-template-columns: 1fr;
+  }
 }
 
 .slot--wide {
   grid-column: 1 / -1;
-}
-
-.compact {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.compact__select {
-  width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--tavern-line);
-  border-radius: var(--tavern-radius-control);
-  background: var(--tavern-surface);
-  color: var(--tavern-ink);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.compact__control {
-  padding: 12px;
-  border: 1px solid var(--tavern-line);
-  border-radius: var(--tavern-radius-control);
-  background: var(--tavern-soft);
 }

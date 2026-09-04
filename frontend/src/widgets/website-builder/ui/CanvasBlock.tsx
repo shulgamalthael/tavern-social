@@ -14,7 +14,14 @@ import {
   type WebsiteTheme,
 } from '@/entities/website';
 import { cn } from '@/shared/lib/cn';
-import { DuplicateIcon, EyeIcon, EyeOffIcon, GripIcon, TrashIcon } from '@/shared/ui/icons';
+import {
+  DuplicateIcon,
+  EditIcon,
+  EyeIcon,
+  EyeOffIcon,
+  GripIcon,
+  TrashIcon,
+} from '@/shared/ui/icons';
 import { BlockInsertCross } from './BlockInsertCross';
 import { EmptyDropZone } from './EmptyDropZone';
 import { SortableList } from './SortableList';
@@ -46,6 +53,15 @@ export function CanvasBlock({ block, theme, viewport, business, pages }: CanvasB
   const removeBlock = useWebsiteBuilderStore((state) => state.removeBlock);
   const duplicateBlock = useWebsiteBuilderStore((state) => state.duplicateBlock);
   const toggleBlockVisibility = useWebsiteBuilderStore((state) => state.toggleBlockVisibility);
+  const updateBlockProps = useWebsiteBuilderStore((state) => state.updateBlockProps);
+  // Точечный селектор — возвращает значение, ОТНОСЯЩЕЕСЯ ИМЕННО К ЭТОМУ
+  // блоку, не всё поле стора целиком: `onDragOver` в `BuilderDndProvider.tsx`
+  // срабатывает часто (на каждое перемещение курсора), а перерендериться из-
+  // за этого должны только два блока — тот, что был целью до этого тика, и
+  // тот, что стал ею сейчас, не вообще все блоки страницы.
+  const dropPosition = useWebsiteBuilderStore((state) =>
+    state.dragOverTarget?.blockId === block.id ? state.dragOverTarget.position : null,
+  );
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
@@ -87,7 +103,7 @@ export function CanvasBlock({ block, theme, viewport, business, pages }: CanvasB
 
   const hidden = isBlockHidden(block, viewport);
   const isSelected = selectedBlockId === block.id;
-  const { outer, inner } = computeBlockWrapperStyle(block.style, viewport);
+  const { outer, inner, layout } = computeBlockWrapperStyle(block.style, viewport);
   const Renderer = definition.Renderer;
 
   return (
@@ -105,6 +121,16 @@ export function CanvasBlock({ block, theme, viewport, business, pages }: CanvasB
         selectBlock(block.id);
       }}
     >
+      {dropPosition && (
+        <div
+          className={cn(
+            styles['block__dropIndicator'],
+            styles[`block__dropIndicator--${dropPosition}`],
+          )}
+          aria-hidden="true"
+        />
+      )}
+
       <div className={styles['block__toolbar']}>
         <button
           type="button"
@@ -117,6 +143,18 @@ export function CanvasBlock({ block, theme, viewport, business, pages }: CanvasB
         </button>
         <span className={styles['block__label']}>{definition.label}</span>
         <span className={styles['block__actions']}>
+          <button
+            type="button"
+            className={styles['block__action']}
+            aria-label="Редактировать блок"
+            title="Редактировать"
+            onClick={(event) => {
+              event.stopPropagation();
+              selectBlock(block.id);
+            }}
+          >
+            <EditIcon />
+          </button>
           <button
             type="button"
             className={styles['block__action']}
@@ -163,7 +201,9 @@ export function CanvasBlock({ block, theme, viewport, business, pages }: CanvasB
           viewport={viewport}
           business={business}
           pages={pages}
+          layout={layout}
           isEditing
+          onEditProp={(key, value) => updateBlockProps(block.id, { [key]: value })}
         >
           {definition.isContainer &&
             (block.children && block.children.length > 0 ? (

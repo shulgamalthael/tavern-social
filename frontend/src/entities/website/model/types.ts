@@ -7,6 +7,21 @@ import type { GoogleFontId } from './google-fonts';
  * окна — сам канвас всегда меньше окна браузера. */
 export type Viewport = 'desktop' | 'tablet' | 'mobile';
 
+/** Реальная ширина (px) каждого вьюпорта редактирования — единственный
+ * источник истины для канваса (`Canvas.tsx`) и предпросмотра
+ * (`PreviewModal.tsx`), раньше продублированный в обоих местах со своими
+ * (и одним багованным — `desktop: '100%'`, то есть «сколько есть у
+ * текущего экрана», а не настоящая desktop-раскладка) значениями. Рамка
+ * всегда рендерится этой физической шириной, а на экране уже, чем она,
+ * вписывается через `useFitZoom` (`shared/lib/use-fit-zoom.ts`) — так
+ * «Десктоп» на телефоне показывает уменьшенную, но пропорционально верную
+ * десктопную раскладку, а не сплющенную мобильную. */
+export const VIEWPORT_FRAME_WIDTH: Record<Viewport, number> = {
+  desktop: 1280,
+  tablet: 834,
+  mobile: 390,
+};
+
 /**
  * Значение, которое может отличаться по вьюпортам — `desktop` обязателен
  * (это то, что видит публичный сайт по умолчанию и то, с чего блок
@@ -27,6 +42,16 @@ export type Background = 'none' | 'surface' | 'muted' | 'primary' | 'dark' | 'cu
 export type TextAlign = 'left' | 'center' | 'right';
 export type ContainerWidth = 'narrow' | 'default' | 'wide' | 'full';
 export type SpacingSize = 'none' | 'sm' | 'md' | 'lg' | 'xl';
+
+/** Как контейнерный блок (`section`/`container`/`columns`) раскладывает
+ * своих детей — `'block'` (по умолчанию, старое поведение — вертикальный
+ * стек через `gap`, без flex/grid вообще) сохраняет вид всех документов до
+ * этого поля нетронутым, `'flex'`/`'grid'` включают `LayoutDirection`/
+ * `LayoutJustify`/`LayoutAlign`/`gridColumns` ниже. */
+export type LayoutDisplay = 'block' | 'flex' | 'grid';
+export type LayoutDirection = 'row' | 'column';
+export type LayoutJustify = 'start' | 'center' | 'end' | 'space-between' | 'space-around';
+export type LayoutAlign = 'start' | 'center' | 'end' | 'stretch';
 /** Отступ — либо один из 5 именованных пресетов (`SpacingSize`), либо
  * произвольное число пикселей (`number`, напр. `18` → `18px`) — см.
  * `spacingToPx` в `block-style.ts`. Число — не отдельное поле-компаньон
@@ -128,6 +153,69 @@ export interface BlockStyle {
   paddingRight?: StyleValue<SpacingValue | null>;
   paddingBottom?: StyleValue<SpacingValue | null>;
   paddingLeft?: StyleValue<SpacingValue | null>;
+
+  // --- Раскладка (только контейнерные блоки — `section`/`container`/
+  // `columns`, см. `definition.isContainer` в `registry.ts`) ---------------
+  /** `undefined`/`'block'` — старое поведение (вертикальный стек через CSS-
+   * класс блока, см. `layout.module.scss`), полностью без участия этих
+   * полей — ни один существующий документ не меняется визуально, пока
+   * автор явно не включит `'flex'`/`'grid'`. */
+  display?: LayoutDisplay;
+  /** Только при `display: 'flex'`. Responsive — самый частый «взрослый»
+   * паттерн: ряд на десктопе, стопка на телефоне (сайдбар/шапка), без
+   * ручного дублирования блока под каждый вьюпорт. */
+  direction?: StyleValue<LayoutDirection>;
+  /** Только при `display: 'flex'`. */
+  wrap?: boolean;
+  justify?: LayoutJustify;
+  align?: LayoutAlign;
+  /** Промежуток между детьми — та же шкала, что `paddingY` и т. п.
+   * (`SpacingValue`, именованный пресет или свой px), применяется и к
+   * `flex`, и к `grid`. */
+  gap?: StyleValue<SpacingValue>;
+  /** Только при `display: 'grid'` — число равных колонок (1–6); для
+   * неравных пропорций (сайдбар) используйте `grow`/`fixedWidth` ниже на
+   * ROW-раскладке (`display:'flex', direction:'row'`) вместо `grid`. */
+  gridColumns?: StyleValue<number>;
+
+  // --- Раскладка блока КАК РЕБЁНКА (актуально, только когда родитель сам
+  // flex/grid — иначе браузер это игнорирует, поле безопасно как no-op на
+  // любом блоке независимо от того, что у него за родитель) --------------
+  /** `'fixed'` + `fixedWidth` — блок не сжимается/не растягивается
+   * (`flex: 0 0 <fixedWidth>px`) — так делается сайдбар: одна колонка
+   * `'fixed'`, соседняя (по умолчанию) `'grow'` (`flex: 1 1 0%`) забирает
+   * всё оставшееся место. */
+  grow?: 'grow' | 'fixed';
+  /** Только при `grow: 'fixed'`. */
+  fixedWidth?: number;
+
+  // --- Позиция ------------------------------------------------------------
+  /** `position: sticky` относительно ближайшего скролл-контейнера — вместе
+   * с `grow:'fixed'` на ROW-раскладке даёт классический sticky-сайдбар.
+   * `align-self: flex-start` подставляется автоматически, когда родитель —
+   * flex (`computeBlockWrapperStyle`) — без него `stretch` по умолчанию
+   * ломает sticky-расчёт высоты. */
+  sticky?: boolean;
+  /** Только при `sticky: true` — отступ от верха вьюпорта/скролл-контейнера
+   * в px, по умолчанию `0`. */
+  stickyOffset?: number;
+
+  // --- Анимация появления при прокрутке ------------------------------------
+  /** Однократный эффект появления, когда блок впервые попадает в зону
+   * видимости при прокрутке (`entities/website/lib/use-scroll-reveal.ts`).
+   * `undefined`/`'none'` — без анимации, рендерится как раньше. Общее поле
+   * `BlockStyle`, не проп конкретного блока — работает для ЛЮБОГО типа
+   * блока одинаково, т.к. подключено один раз в `BlockRenderer.tsx`, не в
+   * каждом Renderer'е отдельно. Сознательно НЕ проигрывается в самом
+   * канвасе билдера (`CanvasBlock.tsx`) — блок там перерисовывается на
+   * каждое действие редактирования, повторяющийся fade/slide мешал бы, не
+   * помогал; эффект виден в «Предпросмотр» и на самом сайте. */
+  entranceAnimation?:
+    'none' | 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'zoom-in';
+  /** Только при `entranceAnimation` ≠ `'none'`/`undefined` — задержка в мс
+   * перед стартом анимации после появления в зоне видимости (не задержка
+   * самого срабатывания обсёрвера). По умолчанию `0`. */
+  entranceDelay?: number;
 }
 
 /**

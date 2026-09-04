@@ -1,3 +1,6 @@
+'use client';
+
+import { useScrollReveal } from '../lib/use-scroll-reveal';
 import { computeBlockWrapperStyle } from '../model/block-style';
 import { type BlockBusinessContext, getBlockDefinition } from '../model/registry';
 import { isBlockHidden } from '../model/resolve-responsive';
@@ -33,15 +36,28 @@ export interface BlockRendererProps {
  * же `computeBlockWrapperStyle`, просто больше хрома вокруг).
  */
 export function BlockRenderer({ block, theme, viewport, business, pages }: BlockRendererProps) {
+  // Хук — ДО любых условных `return null` ниже (Rules of Hooks: `hidden`
+  // может стать/перестать быть true между рендерами того же блока при
+  // смене вьюпорта, пропуск вызова хука в части рендеров недопустим).
+  // Деструктурируется сразу в отдельные переменные, не хранится как единый
+  // объект `reveal.ref`/`reveal.style` — React Compiler иначе считает ЛЮБОЕ
+  // чтение поля объекта, чьё другое поле уходит в JSX `ref=`, «чтением рефа
+  // во время рендера» (см. комментарий `useScrollReveal`), даже для полей,
+  // которые рефом не являются.
+  const { ref: revealRef, style: revealStyle } = useScrollReveal(
+    block.style?.entranceAnimation,
+    block.style?.entranceDelay,
+  );
+
   const definition = getBlockDefinition(block.type);
   if (!definition) return null;
   if (isBlockHidden(block, viewport)) return null;
 
-  const { outer, inner } = computeBlockWrapperStyle(block.style, viewport);
+  const { outer, inner, layout } = computeBlockWrapperStyle(block.style, viewport);
   const Renderer = definition.Renderer;
 
   return (
-    <div style={outer}>
+    <div ref={revealRef} style={{ ...outer, ...revealStyle }}>
       <div style={inner}>
         <Renderer
           props={block.props}
@@ -49,6 +65,7 @@ export function BlockRenderer({ block, theme, viewport, business, pages }: Block
           viewport={viewport}
           business={business}
           pages={pages}
+          layout={layout}
         >
           {definition.isContainer &&
             (block.children ?? []).map((child) => (

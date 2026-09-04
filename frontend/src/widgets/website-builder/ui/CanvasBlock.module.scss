@@ -6,7 +6,15 @@
   outline-offset: -1px;
   transition: outline-color 0.1s ease;
 
-  &:hover {
+  // `:hover` бабблится по всем предкам, у которых курсор тоже физически
+  // внутри границ (контейнерные блоки — реальные DOM-родители своих детей,
+  // `.block__content` оборачивает вложенные `.block`) — без `:not(:has(...))`
+  // наведение на вложенный блок подсвечивало (и открывало тулбар у) ВСЕХ
+  // предков разом, до самой секции. `:has(.block:hover)` — «внутри меня
+  // прямо сейчас под курсором лежит блок глубже» — оставляет подсветку
+  // только у самого глубокого наведённого блока, тот же приём и для
+  // `.block__toolbar` ниже.
+  &:hover:not(:has(.block:hover)) {
     outline-color: color-mix(in srgb, #2563eb 45%, transparent);
   }
 }
@@ -60,6 +68,32 @@
   z-index: 30;
 }
 
+// «Здесь окажется блок, если отпустить сейчас» — единственная обратная связь
+// о МЕСТЕ вставки при drag-and-drop раньше была плавающая подпись за
+// курсором (`DragOverlay`, `BuilderDndProvider.tsx`), без всякого намёка на
+// точное место до самого отпускания. `top`/`bottom: -2px` — на границе
+// блока, не внутри нашего же `outline` (см. `.block` выше), поэтому не
+// сливается с ним визуально.
+.block__dropIndicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: #2563eb;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #2563eb 25%, transparent);
+  z-index: 40;
+  pointer-events: none;
+}
+
+.block__dropIndicator--before {
+  top: -2px;
+}
+
+.block__dropIndicator--after {
+  bottom: -2px;
+}
+
 .block__toolbar {
   // Внутри верхней границы блока (не плавает над ним) — если бы тулбар
   // всплывал строго снаружи блока (`top: -29px`), у первого блока страницы
@@ -90,7 +124,7 @@
   }
 }
 
-.block:hover > .block__toolbar,
+.block:hover:not(:has(.block:hover)) > .block__toolbar,
 .block--selected > .block__toolbar {
   display: flex;
 }

@@ -1,7 +1,12 @@
 'use client';
 
 import type { CustomWidget } from '@/entities/custom-widget';
-import { findBlock, findParentId, useWebsiteBuilderStore } from '@/entities/website';
+import {
+  findBlock,
+  findParentId,
+  useWebsiteBuilderStore,
+  type LayoutPattern,
+} from '@/entities/website';
 import { Modal } from '@/shared/ui/Modal';
 import { ComponentLibraryPanel } from './ComponentLibraryPanel';
 import styles from './AddBlockModal.module.scss';
@@ -45,16 +50,18 @@ export function AddBlockModal({ businessId, capabilities }: AddBlockModalProps) 
     closeInsertPicker();
   }
 
-  /** Виджет — уже НЕСКОЛЬКО блоков, а не один, поэтому для него нет аналога
-   * `insertBlockBeside`'s обёртки в колонки (см. `website-store.ts`'s
-   * комментарий на `insertWidgetBlocks` про то, почему). Для 'beside' здесь
-   * сознательно используется тот же sibling-режим, что и для 'sibling' —
-   * блоки виджета вставляются сразу ПОСЛЕ анкора в его собственном родителе
-   * (то же вычисление parentId/индекса анкора, что `insertBlockBeside` в
-   * сторе), не рядом с ним в колонках. */
-  function handleAddWidget(widget: CustomWidget) {
+  /** И виджет, и готовый макет (§45.6) — уже НЕСКОЛЬКО блоков, а не один,
+   * поэтому для них нет аналога `insertBlockBeside`'s обёртки в колонки
+   * (см. `website-store.ts`'s комментарий на `insertWidgetBlocks` про то,
+   * почему). Для 'beside' здесь сознательно используется тот же
+   * sibling-режим, что и для 'sibling' — блоки вставляются сразу ПОСЛЕ
+   * анкора в его собственном родителе (то же вычисление parentId/индекса
+   * анкора, что `insertBlockBeside` в сторе), не рядом с ним в колонках.
+   * Общая для `handleAddWidget`/`handleAddPattern` ниже — разница между
+   * ними только в том, откуда берётся массив блоков. */
+  function insertBlocksAtTarget(blocks: Parameters<typeof insertWidgetBlocks>[0]) {
     if (target.mode === 'sibling') {
-      insertWidgetBlocks(widget.schema, target.parentId, target.index);
+      insertWidgetBlocks(blocks, target.parentId, target.index);
       closeInsertPicker();
       return;
     }
@@ -65,13 +72,17 @@ export function AddBlockModal({ businessId, capabilities }: AddBlockModalProps) 
       const siblings =
         parentId === null ? page.blocks : (findBlock(page.blocks, parentId)?.children ?? []);
       const anchorIndex = siblings.findIndex((block) => block.id === target.anchorId);
-      insertWidgetBlocks(
-        widget.schema,
-        parentId,
-        anchorIndex === -1 ? siblings.length : anchorIndex + 1,
-      );
+      insertWidgetBlocks(blocks, parentId, anchorIndex === -1 ? siblings.length : anchorIndex + 1);
     }
     closeInsertPicker();
+  }
+
+  function handleAddWidget(widget: CustomWidget) {
+    insertBlocksAtTarget(widget.schema);
+  }
+
+  function handleAddPattern(pattern: LayoutPattern) {
+    insertBlocksAtTarget(pattern.build());
   }
 
   return (
@@ -82,6 +93,7 @@ export function AddBlockModal({ businessId, capabilities }: AddBlockModalProps) 
         businessId={businessId}
         onAdd={handleAdd}
         onAddWidget={handleAddWidget}
+        onAddPattern={handleAddPattern}
         capabilities={capabilities}
       />
     </Modal>

@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, type CSSProperties } from 'react';
+import { useCallback, useEffect, type CSSProperties } from 'react';
 import { useCartStore } from '@/entities/cart';
+import { FavoriteButton, useFavoriteStore } from '@/entities/favorite';
 import { getPublicProducts, type PublicProduct } from '@/entities/product';
+import { cn } from '@/shared/lib/cn';
 import { formatMoney } from '@/shared/lib/format-money';
 import { useAsyncData } from '@/shared/lib/use-async-data';
 import { ShoppingBagIcon } from '@/shared/ui/icons';
@@ -72,7 +74,19 @@ function ProductCard({ product, isEditing }: ProductCardProps) {
   }
 
   return (
-    <div className={primitives['simple-card']}>
+    <div className={cn(primitives['simple-card'], styles.card)}>
+      <FavoriteButton
+        className={styles['card__favorite']}
+        isEditing={isEditing}
+        item={{
+          id: product.id,
+          kind: 'product',
+          name: product.name,
+          image: product.images[0] ?? null,
+          priceCents: product.priceCents,
+          currency: product.currency,
+        }}
+      />
       {product.images[0] ? (
         // eslint-disable-next-line @next/next/no-img-element -- превью загруженного пользователем фото товара
         <img src={product.images[0]} alt="" className={primitives['simple-card__image']} />
@@ -108,6 +122,20 @@ function ProductCard({ product, isEditing }: ProductCardProps) {
 function ProductGridRenderer({ props, business, isEditing }: BlockRendererProps<ProductGridProps>) {
   const fetcher = useCallback(() => getPublicProducts(business.businessId), [business.businessId]);
   const { status, data, error } = useAsyncData(fetcher);
+
+  // Раньше самого первого клика по сердечку карточки (`FavoriteButton`) —
+  // не только когда посетитель откроет попап «Избранное» в шапке
+  // (`FavoritesPanel.tsx`, тот вызов покрывает только чтение/отображение).
+  // Без этого `toggle()` с карточки писал бы в `localStorage` под ЧУЖИМ
+  // `businessId`, оставшимся от предыдущего сайта Таверны в этом браузере
+  // (тот же сценарий, что и у `useCartStore.ensureBusiness`, см. её
+  // комментарий) — и при следующем открытии панели избранного этого же
+  // сайта только что добавленный товар молча пропал бы (`ensureBusiness`
+  // увидел бы несовпадение `businessId` и сбросил список).
+  const ensureFavoritesBusiness = useFavoriteStore((state) => state.ensureBusiness);
+  useEffect(() => {
+    ensureFavoritesBusiness(business.businessId);
+  }, [business.businessId, ensureFavoritesBusiness]);
 
   if (status === 'loading') {
     return (

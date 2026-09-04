@@ -3,17 +3,22 @@
 import type { ComponentType } from 'react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { CartWidget } from '@/entities/cart';
 import {
   WebsiteRenderer,
   buildThemeCssVars,
+  pageHasHeaderCartButton,
+  VIEWPORT_FRAME_WIDTH,
   type BlockBusinessContext,
   type Viewport,
   type WebsitePage,
   type WebsiteTheme,
 } from '@/entities/website';
 import { cn } from '@/shared/lib/cn';
+import { useFitZoom } from '@/shared/lib/use-fit-zoom';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
 import { CloseIcon, DesktopIcon, MobileIcon, TabletIcon, type IconProps } from '@/shared/ui/icons';
+import { ZoomIndicator } from './ZoomIndicator';
 import styles from './PreviewModal.module.scss';
 
 const VIEWPORT_OPTIONS: { value: Viewport; icon: ComponentType<IconProps>; label: string }[] = [
@@ -21,12 +26,6 @@ const VIEWPORT_OPTIONS: { value: Viewport; icon: ComponentType<IconProps>; label
   { value: 'tablet', icon: TabletIcon, label: 'Планшет' },
   { value: 'mobile', icon: MobileIcon, label: 'Телефон' },
 ];
-
-const FRAME_WIDTH: Record<Viewport, string> = {
-  desktop: '100%',
-  tablet: '834px',
-  mobile: '390px',
-};
 
 export interface PreviewModalProps {
   page: WebsitePage;
@@ -50,6 +49,8 @@ export interface PreviewModalProps {
  */
 export function PreviewModal({ page, pages, theme, business, onClose }: PreviewModalProps) {
   const [viewport, setViewport] = useState<Viewport>('desktop');
+  const frameWidth = VIEWPORT_FRAME_WIDTH[viewport];
+  const { containerRef, zoom, fitZoom, isFitted, toggleFit } = useFitZoom(frameWidth);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -92,20 +93,40 @@ export function PreviewModal({ page, pages, theme, business, onClose }: PreviewM
         </button>
       </div>
 
-      <ScrollArea className={styles.body} viewportClassName={styles.bodyViewport}>
-        <div
-          className={styles.frame}
-          style={{ ...buildThemeCssVars(theme), width: FRAME_WIDTH[viewport] }}
+      <div className={styles.bodyWrap}>
+        <ScrollArea
+          className={styles.body}
+          viewportClassName={styles.bodyViewport}
+          viewportRef={containerRef}
         >
-          <WebsiteRenderer
-            page={page}
-            pages={pages}
-            theme={theme}
-            viewport={viewport}
-            business={business}
-          />
-        </div>
-      </ScrollArea>
+          <div
+            className={styles.frame}
+            style={{ ...buildThemeCssVars(theme), width: frameWidth, zoom }}
+          >
+            <WebsiteRenderer
+              page={page}
+              pages={pages}
+              theme={theme}
+              viewport={viewport}
+              business={business}
+            />
+          </div>
+        </ScrollArea>
+
+        {fitZoom < 0.999 && (
+          <ZoomIndicator fitZoom={fitZoom} isFitted={isFitted} onToggle={toggleFit} />
+        )}
+      </div>
+
+      {/* Кнопка «Корзина» в шапке (`HeaderActions.tsx`) реально открывает
+       * `useCartStore`'s панель — без своего `<CartWidget>` здесь клик по
+       * ней в Preview был бы тихим no-op (стор поменялся, показывать некому).
+       * `hideFab` всегда true — свой плавающий `.fab` тут не нужен, кнопка
+       * уже есть в шапке (иначе `pageHasHeaderCartButton` не пропустила бы
+       * этот блок сюда). */}
+      {pageHasHeaderCartButton(page.blocks) && (
+        <CartWidget businessId={business.businessId} hideFab />
+      )}
     </div>,
     document.body,
   );

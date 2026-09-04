@@ -8,6 +8,7 @@ import {
   type FieldSchema,
   type WebsiteBlock,
 } from '@/entities/website';
+import { PaletteIcon } from '@/shared/ui/icons';
 import { defaultValueForField } from './field-defaults';
 import { FieldGroup } from './FieldGroup';
 import { LayoutSection } from './LayoutSection';
@@ -61,7 +62,6 @@ export function BlockInspectorForm({ block, businessId }: BlockInspectorFormProp
       {definition.fields.length > 0 && (
         <div className={styles.fields}>
           <FieldGroup
-            resetKey={block.id}
             businessId={businessId}
             wideControls={WIDE_CONTROLS}
             pages={pages}
@@ -87,10 +87,19 @@ export function BlockInspectorForm({ block, businessId }: BlockInspectorFormProp
         </div>
       )}
 
+      {/* Разделитель перед «Раскладкой» — без него секция начиналась сразу
+       * после полей самого блока, без всякой подписи: читалась как случайно
+       * приклеенная снизу вторая форма, а не как осмысленно второй раздел
+       * той же панели. */}
+      <div className={styles.sectionHeading}>
+        <PaletteIcon className={styles['sectionHeading__icon']} />
+        Оформление и раскладка
+      </div>
+
       <LayoutSection
-        blockId={block.id}
         style={block.style}
         businessId={businessId}
+        isContainer={definition.isContainer}
         onChange={(patch) => updateBlockStyle(block.id, patch)}
       />
     </div>

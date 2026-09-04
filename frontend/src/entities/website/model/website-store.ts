@@ -64,6 +64,16 @@ interface WebsiteBuilderState {
    * `insertBlockBeside` ниже) — блоки страницы стоят друг под другом, поэтому
    * «слева/справа» физически возможно только через колонки. */
   insertionTarget: InsertionTarget | null;
+  /** Куда реально попадёт перетаскиваемый (из библиотеки или уже
+   * существующий на холсте) блок, если отпустить его прямо сейчас — только
+   * для блока, НАД которым сейчас идёт наведение при drag-and-drop
+   * (`BuilderDndProvider.tsx`'s `onDragOver`); `null` вне драга и когда
+   * навели на пустую drop-зону (та уже сама подсвечивается через свой
+   * `useDroppable`'s `isOver`, см. `EmptyDropZone.tsx` — второй индикатор
+   * там не нужен). `CanvasBlock.tsx` рисует по нему тонкую линию у своего
+   * верхнего/нижнего края. Эфемерное состояние UI, не часть истории
+   * отмены — как `selectedBlockId`/`viewport`. */
+  dragOverTarget: { blockId: string; position: 'before' | 'after' } | null;
 }
 
 export type InsertionTarget =
@@ -85,6 +95,9 @@ interface WebsiteBuilderActions {
    * `insertBlockBeside`). */
   openInsertPickerBeside: (anchorId: string, side: 'left' | 'right') => void;
   closeInsertPicker: () => void;
+  /** `BuilderDndProvider.tsx`'s `onDragOver`/`onDragEnd`/`onDragCancel` —
+   * см. комментарий у `dragOverTarget` в `WebsiteBuilderStore`. */
+  setDragOverTarget: (target: { blockId: string; position: 'before' | 'after' } | null) => void;
   /** Вставляет новый блок типа `type` СЛЕВА/СПРАВА от блока `anchorId` —
    * оборачивает анкор (со всем его поддеревом) и новый блок в общий
    * `columns` с двумя `column`-детьми, на место, которое раньше занимал сам
@@ -171,6 +184,7 @@ const initialState: WebsiteBuilderState = {
   isDirty: false,
   lastSavedAt: null,
   insertionTarget: null,
+  dragOverTarget: null,
 };
 
 /** Применяет `updater` к активной странице документа и кладёт предыдущее
@@ -263,6 +277,8 @@ export const useWebsiteBuilderStore = create<WebsiteBuilderStore>()((set, get) =
     set({ insertionTarget: { mode: 'beside', anchorId, side } }),
 
   closeInsertPicker: () => set({ insertionTarget: null }),
+
+  setDragOverTarget: (target) => set({ dragOverTarget: target }),
 
   addBlock: (type, parentId, index) => {
     const id = createBlockId();

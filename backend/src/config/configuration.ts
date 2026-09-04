@@ -128,6 +128,17 @@ export interface AppConfig {
    * анализировать каждый request" — периодически/по событию, не на каждый
    * запрос). Дефолт — 30 минут, как в собственном примере задачи. */
   aiRecommendationIntervalMs: number;
+
+  /** Через сколько часов после загрузки файл в `uploads/messages/`, ни разу
+   * не привязанный ни к одному отправленному сообщению (`MessageAttachment`
+   * — ни AI-чата, ни обычного мессенджера), считается брошенным и
+   * подчищается (`UploadsRetentionService`, AI_PLATFORM_ROADMAP.md §43).
+   * 24 часа — с большим запасом относительно того, сколько реально длится
+   * один ход AI-чата (секунды-минуты), чтобы не задеть ничего ещё в работе. */
+  uploadOrphanTtlHours: number;
+  /** Как часто гонять сам обход `uploads/messages/` на брошенные файлы —
+   * фоновая уборка, не времячувствительная операция, реже, чем AI-агрегация. */
+  uploadOrphanSweepIntervalMs: number;
 }
 
 export default (): { app: AppConfig } => {
@@ -191,6 +202,11 @@ export default (): { app: AppConfig } => {
       aiAnomalyRetrySpikeThreshold: Number(process.env.AI_ANOMALY_RETRY_SPIKE_THRESHOLD ?? 5),
 
       aiRecommendationIntervalMs: Number(process.env.AI_RECOMMENDATION_INTERVAL_MS ?? 30 * 60_000),
+
+      uploadOrphanTtlHours: Number(process.env.UPLOAD_ORPHAN_TTL_HOURS ?? 24),
+      uploadOrphanSweepIntervalMs: Number(
+        process.env.UPLOAD_ORPHAN_SWEEP_INTERVAL_MS ?? 6 * 60 * 60_000,
+      ),
     },
   };
 };

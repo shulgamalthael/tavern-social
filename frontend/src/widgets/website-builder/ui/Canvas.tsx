@@ -5,15 +5,18 @@ import {
   buildThemeCssVars,
   GoogleFontLink,
   useWebsiteBuilderStore,
+  VIEWPORT_FRAME_WIDTH,
   type BlockBusinessContext,
   type WebsitePage,
   type WebsiteTheme,
 } from '@/entities/website';
+import { useFitZoom } from '@/shared/lib/use-fit-zoom';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
 import { BlockInsertCross } from './BlockInsertCross';
 import { CanvasBlock } from './CanvasBlock';
 import { EmptyDropZone } from './EmptyDropZone';
 import { SortableList } from './SortableList';
+import { ZoomIndicator } from './ZoomIndicator';
 import styles from './Canvas.module.scss';
 
 export interface CanvasProps {
@@ -23,7 +26,6 @@ export interface CanvasProps {
   pages: WebsitePage[];
   theme: WebsiteTheme;
   business: BlockBusinessContext;
-  viewportWidth: string;
 }
 
 /**
@@ -39,45 +41,54 @@ export interface CanvasProps {
  * блоков через `SortableList`/`CanvasBlock`, пустая drop-зона для пустой
  * страницы.
  */
-export function Canvas({ page, pages, theme, business, viewportWidth }: CanvasProps) {
+export function Canvas({ page, pages, theme, business }: CanvasProps) {
   const viewport = useWebsiteBuilderStore((state) => state.viewport);
   const selectEmpty = useWebsiteBuilderStore((state) => state.selectBlock);
 
   const themeVars = useMemo(() => buildThemeCssVars(theme), [theme]);
+  const frameWidth = VIEWPORT_FRAME_WIDTH[viewport];
+  const { containerRef, zoom, fitZoom, isFitted, toggleFit } = useFitZoom(frameWidth);
 
   return (
-    <ScrollArea
-      className={styles.canvasRoot}
-      viewportClassName={styles.viewport}
-      onClick={() => selectEmpty(null)}
-    >
-      <div className={styles.frame} style={{ ...themeVars, width: viewportWidth }}>
-        <GoogleFontLink theme={theme} />
-        <div className={styles.page} onClick={(event) => event.stopPropagation()}>
-          {page.blocks.length > 0 ? (
-            <SortableList id="root" items={page.blocks.map((block) => block.id)}>
-              {page.blocks.map((block, index) => (
-                <BlockInsertCross key={block.id} blockId={block.id} parentId={null} index={index}>
-                  <CanvasBlock
-                    block={block}
-                    theme={theme}
-                    viewport={viewport}
-                    business={business}
-                    pages={pages}
-                  />
-                </BlockInsertCross>
-              ))}
-            </SortableList>
-          ) : (
-            <div className={styles.empty}>
-              <EmptyDropZone
-                containerId={null}
-                label="Перетащите или нажмите, чтобы добавить первый компонент"
-              />
-            </div>
-          )}
+    <div className={styles.canvasWrap}>
+      <ScrollArea
+        className={styles.canvasRoot}
+        viewportClassName={styles.viewport}
+        viewportRef={containerRef}
+        onClick={() => selectEmpty(null)}
+      >
+        <div className={styles.frame} style={{ ...themeVars, width: frameWidth, zoom }}>
+          <GoogleFontLink theme={theme} />
+          <div className={styles.page} onClick={(event) => event.stopPropagation()}>
+            {page.blocks.length > 0 ? (
+              <SortableList id="root" items={page.blocks.map((block) => block.id)}>
+                {page.blocks.map((block, index) => (
+                  <BlockInsertCross key={block.id} blockId={block.id} parentId={null} index={index}>
+                    <CanvasBlock
+                      block={block}
+                      theme={theme}
+                      viewport={viewport}
+                      business={business}
+                      pages={pages}
+                    />
+                  </BlockInsertCross>
+                ))}
+              </SortableList>
+            ) : (
+              <div className={styles.empty}>
+                <EmptyDropZone
+                  containerId={null}
+                  label="Перетащите или нажмите, чтобы добавить первый компонент"
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </ScrollArea>
+      </ScrollArea>
+
+      {fitZoom < 0.999 && (
+        <ZoomIndicator fitZoom={fitZoom} isFitted={isFitted} onToggle={toggleFit} />
+      )}
+    </div>
   );
 }

@@ -7,6 +7,7 @@ import {
 import type { Prisma, WebsitePage as WebsitePageRow } from '@prisma/client';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import type { UpdateWebsiteDocumentDto } from './dto/update-website-document.dto';
+import { sanitizeRichBlocks } from './lib/sanitize-rich-blocks';
 import type {
   WebsiteDocument,
   WebsiteDraftDto,
@@ -63,7 +64,10 @@ export class WebsitesService {
     dto: UpdateWebsiteDocumentDto,
   ): Promise<WebsiteDraftDto> {
     const website = await this.findOwned(businessId, ownerId);
-    const incomingPages = this.validatePages(dto.pages);
+    const incomingPages = this.validatePages(dto.pages).map((page) => ({
+      ...page,
+      blocks: sanitizeRichBlocks(page.blocks),
+    }));
 
     await this.prisma.$transaction(async (tx) => {
       const incomingIds = incomingPages.map((page) => page.id);

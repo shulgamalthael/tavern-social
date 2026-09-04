@@ -1,7 +1,14 @@
 import type { CSSProperties } from 'react';
 import { readResponsiveProp } from './registry';
 import { BLOCK_SHADOW_VALUE, BORDER_WIDTH_PX, SPACING_PX } from './theme-tokens';
-import type { BlockStyle, ContainerWidth, SpacingValue, StyleValue, Viewport } from './types';
+import type {
+  BlockStyle,
+  ContainerWidth,
+  LayoutDirection,
+  SpacingValue,
+  StyleValue,
+  Viewport,
+} from './types';
 
 /** `SpacingValue` → CSS-длина — именованный пресет читает `SPACING_PX`
  * (`theme-tokens.ts`), число — произвольный px (см. `SpacingValue` в
@@ -130,6 +137,87 @@ function borderAndShadowStyle(blockStyle: BlockStyle): CSSProperties {
 export interface BlockWrapperStyle {
   outer: CSSProperties;
   inner: CSSProperties;
+  /** Стиль раскладки САМОГО этого блока как контейнера для своих детей
+   * (`display`/`flexDirection`/`gap`/... — см. `BlockStyle`'s раздел
+   * «Раскладка» в `types.ts`) — в отличие от `outer`/`inner`, это не
+   * обёртка ВОКРУГ блока, а стиль, который применяет НА СЕБЯ сам `Renderer`
+   * контейнерного блока (`section`/`container`/`columns`,
+   * `blocks/layout/index.tsx`) поверх своего SCSS-класса. Пустой объект
+   * (`display` не задан/`'block'`) — старое поведение блока без изменений. */
+  layout: CSSProperties;
+}
+
+const JUSTIFY_CONTENT: Record<NonNullable<BlockStyle['justify']>, string> = {
+  start: 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+  'space-between': 'space-between',
+  'space-around': 'space-around',
+};
+
+const ALIGN_ITEMS: Record<NonNullable<BlockStyle['align']>, string> = {
+  start: 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+  stretch: 'stretch',
+};
+
+/** Раскладка блока-контейнера для своих детей (`BlockWrapperStyle.layout`)
+ * — `display: 'block'`/не задано оставляет объект пустым, ничего не
+ * переопределяя поверх SCSS-класса блока (`layout.module.scss`), так
+ * документы без этих полей выглядят ровно как раньше. */
+function layoutStyle(blockStyle: BlockStyle, viewport: Viewport): CSSProperties {
+  const display = readResponsiveProp<BlockStyle['display']>(blockStyle.display, viewport, 'block');
+  if (!display || display === 'block') return {};
+
+  const gap = spacingToPx(
+    readResponsiveProp<SpacingValue | undefined>(blockStyle.gap, viewport, undefined),
+  );
+  const justifyContent = blockStyle.justify ? JUSTIFY_CONTENT[blockStyle.justify] : undefined;
+  const alignItems = blockStyle.align ? ALIGN_ITEMS[blockStyle.align] : undefined;
+
+  if (display === 'grid') {
+    const columns = readResponsiveProp<number | undefined>(blockStyle.gridColumns, viewport, 3);
+    return {
+      display: 'grid',
+      gridTemplateColumns: `repeat(${columns}, 1fr)`,
+      gap,
+      justifyContent,
+      alignItems,
+    };
+  }
+
+  const direction = readResponsiveProp<LayoutDirection>(blockStyle.direction, viewport, 'row');
+
+  return {
+    display: 'flex',
+    flexDirection: direction === 'column' ? 'column' : 'row',
+    flexWrap: blockStyle.wrap ? 'wrap' : 'nowrap',
+    gap,
+    justifyContent,
+    alignItems,
+  };
+}
+
+/** Раскладка блока КАК РЕБЁНКА чужого flex/grid-ряда (`grow`/`fixedWidth`)
+ * плюс `sticky` — оба идут на `outer` (см. `BlockRenderer.tsx`: `outer` —
+ * самый внешний DOM-узел блока, то есть ровно тот, что становится flex/
+ * grid-item'ом родителя). Безопасный no-op на любом родителе, который сам
+ * не flex/grid — браузер просто игнорирует `flex`/`align-self` вне
+ * flex/grid-контекста. */
+function childLayoutStyle(blockStyle: BlockStyle): CSSProperties {
+  const sizing: CSSProperties =
+    blockStyle.grow === 'fixed' && blockStyle.fixedWidth
+      ? { flex: `0 0 ${blockStyle.fixedWidth}px` }
+      : blockStyle.grow === 'grow'
+        ? { flex: '1 1 0%', minWidth: 0 }
+        : {};
+
+  const stickyStyle: CSSProperties = blockStyle.sticky
+    ? { position: 'sticky', top: `${blockStyle.stickyOffset ?? 0}px`, alignSelf: 'flex-start' }
+    : {};
+
+  return { ...sizing, ...stickyStyle };
 }
 
 /** Сторона отступа в режиме «Дополнительно» (`blockStyle.customPadding`,
@@ -207,6 +295,7 @@ export function computeBlockWrapperStyle(
   const left = resolveSide(blockStyle.paddingLeft, viewport, blockStyle.customPadding, paddingX);
 
   const outer: CSSProperties = {
+    ...childLayoutStyle(blockStyle),
     background: backgroundValue(blockStyle),
     // Переобъявляем `color` тем же `--site-text`, что уже наследовался бы и
     // без этой строки НА САМОМ ДЕЛЕ ЖЕ ЗНАЧЕНИИ — но `color: inherit` внутри
@@ -237,5 +326,5 @@ export function computeBlockWrapperStyle(
     textAlign: blockStyle.textAlign,
   };
 
-  return { outer, inner };
+  return { outer, inner, layout: layoutStyle(blockStyle, viewport) };
 }

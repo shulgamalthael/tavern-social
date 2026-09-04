@@ -7,6 +7,7 @@ import { getBusiness, type Business } from '@/entities/business';
 import {
   WebsiteRenderer,
   getPublicWebsite,
+  pageHasHeaderCartButton,
   useRealViewport,
   type BlockBusinessContext,
   type PublicWebsite,
@@ -154,7 +155,10 @@ export function BusinessPageWidget({ businessId }: BusinessPageWidgetProps) {
             business={businessContext}
           />
           {capabilities.includes('commerce') && (
-            <CartWidget businessId={businessContext.businessId} />
+            <CartWidget
+              businessId={businessContext.businessId}
+              hideFab={pageHasHeaderCartButton(document.pages[0].blocks)}
+            />
           )}
         </ScrollArea>
       ) : (

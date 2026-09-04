@@ -6,19 +6,22 @@
   color: var(--site-text);
 }
 
+// `white-space: pre-wrap` больше не нужен здесь — раньше `text`/`richtext`
+// хранились как обычная строка с литеральными `\n` для переносов, теперь
+// это HTML (`<p>`-абзацы через `EditableRichText`/Tiptap, см. `index.tsx`),
+// переносы — обычные блочные элементы, `pre-wrap` только задвоил бы отступы
+// на реальных переносах строк ВНУТРИ самой HTML-строки.
 .text {
   margin: 0;
   color: var(--site-text);
   font-size: 15.5px;
   line-height: 1.65;
-  white-space: pre-wrap;
 }
 
 .richtext {
   color: var(--site-text);
   font-size: 15.5px;
   line-height: 1.75;
-  white-space: pre-wrap;
 }
 
 .quote {

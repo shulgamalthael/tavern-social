@@ -32,6 +32,7 @@
 .biz-header__nav {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 22px;
 
   a {
@@ -46,21 +47,99 @@
   }
 }
 
+// Пункт меню с подпунктами (`NavItem`, `index.tsx`) — та же типографика, что
+// у соседних `<a>`, но `<button>` (открывает `Popover`), поэтому шрифт/цвет
+// не наследуются от `.biz-header__nav a` автоматически — дублируем явно.
+.biz-header__navButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    color: var(--site-primary);
+  }
+}
+
+.biz-header__dropdown {
+  min-width: 180px;
+  padding: 6px;
+  background: var(--site-surface);
+  border-color: var(--site-border);
+}
+
+.biz-header__dropdownList {
+  display: flex;
+  flex-direction: column;
+
+  a {
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--site-text);
+    font-size: 14px;
+    text-decoration: none;
+
+    &:hover {
+      background: var(--site-background);
+      color: var(--site-primary);
+    }
+  }
+}
+
 // --- Hero --------------------------------------------------------------
 
 .hero {
+  // `relative`+`hidden` — контейнер для `.hero__bg`/`.hero__overlay` слоёв
+  // ниже (параллакс двигает `.hero__bg` за пределы своей рамки, `hidden`
+  // не даёт ему вылезти за скруглённые углы блока).
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--site-radius);
+}
+
+.hero__bg {
+  position: absolute;
+  // Запас сверху/снизу — при параллаксе `.hero__bg` двигается по Y
+  // (`use-parallax-offset.ts`), без запаса был бы виден край картинки.
+  inset: -15% 0;
+  background-position: center;
+  background-size: cover;
+  will-change: transform;
+}
+
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+  // Тот же тёмный нейтральный оверлей, что и раньше — не цвет темы (на
+  // ярких акцентах красил бы фото в сплошной цвет вместо лёгкого
+  // затемнения под текст).
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.hero__content {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  border-radius: var(--site-radius);
-  background-position: center;
-  background-size: cover;
+}
 
-  &[data-has-image='true'] {
-    padding: 48px 32px;
-    color: #ffffff;
-  }
+.hero[data-has-image='true'] .hero__content {
+  padding: 48px 32px;
+  color: #ffffff;
 }
 
 .hero__eyebrow {
@@ -139,6 +218,19 @@
 
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
+  }
+}
+
+// «Зигзаг»-раскладка (см. `imagePosition` в `index.tsx`) — `order` меняет
+// визуальную сторону без изменения DOM (доступность/порядок чтения не
+// страдают), колонки-доли зеркалятся вместе с ним, чтобы текстовая колонка
+// оставалась чуть шире независимо от стороны — не только позиция едет, а
+// не пропорции остаются от исходной раскладки.
+.about--image-left {
+  grid-template-columns: 1fr 1.1fr;
+
+  .about__body {
+    order: 2;
   }
 }
 

@@ -74,19 +74,21 @@
   // тогда были осмысленным потолком. Теперь панель всегда на всю ширину
   // экрана (раскладной «второй хедер» на десктопе, полноэкранная вкладка на
   // телефоне/планшете, см. `WebsiteBuilderWidget.module.scss`) — авто-сетка
-  // из карточек ~150px вместо фиксированных колонок использует эту ширину
-  // по максимуму на любом экране.
+  // из карточек ~170px вместо фиксированных колонок использует эту ширину
+  // по максимуму на любом экране. Чуть шире, чем раньше (было 150px) — теперь
+  // карточка показывает живое превью блока (`BlockThumbnail`), не просто
+  // маленькую иконку, и ему нужно больше места, чтобы быть узнаваемым.
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
 }
 
 .item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 10px 10px 9px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 8px 9px;
   border: 1px solid var(--tavern-line);
   border-radius: var(--tavern-radius-control);
   background: var(--tavern-surface);
@@ -119,17 +121,6 @@
   }
 }
 
-.item__icon {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
-  background: var(--tavern-soft);
-  color: var(--tavern-accent);
-
-  svg {
-    width: 14px;
-    height: 14px;
-  }
+.item__label {
+  padding: 0 2px;
 }

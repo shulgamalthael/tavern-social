@@ -4,10 +4,15 @@
  * местами показа одного и того же факта "AI выполнил X". */
 const TOOL_LABELS: Record<string, string> = {
   get_project_tree: 'Прочитал структуру сайта',
+  get_page_blocks: 'Прочитал блоки страницы',
+  get_block: 'Прочитал блок',
+  get_block_schema: 'Посмотрел справочник блоков',
   create_page: 'Создал страницу',
   add_block: 'Добавил блок',
   update_block_props: 'Изменил блок',
   set_style: 'Изменил оформление блока',
+  move_block: 'Переместил блок',
+  delete_block: 'Удалил блок',
   list_media_assets: 'Посмотрел загруженные файлы',
   create_custom_widget: 'Сохранил виджет',
   get_wallet_info: 'Проверил кошелёк',

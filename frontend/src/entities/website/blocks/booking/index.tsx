@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { BookingModal } from '@/entities/appointment';
+import { FavoriteButton, useFavoriteStore } from '@/entities/favorite';
 import { getPublicServices, formatDuration, type PublicService } from '@/entities/service';
+import { cn } from '@/shared/lib/cn';
 import { formatMoney } from '@/shared/lib/format-money';
 import { useAsyncData } from '@/shared/lib/use-async-data';
 import { CalendarIcon } from '@/shared/ui/icons';
@@ -48,7 +50,19 @@ function ServiceCard({ service, businessId, isEditing }: ServiceCardProps) {
   const [isBooking, setBooking] = useState(false);
 
   return (
-    <div className={primitives['simple-card']}>
+    <div className={cn(primitives['simple-card'], styles.card)}>
+      <FavoriteButton
+        className={styles['card__favorite']}
+        isEditing={isEditing}
+        item={{
+          id: service.id,
+          kind: 'service',
+          name: service.name,
+          image: service.images[0] ?? null,
+          priceCents: service.priceCents,
+          currency: service.currency,
+        }}
+      />
       {service.images[0] ? (
         // eslint-disable-next-line @next/next/no-img-element -- превью загруженного пользователем фото услуги
         <img src={service.images[0]} alt="" className={primitives['simple-card__image']} />
@@ -90,6 +104,14 @@ function ServiceCard({ service, businessId, isEditing }: ServiceCardProps) {
 function ServiceGridRenderer({ props, business, isEditing }: BlockRendererProps<ServiceGridProps>) {
   const fetcher = useCallback(() => getPublicServices(business.businessId), [business.businessId]);
   const { status, data, error } = useAsyncData(fetcher);
+
+  // См. тот же вызов и его комментарий в `ProductGridRenderer`
+  // (`blocks/commerce/index.tsx`) — здесь нужен по той же причине,
+  // `ServiceCard` тоже рендерит `FavoriteButton`.
+  const ensureFavoritesBusiness = useFavoriteStore((state) => state.ensureBusiness);
+  useEffect(() => {
+    ensureFavoritesBusiness(business.businessId);
+  }, [business.businessId, ensureFavoritesBusiness]);
 
   if (status === 'loading') {
     return (

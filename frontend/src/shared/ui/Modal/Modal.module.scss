@@ -5,7 +5,15 @@
 .modal {
   position: fixed;
   inset: 0;
-  z-index: 110;
+  // 130, не 110 — должна перекрывать `PreviewModal` (z-index 120,
+  // `widgets/website-builder/ui/PreviewModal.module.scss`): кнопка
+  // «Корзина» в шапке сайта (`HeaderActions.tsx`) открывает `CartWidget`'s
+  // модалку (эту же) и внутри Preview владельца, не только на реальном
+  // публичном сайте — оформление заказа должно быть видно поверх
+  // предпросмотра, не под ним. Тот же топ-уровневый z-index, что уже
+  // используют `PagesSection`/`ProductsSection`/`PagesPanel` (business-
+  // dashboard) для своих модалок.
+  z-index: 130;
   display: flex;
   align-items: center;
   justify-content: center;

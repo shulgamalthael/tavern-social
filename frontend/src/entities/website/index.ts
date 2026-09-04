@@ -28,6 +28,7 @@ export type {
   FieldSchema,
   SelectOption,
 } from './model/registry';
+export { pageHasHeaderCartButton } from './model/page-has-header-cart-button';
 export { isBlockHidden, resolveResponsive } from './model/resolve-responsive';
 export { describeLinkTarget, EMPTY_LINK_TARGET, resolveLinkHref } from './model/resolve-link';
 export { resolveSitePage } from './model/resolve-site-page';
@@ -41,8 +42,15 @@ export {
   CARD_BORDER_OPTIONS,
   CARD_SHADOW_OPTIONS,
   CONTAINER_WIDTH_OPTIONS,
+  ENTRANCE_ANIMATION_OPTIONS,
   FONT_CHOICE_OPTIONS,
   GRADIENT_TYPE_OPTIONS,
+  GRID_COLUMNS_OPTIONS,
+  LAYOUT_ALIGN_OPTIONS,
+  LAYOUT_DIRECTION_OPTIONS,
+  LAYOUT_DISPLAY_OPTIONS,
+  LAYOUT_GROW_OPTIONS,
+  LAYOUT_JUSTIFY_OPTIONS,
   RADIUS_OPTIONS,
   SECTION_SPACING_OPTIONS,
   SPACING_PX,
@@ -53,11 +61,17 @@ export {
 } from './model/theme-tokens';
 export { GOOGLE_FONT_OPTIONS } from './model/google-fonts';
 export type { GoogleFontId } from './model/google-fonts';
+export { LAYOUT_PATTERNS } from './model/layout-patterns';
+export type { LayoutPattern } from './model/layout-patterns';
 export type {
   Background,
   ContainerWidth,
   DataSourceValue,
   FontChoice,
+  LayoutAlign,
+  LayoutDirection,
+  LayoutDisplay,
+  LayoutJustify,
   ResponsiveValue,
   SectionSpacing,
   SpacingSize,
@@ -76,6 +90,7 @@ export type {
   WebsiteTheme,
   WebsiteThemeColors,
 } from './model/types';
+export { VIEWPORT_FRAME_WIDTH } from './model/types';
 export { useAutosave } from './model/use-autosave';
 export { useRealViewport } from './model/use-real-viewport';
 export { useWebsiteBuilderStore } from './model/website-store';
@@ -95,5 +110,7 @@ export { BLANK_TEMPLATE_ICON, STARTER_TEMPLATES } from './templates';
 export type { StarterTemplate } from './templates';
 
 export { BlockRenderer } from './ui/BlockRenderer';
+export { BlockThumbnail } from './ui/BlockThumbnail';
+export { LayoutPatternThumbnail } from './ui/LayoutPatternThumbnail';
 export { GoogleFontLink } from './ui/GoogleFontLink';
 export { WebsiteRenderer } from './ui/WebsiteRenderer';

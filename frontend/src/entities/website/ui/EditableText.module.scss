@@ -1,0 +1,24 @@
+.editable {
+  cursor: text;
+  border-radius: 4px;
+  outline: 1px dashed transparent;
+  outline-offset: 4px;
+  transition:
+    outline-color 0.12s ease,
+    background-color 0.12s ease;
+
+  &:hover {
+    outline-color: color-mix(in srgb, #2563eb 35%, transparent);
+  }
+}
+
+.editable--active {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+  background: color-mix(in srgb, #2563eb 6%, transparent);
+}
+
+.editable--empty {
+  color: color-mix(in srgb, currentcolor 45%, transparent);
+  font-style: italic;
+}

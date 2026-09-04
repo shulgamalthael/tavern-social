@@ -16,6 +16,8 @@ export function defaultValueForField(field: FieldSchema): unknown {
       return field.min ?? 0;
     case 'select':
     case 'spacing':
+    case 'scale':
+    case 'segmented':
       return field.options[0]?.value ?? '';
     case 'color':
       return '#2563eb';

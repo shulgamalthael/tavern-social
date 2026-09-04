@@ -9,6 +9,9 @@ import {
   LocationIcon,
   MailIcon,
 } from '@/shared/ui/icons';
+import { cn } from '@/shared/lib/cn';
+import { Popover } from '@/shared/ui/Popover';
+import { useParallaxOffset } from '../../lib/use-parallax-offset';
 import { registerBlock, type BlockRendererProps, type FieldSchema } from '../../model/registry';
 import { EMPTY_LINK_TARGET, resolveLinkHref } from '../../model/resolve-link';
 import type { LinkTarget } from '../../model/types';
@@ -16,27 +19,81 @@ import { RepeatableIconCards } from '../shared/RepeatableIconCards';
 import { RepeatablePeopleCards } from '../shared/RepeatablePeopleCards';
 import { ICON_CHOICE_OPTIONS, resolveIconChoice } from '../shared/icon-choices';
 import { SectionHeading } from '../shared/SectionHeading';
+import { HeaderActions } from './HeaderActions';
 import styles from './business.module.scss';
 
 // --- Business Header ---------------------------------------------------
 // Свёрнутые вместе «Header»/«Navbar»/«Business Header» из ТЗ (см. корневой
 // план фичи, раздел про упрощения) — один блок навигации сайта, сам
 // подставляет лого и имя бизнеса, пользователь настраивает только ссылки
-// меню.
+// меню. `children` у пункта меню (простой одноуровневый дропдаун, не
+// многоколоночное мега-меню — см. AI_PLATFORM_ROADMAP.md, партия «шапка с
+// попапами») переиспользует ту же рекурсивную поддержку `control: 'list'`
+// внутри `itemFields`, что уже есть у `FieldControl.tsx` — новой
+// инфраструктуры инспектора для этого не потребовалось.
 
-interface NavLink {
+interface SubNavLink {
   label: string;
   url: LinkTarget;
 }
 
+interface NavLink {
+  label: string;
+  url: LinkTarget;
+  children?: SubNavLink[];
+}
+
 interface BusinessHeaderProps {
   navLinks: NavLink[];
+  showSearch: boolean;
+  showFavorites: boolean;
+  showCart: boolean;
+}
+
+interface NavItemProps {
+  link: NavLink;
+  pages: BlockRendererProps<BusinessHeaderProps>['pages'];
+}
+
+function NavItem({ link, pages }: NavItemProps) {
+  if (!link.children || link.children.length === 0) {
+    return <a href={resolveLinkHref(link.url, pages)}>{link.label}</a>;
+  }
+
+  return (
+    <Popover
+      panelLabel={link.label}
+      panelClassName={styles['biz-header__dropdown']}
+      trigger={({ open, toggle }) => (
+        <button
+          type="button"
+          className={styles['biz-header__navButton']}
+          aria-expanded={open}
+          onClick={toggle}
+        >
+          {link.label}
+          <ChevronDownIcon />
+        </button>
+      )}
+    >
+      {() => (
+        <div className={styles['biz-header__dropdownList']}>
+          {link.children?.map((child, index) => (
+            <a key={index} href={resolveLinkHref(child.url, pages)}>
+              {child.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </Popover>
+  );
 }
 
 function BusinessHeaderRenderer({
   props,
   business,
   pages,
+  isEditing,
 }: BlockRendererProps<BusinessHeaderProps>) {
   return (
     <header className={styles['biz-header']}>
@@ -50,12 +107,17 @@ function BusinessHeaderRenderer({
       {props.navLinks.length > 0 && (
         <nav className={styles['biz-header__nav']}>
           {props.navLinks.map((link, index) => (
-            <a key={index} href={resolveLinkHref(link.url, pages)}>
-              {link.label}
-            </a>
+            <NavItem key={index} link={link} pages={pages} />
           ))}
         </nav>
       )}
+      <HeaderActions
+        businessId={business.businessId}
+        showSearch={props.showSearch}
+        showFavorites={props.showFavorites}
+        showCart={props.showCart}
+        isEditing={isEditing}
+      />
     </header>
   );
 }
@@ -70,8 +132,22 @@ const businessHeaderFields: FieldSchema[] = [
     itemFields: [
       { key: 'label', label: 'Текст', control: 'text' },
       { key: 'url', label: 'Ссылка', control: 'link' },
+      {
+        key: 'children',
+        label: 'Подпункты (выпадающий список)',
+        control: 'list',
+        itemLabel: 'Подпункт',
+        max: 6,
+        itemFields: [
+          { key: 'label', label: 'Текст', control: 'text' },
+          { key: 'url', label: 'Ссылка', control: 'link' },
+        ],
+      },
     ],
   },
+  { key: 'showSearch', label: 'Кнопка поиска', control: 'toggle' },
+  { key: 'showFavorites', label: 'Кнопка «Избранное»', control: 'toggle' },
+  { key: 'showCart', label: 'Кнопка «Корзина»', control: 'toggle' },
 ];
 
 registerBlock<BusinessHeaderProps>({
@@ -79,13 +155,16 @@ registerBlock<BusinessHeaderProps>({
   label: 'Шапка сайта',
   category: 'business',
   icon: GlobeIcon,
-  description: 'Лого, название и меню — верх страницы',
+  description: 'Лого, название, меню и кнопки — верх страницы',
   defaultProps: {
     navLinks: [
       { label: 'О нас', url: { type: 'anchor', anchor: 'about' } },
       { label: 'Услуги', url: { type: 'anchor', anchor: 'services' } },
       { label: 'Контакты', url: { type: 'anchor', anchor: 'contact' } },
     ],
+    showSearch: true,
+    showFavorites: true,
+    showCart: false,
   },
   fields: businessHeaderFields,
   Renderer: BusinessHeaderRenderer,
@@ -98,6 +177,9 @@ interface HeroProps {
   heading: string;
   description: string;
   backgroundImage: string | null;
+  /** Только когда `backgroundImage` заполнен — фон едет медленнее контента
+   * при прокрутке (`entities/website/lib/use-parallax-offset.ts`). */
+  parallaxBackground: boolean;
   buttonLabel: string;
   buttonUrl: LinkTarget;
   secondaryLabel: string;
@@ -105,38 +187,60 @@ interface HeroProps {
 }
 
 function HeroRenderer({ props, pages }: BlockRendererProps<HeroProps>) {
+  const hasImage = Boolean(props.backgroundImage);
+  // Деструктурируется сразу, не хранится как единый объект `parallax.ref`/
+  // `parallax.offsetY` — см. комментарий у аналогичного места в
+  // `BlockRenderer.tsx` (React Compiler иначе тянет «это реф» на весь объект).
+  const { ref: parallaxRef, offsetY: parallaxOffsetY } = useParallaxOffset(
+    hasImage && props.parallaxBackground,
+  );
+
   return (
-    <div
-      className={styles.hero}
-      style={
-        props.backgroundImage
-          ? {
-              backgroundImage: `linear-gradient(color-mix(in srgb, var(--site-secondary) 55%, transparent), color-mix(in srgb, var(--site-secondary) 55%, transparent)), url(${props.backgroundImage})`,
-            }
-          : undefined
-      }
-      data-has-image={Boolean(props.backgroundImage)}
-    >
-      {props.eyebrow && <span className={styles.hero__eyebrow}>{props.eyebrow}</span>}
-      <h1 className={styles.hero__heading}>{props.heading}</h1>
-      {props.description && <p className={styles.hero__description}>{props.description}</p>}
-      <div className={styles.hero__actions}>
-        {props.buttonLabel && (
-          <a
-            href={resolveLinkHref(props.buttonUrl, pages)}
-            className={styles['hero__button--primary']}
-          >
-            {props.buttonLabel}
-          </a>
-        )}
-        {props.secondaryLabel && (
-          <a
-            href={resolveLinkHref(props.secondaryUrl, pages)}
-            className={styles['hero__button--secondary']}
-          >
-            {props.secondaryLabel}
-          </a>
-        )}
+    <div className={styles.hero} data-has-image={hasImage}>
+      {hasImage && (
+        <>
+          {/* Разнесено на слои (фон / затемнение / контент), не единый
+           * `backgroundImage`-шорткат с градиентом поверх — иначе параллаксу
+           * нечего было бы двигать отдельно от текста. `inset: -15% 0` —
+           * запас по вертикали, чтобы `translateY` при параллаксе не
+           * обнажал край картинки. */}
+          <div
+            ref={parallaxRef}
+            className={styles.hero__bg}
+            style={{
+              backgroundImage: `url(${props.backgroundImage})`,
+              transform: parallaxOffsetY ? `translateY(${parallaxOffsetY}px)` : undefined,
+            }}
+          />
+          {/* Тот же тёмный нейтральный оверлей, что и раньше (не цвет темы —
+           * на ярких акцентах красил бы фото в сплошной цвет вместо лёгкого
+           * затемнения под текст), теперь отдельным слоем, а не вторым
+           * стопом того же `linear-gradient`. */}
+          <div className={styles.hero__overlay} />
+        </>
+      )}
+      <div className={styles.hero__content}>
+        {props.eyebrow && <span className={styles.hero__eyebrow}>{props.eyebrow}</span>}
+        <h1 className={styles.hero__heading}>{props.heading}</h1>
+        {props.description && <p className={styles.hero__description}>{props.description}</p>}
+        <div className={styles.hero__actions}>
+          {props.buttonLabel && (
+            <a
+              href={resolveLinkHref(props.buttonUrl, pages)}
+              className={styles['hero__button--primary']}
+            >
+              {props.buttonLabel}
+            </a>
+          )}
+          {props.secondaryLabel && (
+            <a
+              href={resolveLinkHref(props.secondaryUrl, pages)}
+              className={styles['hero__button--secondary']}
+            >
+              {props.secondaryLabel}
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -147,6 +251,11 @@ const heroFields: FieldSchema[] = [
   { key: 'heading', label: 'Заголовок', control: 'text' },
   { key: 'description', label: 'Подзаголовок', control: 'textarea', rows: 2 },
   { key: 'backgroundImage', label: 'Фоновое изображение', control: 'image' },
+  {
+    key: 'parallaxBackground',
+    label: 'Параллакс фона (работает только с изображением)',
+    control: 'toggle',
+  },
   { key: 'buttonLabel', label: 'Текст кнопки', control: 'text' },
   { key: 'buttonUrl', label: 'Ссылка кнопки', control: 'link' },
   { key: 'secondaryLabel', label: 'Вторая кнопка — текст', control: 'text' },
@@ -164,6 +273,7 @@ registerBlock<HeroProps>({
     heading: 'Название вашего бизнеса',
     description: 'Короткое и цепляющее описание того, чем вы занимаетесь.',
     backgroundImage: null,
+    parallaxBackground: false,
     buttonLabel: 'Связаться с нами',
     buttonUrl: { type: 'anchor', anchor: 'contact' },
     secondaryLabel: '',
@@ -181,11 +291,19 @@ interface AboutProps {
   heading: string;
   text: string;
   image: string | null;
+  /** По какую сторону фото — `'right'` сохраняет прежнее (единственное до
+   * этого поля) поведение для уже существующих блоков. Несколько `about`-
+   * блоков подряд с чередующимся `left`/`right` — «зигзаг»-паттерн
+   * (фото-текст, текст-фото, фото-текст…), которым уже сам по себе
+   * закрывается частый в лендингах приём, без отдельного нового блока. */
+  imagePosition: 'left' | 'right';
 }
 
 function AboutRenderer({ props }: BlockRendererProps<AboutProps>) {
   return (
-    <div className={styles.about}>
+    <div
+      className={cn(styles.about, props.imagePosition === 'left' && styles['about--image-left'])}
+    >
       <div className={styles['about__body']}>
         {props.eyebrow && <span className={styles.hero__eyebrow}>{props.eyebrow}</span>}
         <h2 className={styles['about__heading']}>{props.heading}</h2>
@@ -208,6 +326,15 @@ const aboutFields: FieldSchema[] = [
   { key: 'heading', label: 'Заголовок', control: 'text' },
   { key: 'text', label: 'Текст', control: 'textarea', rows: 5 },
   { key: 'image', label: 'Изображение', control: 'image' },
+  {
+    key: 'imagePosition',
+    label: 'Фото',
+    control: 'segmented',
+    options: [
+      { value: 'right', label: 'Справа' },
+      { value: 'left', label: 'Слева' },
+    ],
+  },
 ];
 
 registerBlock<AboutProps>({
@@ -221,6 +348,7 @@ registerBlock<AboutProps>({
     heading: 'Почему выбирают нас',
     text: 'Расскажите историю бизнеса, ваши ценности и то, что делает вас особенными.',
     image: null,
+    imagePosition: 'right',
   },
   fields: aboutFields,
   Renderer: AboutRenderer,

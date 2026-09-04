@@ -5,6 +5,7 @@ import { CartWidget } from '@/entities/cart';
 import {
   WebsiteRenderer,
   getAnonymousPublicSite,
+  pageHasHeaderCartButton,
   resolveSitePage,
   useRealViewport,
   type BlockBusinessContext,
@@ -97,7 +98,7 @@ export function PublicSiteWidget({ businessId, slug }: PublicSiteWidgetProps) {
         business={businessContext}
       />
       {data.business.capabilities.includes('commerce') && (
-        <CartWidget businessId={data.business.id} />
+        <CartWidget businessId={data.business.id} hideFab={pageHasHeaderCartButton(page.blocks)} />
       )}
     </ScrollArea>
   );

@@ -1,0 +1,36 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.85);
+  color: #6b6b76;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    transform 0.1s ease;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: #e0245e;
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.button--active {
+  color: #e0245e;
+
+  svg {
+    fill: currentColor;
+  }
+}

@@ -24,6 +24,13 @@ import styles from './CartWidget.module.scss';
 
 export interface CartWidgetProps {
   businessId: string;
+  /** Не рендерить собственный плавающий `.fab` — сайт уже даёт способ
+   * открыть корзину из шапки (`HeaderActions.tsx`, кнопка `actions.cart`,
+   * вызывает `useCartStore.open()` напрямую), второй одновременно видимый
+   * триггер был бы лишним. Сама модалка оформления заказа продолжает
+   * рендериться этим же компонентом независимо от источника открытия — обе
+   * кнопки открывают ровно один и тот же стор-флаг `isOpen`. */
+  hideFab?: boolean;
 }
 
 type Step = 'cart' | 'checkout' | 'payment' | 'payment-unavailable' | 'success';
@@ -105,7 +112,7 @@ function PaymentForm({ onPaid }: PaymentFormProps) {
  * меньше минимума Stripe — реальный случай для дешёвых позиций, не
  * гипотетический).
  */
-export function CartWidget({ businessId }: CartWidgetProps) {
+export function CartWidget({ businessId, hideFab }: CartWidgetProps) {
   const ensureBusiness = useCartStore((state) => state.ensureBusiness);
   const items = useCartStore((state) => state.items);
   const setQuantity = useCartStore((state) => state.setQuantity);
@@ -113,13 +120,30 @@ export function CartWidget({ businessId }: CartWidgetProps) {
   const clear = useCartStore((state) => state.clear);
   const itemCount = useCartStore(selectCartItemCount);
   const totalCents = useCartStore(selectCartTotalCents);
+  const isOpen = useCartStore((state) => state.isOpen);
+  const openPanel = useCartStore((state) => state.open);
+  const closePanel = useCartStore((state) => state.closePanel);
 
   useEffect(() => {
     ensureBusiness(businessId);
   }, [businessId, ensureBusiness]);
 
-  const [isOpen, setOpen] = useState(false);
   const [step, setStep] = useState<Step>('cart');
+
+  // Кнопка корзины в шапке сайта (`HeaderActions.tsx`) открывает панель
+  // напрямую через `useCartStore.open()`, минуя локальный `openCart()` этого
+  // компонента — без сброса шага здесь повторное открытие после
+  // незавершённого оформления заказа показало бы прошлый шаг (`checkout`/
+  // `payment`), а не честно начинало с корзины. Сравнение прямо во время
+  // рендера, не в эффекте (`react-hooks/set-state-in-effect` — тот же приём,
+  // что и `autoPanedFor` в `WebsiteBuilderWidget.tsx`), потому что это чистая
+  // синхронизация локального состояния с уже переданным `isOpen`, а не
+  // побочный эффект над внешней системой.
+  const [handledOpen, setHandledOpen] = useState(isOpen);
+  if (isOpen !== handledOpen) {
+    setHandledOpen(isOpen);
+    if (isOpen) setStep('cart');
+  }
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentUnavailableReason, setPaymentUnavailableReason] =
     useState<PaymentUnavailableReason | null>(null);
@@ -142,11 +166,11 @@ export function CartWidget({ businessId }: CartWidgetProps) {
 
   function openCart() {
     setStep('cart');
-    setOpen(true);
+    openPanel();
   }
 
   function closeModal() {
-    setOpen(false);
+    closePanel();
   }
 
   /** Предпросмотр промокода (Pricing Engine, Phase 17 — см.
@@ -233,10 +257,12 @@ export function CartWidget({ businessId }: CartWidgetProps) {
 
   return (
     <>
-      <button type="button" className={styles.fab} aria-label="Корзина" onClick={openCart}>
-        <ShoppingBagIcon />
-        {itemCount > 0 && <span className={styles.fab__badge}>{itemCount}</span>}
-      </button>
+      {!hideFab && (
+        <button type="button" className={styles.fab} aria-label="Корзина" onClick={openCart}>
+          <ShoppingBagIcon />
+          {itemCount > 0 && <span className={styles.fab__badge}>{itemCount}</span>}
+        </button>
+      )}
 
       {isOpen && (
         <Modal onClose={closeModal} label="Корзина" className={styles.modal}>

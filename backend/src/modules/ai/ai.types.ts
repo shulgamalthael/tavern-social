@@ -76,6 +76,17 @@ export interface ConfirmRequiredInfo {
   args: unknown;
 }
 
+/** Ответ `AiController.uploadAttachment` — `id` дальше уходит клиентом
+ * обратно в `ChatRequestDto.attachmentIds`, `url` нужен только для
+ * превью в композере (`/uploads/messages/<id>`, см. `uploadedFileUrl`). */
+export interface ChatAttachmentDto {
+  id: string;
+  name: string;
+  mimeType: string;
+  url: string;
+  sizeBytes: number;
+}
+
 export interface ChatResult {
   message: string;
   toolExecutions: ToolExecutionSummary[];

@@ -66,6 +66,19 @@ export interface PendingConfirmation extends ConfirmRequiredInfo {
   resolution: 'awaiting' | 'confirming' | 'rejecting' | 'confirmed' | 'confirm_failed' | 'rejected';
 }
 
+/** Зеркало backend `ChatAttachmentDto` (`ai.types.ts`) — ответ загрузки
+ * вложения (`POST .../ai/chat/attachments`). `id` — то, что уходит обратно в
+ * `streamAiChat` как элемент `attachmentIds`; `url` нужен только здесь, на
+ * клиенте, для превью в композере и истории диалога (сервер вложение не
+ * помнит дольше одного хода, см. `AiService.runToolLoop`). */
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  url: string;
+  sizeBytes: number;
+}
+
 export interface AiChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -73,4 +86,8 @@ export interface AiChatMessage {
   toolExecutions?: ToolExecutionSummary[];
   isError?: boolean;
   pendingConfirmation?: PendingConfirmation;
+  /** Только у сообщений пользователя — что было прикреплено к этому ходу.
+   * Чисто отображение: сервер уже удалил файл после обработки, повторно
+   * скачать/переиспользовать вложение из истории нельзя. */
+  attachments?: ChatAttachment[];
 }

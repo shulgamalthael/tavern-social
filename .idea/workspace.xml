@@ -6,6 +6,84 @@
   <component name="ChangeListManager">
     <list default="true" id="ffe7bfaa-5868-4759-bace-829feb31aa13" name="Changes" comment="business features">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AI_PLATFORM_ROADMAP.md" beforeDir="false" afterPath="$PROJECT_DIR$/AI_PLATFORM_ROADMAP.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/app.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/common/lib/upload.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/common/lib/upload.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/config/configuration.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/configuration.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/config/env.validation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/config/env.validation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.controller.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.module.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/ai.types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/ai.types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/dto/chat-request.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/dto/chat-request.dto.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/llm-provider.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/llm-provider.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/providers/gemini-adapter.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/providers/gemini-adapter.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/add-block.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/add-block.tool.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/build-block-refs.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/build-block-refs.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/add-block-schemas.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/block-style-schema.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/block-style-schema.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/block-tree.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/block-tree.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/block-tree.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/lib/block-tree.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/set-style.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/set-style.tool.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/ai/tools/update-block-props.tool.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/ai/tools/update-block-props.tool.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/custom-widgets/custom-widgets.types.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/custom-widgets/custom-widgets.types.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/modules/websites/websites.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/modules/websites/websites.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/app/api/ai-chat/route.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/app/api/ai-chat/route.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/cart/model/cart-store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/cart/model/cart-store.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/cart/ui/CartWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/cart/ui/CartWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/booking/booking.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/booking/booking.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/booking/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/booking/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/business/business.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/business/business.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/business/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/business/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/commerce/commerce.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/commerce/commerce.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/commerce/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/commerce/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/layout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/layout/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/typography/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/typography/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/typography/typography.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/typography/typography.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/blocks/web3/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/blocks/web3/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/block-style.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/block-style.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.test.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.test.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/block-tree.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/registry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/registry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/theme-tokens.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/theme-tokens.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/model/website-store.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/model/website-store.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/entities/website/ui/BlockRenderer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/entities/website/ui/BlockRenderer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/ai-chat/api/stream-ai-chat.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/ai-chat/api/stream-ai-chat.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/ai-chat/lib/tool-labels.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/ai-chat/lib/tool-labels.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/ai-chat/model/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/ai-chat/model/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/ai-chat/ui/AiChatPanel.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/ai-chat/ui/AiChatPanel.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/features/ai-chat/ui/AiChatPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/features/ai-chat/ui/AiChatPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/ui/Modal/Modal.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/ui/Modal/Modal.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/ui/icons/icons.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/ui/icons/icons.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/shared/ui/icons/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/shared/ui/icons/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/business/ui/BusinessPageWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/business/ui/BusinessPageWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/public-site/ui/PublicSiteWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/public-site/ui/PublicSiteWidget.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/BlockInspectorForm.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/BlockInspectorForm.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/BlockInspectorForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/BlockInspectorForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldControl.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldControl.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldControl.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldControl.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldGroup.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldGroup.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldGroup.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/FieldGroup.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/LayoutSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/ThemePanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/ThemePanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/field-defaults.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/inspector/field-defaults.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/AddBlockModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/AddBlockModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/BlockInsertCross.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/BlockInsertCross.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/BuilderDndProvider.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/BuilderDndProvider.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/Canvas.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/Canvas.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/Canvas.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/Canvas.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/CanvasBlock.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/CanvasBlock.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/CanvasBlock.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/CanvasBlock.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/ComponentLibraryPanel.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/PreviewModal.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/PreviewModal.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/PreviewModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/PreviewModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.module.scss" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.module.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/widgets/website-builder/ui/WebsiteBuilderWidget.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,73 +103,73 @@
     &quot;assignee&quot;: &quot;shulgamalthael&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/shulgamalthael/tavern-social.git",
-    "accountId": "eaaac6e6-50ff-4968-b7f7-d5d3b7c85864"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/shulgamalthael/tavern-social.git&quot;,
+    &quot;accountId&quot;: &quot;eaaac6e6-50ff-4968-b7f7-d5d3b7c85864&quot;
   }
-}]]></component>
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.2599572291599526" />
-      <entry key="MS500" value="2.929505622358062" />
-      <entry key="S2" value="5.81263140425071" />
-      <entry key="S5" value="8.799301668975332" />
-      <entry key="S10" value="11.753767492531528" />
-      <entry key="S30" value="15.357016997041969" />
-      <entry key="S60" value="16.591039504484886" />
-      <entry key="M2" value="17.35318654647864" />
-      <entry key="M5" value="20.433420884475332" />
-      <entry key="M10" value="30.324127755723065" />
-      <entry key="M15" value="40.72134765232868" />
-      <entry key="M30" value="61.98925686713676" />
-      <entry key="H1" value="82.26463571556228" />
-      <entry key="H2" value="114.35307170964633" />
-      <entry key="H4" value="181.21799444711553" />
-      <entry key="D1" value="636.1370807750641" />
-      <entry key="W1" value="1874.160968989957" />
+      <entry key="MS100" value="1.5628863099603263" />
+      <entry key="MS500" value="3.9930769932287786" />
+      <entry key="S2" value="6.372124052726938" />
+      <entry key="S5" value="7.826032171204193" />
+      <entry key="S10" value="11.145914851402518" />
+      <entry key="S30" value="20.127964229664624" />
+      <entry key="S60" value="24.71647212334255" />
+      <entry key="M2" value="27.66164244385771" />
+      <entry key="M5" value="31.177771733898922" />
+      <entry key="M10" value="36.10385512957425" />
+      <entry key="M15" value="40.28213123077742" />
+      <entry key="M30" value="49.67753827855423" />
+      <entry key="H1" value="64.19542371920295" />
+      <entry key="H2" value="92.10974074292612" />
+      <entry key="H4" value="136.14213115691587" />
+      <entry key="D1" value="345.8848194227059" />
+      <entry key="W1" value="1781.6677672904202" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="0.0" />
-      <entry key="S5" value="0.0" />
-      <entry key="S10" value="0.0" />
-      <entry key="S30" value="5.894313201444939E-250" />
-      <entry key="S60" value="2.427820669127955E-125" />
-      <entry key="M2" value="4.927292024152767E-63" />
-      <entry key="M5" value="1.194107210757255E-25" />
-      <entry key="M10" value="3.4555856388711527E-13" />
-      <entry key="M15" value="4.924337081027337E-9" />
-      <entry key="M30" value="7.017363563764733E-5" />
-      <entry key="H1" value="0.008382372015943334" />
-      <entry key="H2" value="0.09481640714055135" />
-      <entry key="H4" value="0.3876588088607926" />
-      <entry key="D1" value="4.751133624147311" />
-      <entry key="W1" value="30.01562934501409" />
+      <entry key="MS100" value="3.801411518731456E-76" />
+      <entry key="MS500" value="8.241171980139243E-16" />
+      <entry key="S2" value="1.6943270495795785E-4" />
+      <entry key="S5" value="0.0310169362712872" />
+      <entry key="S10" value="0.17611625782785414" />
+      <entry key="S30" value="0.5605312325345305" />
+      <entry key="S60" value="0.7486863378842508" />
+      <entry key="M2" value="0.8652666282044222" />
+      <entry key="M5" value="0.9437565561405269" />
+      <entry key="M10" value="0.971471335786467" />
+      <entry key="M15" value="0.9808894439676231" />
+      <entry key="M30" value="0.9907873787688456" />
+      <entry key="H1" value="1.0149063754472596" />
+      <entry key="H2" value="1.1380142000988205" />
+      <entry key="H4" value="1.3737304860801578" />
+      <entry key="D1" value="2.575342723690538" />
+      <entry key="W1" value="24.451156074898435" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.2196002256519147" />
-      <entry key="MS500" value="2.911538896826835" />
-      <entry key="S2" value="5.796426194347443" />
-      <entry key="S5" value="8.769769002437146" />
-      <entry key="S10" value="11.725988358591188" />
-      <entry key="S30" value="15.342655617187607" />
-      <entry key="S60" value="16.583013044241948" />
-      <entry key="M2" value="17.348916153288574" />
-      <entry key="M5" value="20.431346111439787" />
-      <entry key="M10" value="30.322665710918706" />
-      <entry key="M15" value="40.72012980420804" />
-      <entry key="M30" value="61.98849571935345" />
-      <entry key="H1" value="82.2724859119867" />
-      <entry key="H2" value="114.44744526807774" />
-      <entry key="H4" value="181.60518705493644" />
-      <entry key="D1" value="640.8878062194883" />
-      <entry key="W1" value="1904.1764355967975" />
+      <entry key="MS100" value="1.5302234684930338" />
+      <entry key="MS500" value="3.974994001784409" />
+      <entry key="S2" value="6.364947042923101" />
+      <entry key="S5" value="7.845568747421924" />
+      <entry key="S10" value="11.2978577760881" />
+      <entry key="S30" value="20.664533477060765" />
+      <entry key="S60" value="25.44931754904698" />
+      <entry key="M2" value="28.517784358390028" />
+      <entry key="M5" value="32.11741398470472" />
+      <entry key="M10" value="37.07300229300523" />
+      <entry key="M15" value="41.261317735342814" />
+      <entry key="M30" value="50.667283789921555" />
+      <entry key="H1" value="65.20964093493717" />
+      <entry key="H2" value="93.24726597056193" />
+      <entry key="H4" value="137.51552303090227" />
+      <entry key="D1" value="348.46000729902045" />
+      <entry key="W1" value="1806.1187781335493" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -103,32 +181,32 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "master",
-    "javascript.preferred.runtime.type.id": "node",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/nikita-shulha/projects/tavern",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.jshint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.jshint": "",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "prettierjs.PrettierConfiguration.Package": "/home/nikita-shulha/projects/tavern/backend/node_modules/prettier",
-    "settings.editor.selected.configurable": "org.jetbrains.plugins.github.ui.GithubSettingsConfigurable",
-    "to.speed.mode.migration.done": "true",
-    "ts.external.directory.path": "D:\\projects\\tavern\\frontend\\node_modules\\typescript\\lib"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;javascript.preferred.runtime.type.id&quot;: &quot;node&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/nikita-shulha/projects/tavern&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;/home/nikita-shulha/projects/tavern/backend/node_modules/prettier&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;org.jetbrains.plugins.github.ui.GithubSettingsConfigurable&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\projects\\tavern\\frontend\\node_modules\\typescript\\lib&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
@@ -137,7 +215,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-WS-262.9437.145" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-WS-262.10315.144" />
       </set>
     </attachedChunks>
   </component>
@@ -162,7 +240,8 @@
       <workItem from="1788002283346" duration="1196000" />
       <workItem from="1788010031165" duration="15126000" />
       <workItem from="1788048442936" duration="47594000" />
-      <workItem from="1788173097345" duration="8938000" />
+      <workItem from="1788173097345" duration="61488000" />
+      <workItem from="1788512210713" duration="697000" />
     </task>
     <task id="LOCAL-00001" summary="Init project">
       <option name="closed" value="true" />

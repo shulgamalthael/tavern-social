@@ -227,6 +227,18 @@ class EnvironmentVariables {
   @IsInt()
   @Min(1000)
   AI_RECOMMENDATION_INTERVAL_MS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  UPLOAD_ORPHAN_TTL_HOURS?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  UPLOAD_ORPHAN_SWEEP_INTERVAL_MS?: number;
 }
 
 /** Валидирует process.env один раз при старте — падаем сразу, а не на первом запросе. */

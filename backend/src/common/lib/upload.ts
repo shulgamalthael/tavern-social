@@ -130,6 +130,59 @@ export function uploadedFileUrl(subdir: ImageUploadSubdir, filename: string): st
   return `/uploads/${subdir}/${filename}`;
 }
 
+/** Обратная карта расширение → MIME для `CHAT_ATTACHMENT_MIME_EXTENSIONS`
+ * выше — не отдельный список, чтобы формат файла на диске и распознанный
+ * MIME не могли разойтись. */
+const CHAT_ATTACHMENT_EXTENSION_MIME: Record<string, string> = Object.fromEntries(
+  Object.entries(CHAT_ATTACHMENT_MIME_EXTENSIONS).map(([mime, ext]) => [ext, mime]),
+);
+
+/** Тот же формат имени, что генерирует `createChatAttachmentMulterOptions`
+ * (`randomUUID()` + известное расширение) — используется, чтобы отличить
+ * «наш» id вложения от произвольной строки, прежде чем трогать файловую
+ * систему по ней (см. `resolveChatAttachmentPath` ниже). */
+const CHAT_ATTACHMENT_FILENAME_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|gif|pdf|zip|txt|doc|docx|xls|xlsx)$/;
+
+export function isChatAttachmentId(id: string): boolean {
+  return CHAT_ATTACHMENT_FILENAME_PATTERN.test(id);
+}
+
+/** MIME вложения чата по его `id` (имени файла на диске) — из расширения,
+ * не из значения, которое мог бы прислать клиент: имя файла мы сами
+ * присвоили при загрузке (`createChatAttachmentMulterOptions`), поэтому
+ * расширение — надёжный источник, а не то, чему клиент решит представиться. */
+export function mimeTypeForChatAttachment(id: string): string | undefined {
+  const dotIndex = id.lastIndexOf('.');
+  if (dotIndex === -1) return undefined;
+  return CHAT_ATTACHMENT_EXTENSION_MIME[id.slice(dotIndex)];
+}
+
+/**
+ * Резолвит `id` вложения AI-чата (`ChatRequestDto.attachmentIds`) в реальный
+ * путь на диске — `id` приходит от клиента ЭХОМ того, что мы сами вернули
+ * при загрузке (`AiController.uploadAttachment`), поэтому это untrusted
+ * input и требует той же defense-in-depth проверки, что `deleteUploadedFile`
+ * ниже: строгий формат имени (см. `isChatAttachmentId`) и подтверждение, что
+ * резолвленный путь не выходит за пределы каталога вложений, ПРЕЖДЕ чем
+ * читать файл. `BadRequestException`, а не `NotFoundException` — с точки
+ * зрения пользователя это некорректный/протухший ввод в его же сообщении,
+ * не «ресурс не найден» в обычном REST-смысле.
+ */
+export function resolveChatAttachmentPath(id: string): string {
+  if (!isChatAttachmentId(id)) {
+    throw new BadRequestException('Некорректный id вложения');
+  }
+
+  const attachmentsDir = join(UPLOADS_ROOT, 'messages');
+  const absolute = resolve(attachmentsDir, id);
+  if (!absolute.startsWith(attachmentsDir) || !existsSync(absolute)) {
+    throw new BadRequestException('Вложение не найдено — прикрепите файл заново');
+  }
+
+  return absolute;
+}
+
 /** Проверка «файл реально пришёл и прошёл валидацию» на уровне контроллера —
  * multer уже отбраковывает недопустимый MIME/размер, но при отсутствии
  * файла в запросе `file` будет `undefined`, и это нужно явно превратить в

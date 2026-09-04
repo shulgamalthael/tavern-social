@@ -1,7 +1,14 @@
 'use client';
 
-import { useId } from 'react';
-import type { DataSourceValue, FieldSchema, LinkTarget, WebsitePage } from '@/entities/website';
+import { useId, useMemo, useState } from 'react';
+import type {
+  DataSourceValue,
+  FieldSchema,
+  LinkTarget,
+  SelectOption,
+  WebsitePage,
+} from '@/entities/website';
+import { useWebsiteBuilderStore } from '@/entities/website';
 import { cn } from '@/shared/lib/cn';
 import { DataSourceField } from './DataSourceField';
 import { ImageField } from './ImageField';
@@ -168,23 +175,55 @@ export function FieldControl({
         </div>
       )}
 
-      {field.control === 'color' && (
-        <div className={styles.colorRow}>
-          <input
-            type="color"
-            className={styles.colorSwatch}
-            aria-label={field.label}
-            value={/^#[0-9a-fA-F]{6}$/.test(value as string) ? (value as string) : '#2563eb'}
-            onChange={(event) => onChange(event.target.value)}
-          />
-          <input
-            id={fieldId}
-            type="text"
-            className={cn(styles.input, styles['input--inline'])}
-            value={(value as string | undefined) ?? ''}
-            onChange={(event) => onChange(event.target.value)}
-          />
+      {field.control === 'scale' && (
+        <ScaleControl
+          fieldId={fieldId}
+          options={field.options}
+          allowCustomPx={field.allowCustomPx}
+          value={value}
+          onChange={onChange}
+        />
+      )}
+
+      {field.control === 'segmented' && (
+        <div className={styles.segmented} role="group" aria-label={field.label}>
+          {field.options.map((option) => {
+            const isActive = (value as string | undefined) === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={cn(
+                  styles.segmented__item,
+                  isActive && styles['segmented__item--active'],
+                )}
+                aria-pressed={isActive}
+                title={option.label}
+                onClick={() => onChange(option.value)}
+              >
+                {option.icon ? (
+                  <option.icon />
+                ) : option.swatch ? (
+                  <span
+                    className={styles.segmented__swatch}
+                    style={{ background: option.swatch }}
+                  />
+                ) : (
+                  <span className={styles.segmented__text}>{option.label}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
+      )}
+
+      {field.control === 'color' && (
+        <ColorControl
+          fieldId={fieldId}
+          label={field.label}
+          value={value as string | undefined}
+          onChange={onChange}
+        />
       )}
 
       {field.control === 'toggle' && (
@@ -256,6 +295,165 @@ export function FieldControl({
 
       {field.hint && field.control !== 'toggle' && (
         <p className={styles.field__hint}>{field.hint}</p>
+      )}
+    </div>
+  );
+}
+
+interface ScaleControlProps {
+  fieldId: string;
+  options: SelectOption[];
+  allowCustomPx?: boolean;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}
+
+/** Слайдер по индексу пресета (`control: 'scale'`, см. `registry.ts`) —
+ * ползунок ходит по позициям `options`, не по значению напрямую, поэтому
+ * шаг всегда «на один осмысленный пресет», независимо от того, что это за
+ * шкала (именованные строки или px). `allowCustomPx` добавляет крайний шаг
+ * «Свой», раскрывающий числовой инпут — тот же случай, что раньше решал
+ * `control: 'spacing'` (см. `CUSTOM_SPACING_OPTION` выше), просто под
+ * слайдером вместо `select`. */
+function ScaleControl({ fieldId, options, allowCustomPx, value, onChange }: ScaleControlProps) {
+  const isCustom = Boolean(allowCustomPx) && typeof value === 'number';
+  const maxIndex = options.length - 1 + (allowCustomPx ? 1 : 0);
+  const presetIndex = options.findIndex((option) => option.value === value);
+  const index = isCustom ? maxIndex : Math.max(presetIndex, 0);
+  const currentLabel = isCustom ? 'Свой (px)' : (options[index]?.label ?? '');
+
+  return (
+    <div className={styles.scale}>
+      <input
+        id={fieldId}
+        type="range"
+        className={styles.scale__range}
+        min={0}
+        max={maxIndex}
+        step={1}
+        value={index}
+        onChange={(event) => {
+          const nextIndex = Number(event.target.value);
+          if (allowCustomPx && nextIndex === maxIndex) {
+            onChange(0);
+          } else {
+            onChange(options[nextIndex]?.value);
+          }
+        }}
+      />
+      <span className={styles.scale__value}>{currentLabel}</span>
+
+      {isCustom && (
+        <input
+          type="number"
+          min={0}
+          className={cn(styles.input, styles['input--inline'])}
+          value={value as number}
+          onChange={(event) => onChange(event.target.value === '' ? 0 : Number(event.target.value))}
+        />
+      )}
+    </div>
+  );
+}
+
+interface ColorControlProps {
+  fieldId: string;
+  label: string;
+  value: string | undefined;
+  onChange: (value: unknown) => void;
+}
+
+/** Курируемая палитра — сначала цвета ТЕКУЩЕЙ темы сайта (тот же смысл, что
+ * у палитры бренда в топ-конкурентах — Wix/Squarespace всегда показывают
+ * цвета бренда первыми в любом цветовом пикере) плюс белый/чёрный, сырой hex
+ * (было раньше единственным способом выбрать цвет) — теперь только за
+ * отдельной кнопкой «Свой». Курс на «не отбирать возможность» (AI_PLATFORM_
+ * ROADMAP.md §45.1 — упрощаем подачу, не мощность): точный подбор остаётся,
+ * просто не первым и не единственным вариантом. */
+const NEUTRAL_SWATCHES: { hex: string; title: string }[] = [
+  { hex: '#ffffff', title: 'Белый' },
+  { hex: '#000000', title: 'Чёрный' },
+];
+
+function ColorControl({ fieldId, label, value, onChange }: ColorControlProps) {
+  const themeColors = useWebsiteBuilderStore((state) => state.document?.theme.colors);
+
+  const palette = useMemo(() => {
+    const theme = themeColors
+      ? [
+          { hex: themeColors.primary, title: 'Акцентный' },
+          { hex: themeColors.secondary, title: 'Дополнительный' },
+          { hex: themeColors.text, title: 'Текст' },
+          { hex: themeColors.muted, title: 'Приглушённый' },
+          { hex: themeColors.surface, title: 'Карточки' },
+          { hex: themeColors.background, title: 'Фон страницы' },
+          { hex: themeColors.border, title: 'Границы' },
+        ]
+      : [];
+    return [...theme, ...NEUTRAL_SWATCHES];
+  }, [themeColors]);
+
+  const matchesPreset = palette.some(
+    (swatch) => swatch.hex.toLowerCase() === (value ?? '').toLowerCase(),
+  );
+  // Открыт сразу, только если значение реально задано и не совпадает ни с
+  // одним пресетом — пустое поле (например, "берётся из темы сайта") не
+  // должно тут же показывать подставной цвет в сыром пикере, будто он уже
+  // выбран.
+  const [customOpen, setCustomOpen] = useState(Boolean(value) && !matchesPreset);
+
+  return (
+    <div className={styles.colorControl}>
+      <div className={styles['colorControl__swatches']}>
+        {palette.map((swatch) => (
+          <button
+            key={swatch.title}
+            type="button"
+            className={cn(
+              styles['colorControl__swatch'],
+              !customOpen &&
+                value?.toLowerCase() === swatch.hex.toLowerCase() &&
+                styles['colorControl__swatch--active'],
+            )}
+            style={{ background: swatch.hex }}
+            title={swatch.title}
+            aria-label={swatch.title}
+            onClick={() => {
+              setCustomOpen(false);
+              onChange(swatch.hex);
+            }}
+          />
+        ))}
+        <button
+          type="button"
+          className={cn(
+            styles['colorControl__swatch'],
+            styles['colorControl__swatch--custom'],
+            customOpen && styles['colorControl__swatch--active'],
+          )}
+          title="Свой цвет"
+          aria-label="Свой цвет"
+          onClick={() => setCustomOpen(true)}
+        />
+      </div>
+
+      {customOpen && (
+        <div className={styles.colorRow}>
+          <input
+            type="color"
+            className={styles.colorSwatch}
+            aria-label={label}
+            value={value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#2563eb'}
+            onChange={(event) => onChange(event.target.value)}
+          />
+          <input
+            id={fieldId}
+            type="text"
+            className={cn(styles.input, styles['input--inline'])}
+            value={value ?? ''}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </div>
       )}
     </div>
   );

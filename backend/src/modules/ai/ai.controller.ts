@@ -8,17 +8,30 @@ import {
   Post,
   RequestMethod,
   Sse,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
   type MessageEvent,
 } from '@nestjs/common';
 import { METHOD_METADATA } from '@nestjs/common/constants';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import type { Observable } from 'rxjs';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import type { RequestUser } from '@/common/types/authenticated-request';
+import {
+  assertUploadedFile,
+  createChatAttachmentMulterOptions,
+  uploadedFileUrl,
+} from '@/common/lib/upload';
 import { AiService } from './ai.service';
-import type { AuditLogListItem, ChatResult, ToolExecutionSummary } from './ai.types';
+import type {
+  AuditLogListItem,
+  ChatAttachmentDto,
+  ChatResult,
+  ToolExecutionSummary,
+} from './ai.types';
 import { ChatRequestDto } from './dto/chat-request.dto';
 import { AiConfiguredGuard } from './guards/ai-configured.guard';
 import { AiOwnershipGuard } from './guards/ai-ownership.guard';
@@ -52,7 +65,7 @@ export class AiController {
     @Param('businessId') businessId: string,
     @Body() dto: ChatRequestDto,
   ): Promise<ChatResult> {
-    return this.aiService.chat(businessId, currentUser.id, dto.message);
+    return this.aiService.chat(businessId, currentUser.id, dto.message, dto.attachmentIds ?? []);
   }
 
   /** Тот же ход диалога, что и `chat()` выше, но эвенты цикла (`AiStreamEvent`
@@ -71,7 +84,34 @@ export class AiController {
     @Param('businessId') businessId: string,
     @Body() dto: ChatRequestDto,
   ): Observable<MessageEvent> {
-    return this.aiService.chatStream(businessId, currentUser.id, dto.message);
+    return this.aiService.chatStream(
+      businessId,
+      currentUser.id,
+      dto.message,
+      dto.attachmentIds ?? [],
+    );
+  }
+
+  /** Загрузка вложения ДО отправки сообщения — намеренно отдельный обычный
+   * (не `@Sse()`) эндпоинт, а не мультипарт прямо в `chat/stream`: та `@Sse()`
+   * уже один раз ловилась на гонке между её собственной "закоммитить заголовки
+   * по таймеру" механикой и async-работой до построения `Observable` (см.
+   * комментарий `AiOwnershipGuard`) — оборачивать в ту же ручку ещё и
+   * multer/`FileInterceptor` было бы новым риском того же класса ради
+   * экономии одного запроса. Без `AiConfiguredGuard` — загрузка файла не
+   * дёргает LLM-провайдера вообще, доступна и когда он не настроен. */
+  @Post('chat/attachments')
+  @UseInterceptors(FileInterceptor('file', createChatAttachmentMulterOptions()))
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
+  uploadAttachment(@UploadedFile() file: Express.Multer.File | undefined): ChatAttachmentDto {
+    assertUploadedFile(file);
+    return {
+      id: file.filename,
+      name: file.originalname,
+      mimeType: file.mimetype,
+      url: uploadedFileUrl('messages', file.filename),
+      sizeBytes: file.size,
+    };
   }
 
   /** Лента активности AI (AI-3, "activity timeline", §10.7 роадмапа) —

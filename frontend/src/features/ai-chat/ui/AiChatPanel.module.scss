@@ -209,12 +209,167 @@
   color: #dc2626;
 }
 
+// Вложения уже отправленного сообщения (история) — маленькие чипы над
+// пузырём, тот же визуальный язык, что `.composerAttachment*` ниже, но без
+// кнопки «убрать» (сообщение уже отправлено, менять нечего).
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 160px;
+  padding: 3px 8px 3px 3px;
+  border-radius: 999px;
+  background: var(--tavern-sunk);
+}
+
+.attachment__thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.attachment__icon {
+  width: 14px;
+  height: 14px;
+  color: var(--tavern-muted);
+}
+
+.attachment__name {
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.attachmentError {
+  margin: 0;
+  padding: 6px 12px 0;
+  color: #dc2626;
+  font-size: 11.5px;
+}
+
+// Вложения ещё НЕ отправленного сообщения — над полем ввода, с превью и
+// кнопкой «убрать» (тот же паттерн, что `MessageComposer.module.scss` у
+// человеческого мессенджера — сознательно тот же визуальный язык).
+.composerAttachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 12px 0;
+  list-style: none;
+}
+
+.composerAttachment {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 4px 6px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+}
+
+.composerAttachment__thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.composerAttachment__icon {
+  width: 16px;
+  height: 16px;
+  color: var(--tavern-muted);
+}
+
+.composerAttachment__name {
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.composerAttachment__size {
+  flex: 0 0 auto;
+  color: var(--tavern-muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.composerAttachment__remove {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 11px;
+    height: 11px;
+  }
+}
+
 .form {
   display: flex;
   flex: 0 0 auto;
+  align-items: center;
   gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--tavern-line);
+}
+
+.attachButton {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--tavern-ink);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.fileInput {
+  display: none;
 }
 
 .input {

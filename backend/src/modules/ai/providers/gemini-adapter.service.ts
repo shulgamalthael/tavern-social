@@ -20,6 +20,10 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models
 
 interface GeminiPart {
   text?: string;
+  /** Картинка/файл как часть хода `role: 'user'` (`LlmMessage.attachments`)
+   * — официальный формат `generateContent` для мультимодального ввода,
+   * `data` без префикса `data:...;base64,`. */
+  inlineData?: { mimeType: string; data: string };
   functionCall?: { name: string; args?: unknown };
   functionResponse?: { name: string; response: unknown };
   /** Обязателен для многошагового tool-calling на "thinking"-моделях (Gemini
@@ -234,7 +238,11 @@ export class GeminiAdapter extends LlmProvider {
 
 function toGeminiContent(message: LlmMessage): GeminiContent {
   if (message.role === 'user') {
-    return { role: 'user', parts: [{ text: message.content ?? '' }] };
+    const parts: GeminiPart[] = [{ text: message.content ?? '' }];
+    for (const attachment of message.attachments ?? []) {
+      parts.push({ inlineData: { mimeType: attachment.mimeType, data: attachment.data } });
+    }
+    return { role: 'user', parts };
   }
 
   if (message.role === 'assistant') {

@@ -9,7 +9,6 @@ import {
   useAutosave,
   useWebsiteBuilderStore,
   type BlockBusinessContext,
-  type Viewport,
 } from '@/entities/website';
 import { AiAssistantPanel } from '@/features/ai-chat';
 import { cn } from '@/shared/lib/cn';
@@ -35,12 +34,6 @@ import { PagesPanel } from './PagesPanel';
 import { PreviewModal } from './PreviewModal';
 import { StarterTemplatePicker } from './StarterTemplatePicker';
 import styles from './WebsiteBuilderWidget.module.scss';
-
-const CANVAS_WIDTH: Record<Viewport, string> = {
-  desktop: '100%',
-  tablet: '834px',
-  mobile: '390px',
-};
 
 /**
  * Холст всегда смонтирован и всегда виден (см. JSX ниже) — не пересоздаётся
@@ -116,7 +109,6 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
   const loadDocument = useWebsiteBuilderStore((state) => state.loadDocument);
   const applyTemplate = useWebsiteBuilderStore((state) => state.applyTemplate);
   const resetStore = useWebsiteBuilderStore((state) => state.reset);
-  const viewport = useWebsiteBuilderStore((state) => state.viewport);
   const activePageId = useWebsiteBuilderStore((state) => state.activePageId);
   const selectedBlockId = useWebsiteBuilderStore((state) => state.selectedBlockId);
 
@@ -416,7 +408,6 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
                   pages={document!.pages}
                   theme={document!.theme}
                   business={businessContext}
-                  viewportWidth={CANVAS_WIDTH[viewport]}
                 />
               </div>
             </div>

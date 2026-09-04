@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { insertBlock, remapBlockIds } from './block-tree';
+import { insertBlock, moveBlock, remapBlockIds } from './block-tree';
 import type { WebsiteBlock } from './types';
 
 describe('remapBlockIds', () => {
@@ -80,5 +80,56 @@ describe('insertBlock applied repeatedly (as insertWidgetBlocks does)', () => {
     expect(page).toHaveLength(4);
     expect(page.map((block) => block.type)).toEqual(['heading', 'text', 'heading', 'text']);
     expect(new Set(page.map((block) => block.id)).size).toBe(4);
+  });
+});
+
+describe('moveBlock', () => {
+  const nested: WebsiteBlock[] = [
+    {
+      id: 'section-1',
+      type: 'section',
+      props: {},
+      children: [
+        {
+          id: 'columns-1',
+          type: 'columns',
+          props: {},
+          children: [
+            { id: 'column-a', type: 'column', props: {}, children: [] },
+            { id: 'column-b', type: 'column', props: {}, children: [] },
+          ],
+        },
+      ],
+    },
+    { id: 'heading-1', type: 'heading', props: { text: 'Top level' } },
+  ];
+
+  it('reorders a top-level block to a new index', () => {
+    const result = moveBlock(nested, 'heading-1', null, 0);
+    expect(result.map((block) => block.id)).toEqual(['heading-1', 'section-1']);
+  });
+
+  it('moves a block into a different container', () => {
+    const result = moveBlock(nested, 'heading-1', 'column-a', 0);
+    const section = result.find((block) => block.id === 'section-1')!;
+    const columns = section.children![0];
+    const columnA = columns.children![0];
+    expect(columnA.children).toHaveLength(1);
+    expect(columnA.children![0].id).toBe('heading-1');
+    // Removed from its original top-level position.
+    expect(result.find((block) => block.id === 'heading-1')).toBeUndefined();
+  });
+
+  it('refuses to move a block into itself, leaving the tree untouched', () => {
+    const result = moveBlock(nested, 'section-1', 'section-1', 0);
+    expect(result).toEqual(nested);
+  });
+
+  it('refuses to move a block into its own descendant, leaving the tree untouched (regression: used to silently delete the block)', () => {
+    const result = moveBlock(nested, 'section-1', 'column-a', 0);
+    expect(result).toEqual(nested);
+    // The whole section — including columns-1/column-a/column-b — must still
+    // exist; the pre-fix bug removed section-1 without re-inserting it.
+    expect(result.find((block) => block.id === 'section-1')).toBeDefined();
   });
 });

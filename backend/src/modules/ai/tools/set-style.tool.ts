@@ -59,6 +59,23 @@ export class SetStyleTool implements OnModuleInit {
               `borderWidth(none|thin|medium|thick — рамка вокруг всего блока), borderColor(hex вида #rrggbb — ` +
               `только когда borderWidth не "none", по умолчанию берётся из темы), ` +
               `shadow(none|soft|medium|strong|floating — тень всего блока). ` +
+              `Раскладка — ТОЛЬКО у section/container/columns/column, задаёт, как блок располагает СВОИХ детей: ` +
+              `display(block|flex|grid, по умолчанию block — обычная вертикальная стопка, "flex"/"grid" включают поля ниже), ` +
+              `direction(row|column — только при display="flex", по умолчанию row), ` +
+              `wrap(true|false — только при display="flex", перенос на новую строку), ` +
+              `gap(none|sm|md|lg|xl, либо число — свой px, промежуток между детьми, для flex и grid), ` +
+              `gridColumns(число 1-6 — только при display="grid", равные колонки), ` +
+              `justify/align(start|center|end|space-between|space-around для justify, start|center|end|stretch для align — только при display≠"block"). ` +
+              `Позиция В РЯДУ — у ЛЮБОГО блока, но действует только если его РОДИТЕЛЬ сам display:flex/grid: ` +
+              `grow(grow|fixed, по умолчанию grow — растягивается; "fixed" требует fixedWidth), ` +
+              `fixedWidth(число 20-800 — px, только при grow="fixed"), ` +
+              `sticky(true|false — прилипает при прокрутке), stickyOffset(число 0-400 — px отступ от верха, только при sticky=true). ` +
+              `Появление ПРИ ПРОКРУТКЕ — у ЛЮБОГО блока, срабатывает один раз, когда блок впервые попадает в зону видимости (не повторяется при скролле туда-обратно): ` +
+              `entranceAnimation(none|fade|slide-up|slide-down|slide-left|slide-right|zoom-in, по умолчанию none — "none" явно выключает, остальные — направление появления), ` +
+              `entranceDelay(число 0-800 — мс задержки перед стартом после появления в зоне видимости, только когда entranceAnimation≠"none"). ` +
+              `Используй умеренно — анимация на каждом блоке страницы подряд утомляет, не усиливает: обычно достаточно героя и 2-3 акцентных секций, не всех. ` +
+              `Эффект виден в Предпросмотре/на опубликованном сайте, не в самом холсте редактора — это осознанно (холст перерисовывается на каждое действие редактирования). ` +
+              `Пример сайдбара: на columns — display:"flex"; на первой колонке — grow:"fixed", fixedWidth:280, sticky:true; на второй — ничего не менять (grow:"grow" по умолчанию). ` +
               `Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}.`,
           },
         },

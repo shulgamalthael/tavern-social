@@ -5,6 +5,10 @@ import type {
   ButtonStyle,
   ContainerWidth,
   FontChoice,
+  LayoutAlign,
+  LayoutDirection,
+  LayoutDisplay,
+  LayoutJustify,
   SectionSpacing,
   SpacingSize,
   TextAlign,
@@ -252,4 +256,68 @@ export const CARD_SHADOW_OPTIONS: { value: ThemeCardShadow; label: string }[] = 
   { value: 'none', label: 'Без тени' },
   { value: 'sm', label: 'Лёгкая' },
   { value: 'md', label: 'Заметная' },
+];
+
+/** Опции секции «Раскладка» в инспекторе (`LayoutSection.tsx`, только для
+ * контейнерных блоков — `section`/`container`/`columns`) — см. `BlockStyle`
+ * в `types.ts` про смысл каждого поля. */
+export const LAYOUT_DISPLAY_OPTIONS: { value: LayoutDisplay; label: string }[] = [
+  { value: 'block', label: 'Стопкой' },
+  { value: 'flex', label: 'Рядом (flex)' },
+  { value: 'grid', label: 'Сеткой' },
+];
+
+export const LAYOUT_DIRECTION_OPTIONS: { value: LayoutDirection; label: string }[] = [
+  { value: 'row', label: 'Горизонтально' },
+  { value: 'column', label: 'Вертикально' },
+];
+
+export const LAYOUT_JUSTIFY_OPTIONS: { value: LayoutJustify; label: string }[] = [
+  { value: 'start', label: 'К началу' },
+  { value: 'center', label: 'По центру' },
+  { value: 'end', label: 'К концу' },
+  { value: 'space-between', label: 'По краям, с равными промежутками' },
+  { value: 'space-around', label: 'С равными отступами вокруг' },
+];
+
+export const LAYOUT_ALIGN_OPTIONS: { value: LayoutAlign; label: string }[] = [
+  { value: 'start', label: 'К началу' },
+  { value: 'center', label: 'По центру' },
+  { value: 'end', label: 'К концу' },
+  { value: 'stretch', label: 'Растянуть' },
+];
+
+/** Не `SpacingSize` — сырое число равных колонок (1–6), см.
+ * `BlockStyle.gridColumns`. Значения — строки (как у любого `SelectOption`),
+ * `LayoutSection.tsx` конвертирует в `number` при записи. */
+export const GRID_COLUMNS_OPTIONS: { value: string; label: string }[] = [
+  { value: '1', label: '1 колонка' },
+  { value: '2', label: '2 колонки' },
+  { value: '3', label: '3 колонки' },
+  { value: '4', label: '4 колонки' },
+  { value: '5', label: '5 колонок' },
+  { value: '6', label: '6 колонок' },
+];
+
+/** См. `BlockStyle.grow` — блок как ребёнок в чужом flex/grid-ряду. */
+export const LAYOUT_GROW_OPTIONS: { value: NonNullable<BlockStyle['grow']>; label: string }[] = [
+  { value: 'grow', label: 'Тянется' },
+  { value: 'fixed', label: 'Фиксированная ширина' },
+];
+
+/** См. `BlockStyle.entranceAnimation` и `entities/website/lib/use-scroll-
+ * reveal.ts` — однократный эффект появления блока при первой прокрутке до
+ * него. `'none'` намеренно первый в списке — тот же порядок, что и у
+ * `RADIUS_OPTIONS`/`BLOCK_SHADOW_OPTIONS` (выключенное состояние первым). */
+export const ENTRANCE_ANIMATION_OPTIONS: {
+  value: NonNullable<BlockStyle['entranceAnimation']>;
+  label: string;
+}[] = [
+  { value: 'none', label: 'Нет' },
+  { value: 'fade', label: 'Проявление' },
+  { value: 'slide-up', label: 'Снизу вверх' },
+  { value: 'slide-down', label: 'Сверху вниз' },
+  { value: 'slide-left', label: 'Слева' },
+  { value: 'slide-right', label: 'Справа' },
+  { value: 'zoom-in', label: 'Увеличение' },
 ];
