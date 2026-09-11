@@ -17,10 +17,19 @@ export const AD_PLACEMENT_ALLOWED_FORMATS: Record<AdPlacement, readonly AdFormat
   // `in_feed`), `header`/`footer`/`sidebar` слишком узкие/низкие для
   // видео-креатива физически.
   content: ['banner', 'large_banner', 'rectangle', 'native', 'card', 'video'],
-  sidebar: ['rectangle', 'square'],
+  // `card` (300×120, см. `AD_FORMAT_PREVIEW_CONFIG`) добавлен, чтобы
+  // карточка товара (`AdCampaignsService.addCreative`'s `productId`-ветка,
+  // всегда `format: 'card'`) физически помещалась и сюда — card уже и ниже
+  // зарезервированной 300×250 коробки `sidebar`, лишнее место просто
+  // остаётся пустым, как и у `square`. `header`/`footer` намеренно БЕЗ
+  // `card` — те же узкие баннерные коробки (728×90/728×90-подобные), что
+  // и не пускают туда `video` чуть выше; кампания, нацеленная только на
+  // `header`/`footer`, не может добавить креатив-карточку товара
+  // (`AdCampaignsService.addCreative` отклоняет это явной ошибкой).
+  sidebar: ['rectangle', 'square', 'card'],
   footer: ['banner', 'mobile_banner'],
   in_feed: ['native', 'card', 'square', 'video'],
   // Та же физическая ширина колонки, что и у `sidebar` (сайдбар сайта
   // бизнеса) — тот же набор форматов вписывается без отдельного расчёта.
-  feed_sidebar: ['rectangle', 'square'],
+  feed_sidebar: ['rectangle', 'square', 'card'],
 };

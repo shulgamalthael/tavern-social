@@ -803,25 +803,25 @@ model GroupJoinRequest {
 /// Cascade` у обеих сторон удаляет сайт вместе с бизнесом, не оставляя
 /// сирот в БД.
 model Business {
-  id             String           @id @default(uuid())
-  ownerId        String
-  owner          User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  name           String
-  slug           String           @unique
-  description    String           @default("")
-  category       BusinessCategory @default(other)
-  logoUrl        String?
-  faviconUrl     String?
-  email          String?
-  phone          String?
-  address        String?
+  id                String           @id @default(uuid())
+  ownerId           String
+  owner             User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name              String
+  slug              String           @unique
+  description       String           @default("")
+  category          BusinessCategory @default(other)
+  logoUrl           String?
+  faviconUrl        String?
+  email             String?
+  phone             String?
+  address           String?
   /// `[{ "platform": "instagram", "url": "https://..." }, ...]` — свободный
   /// список, не enum платформ: у бизнеса может быть любая соцсеть, а новый
   /// enum-вариант на каждую новую платформу означал бы миграцию схемы ради
   /// косметики.
-  socialLinks    Json             @default("[]")
-  seoTitle       String?
-  seoDescription String?
+  socialLinks       Json             @default("[]")
+  seoTitle          String?
+  seoDescription    String?
   /// Какие капабилити (§3.3 ROADMAP.md — Commerce/Booking/Content/...)
   /// включены для этого бизнеса, помимо базового конструктора сайта —
   /// определяет, что показывает Dashboard (например, раздел «Товары») и
@@ -835,7 +835,7 @@ model Business {
   /// бизнес может включить/выключить капабилити независимо от неё в любой
   /// момент (ровно то поведение, которого требует ROADMAP.md §3.3, пример
   /// «ресторан + доставка + бронирование + блог»).
-  capabilities   String[]         @default([])
+  capabilities      String[]         @default([])
   /// Единственная и единая валюта бизнеса — Currency System (ROADMAP.md §8,
   /// Phase Currency System): "Один Business/Website → одна основная валюта
   /// для MVP". `Product`/`Service` намеренно НЕ имеют собственного поля
@@ -852,7 +852,7 @@ model Business {
   /// (`SUPPORTED_CURRENCY_CODES`/`DEFAULT_BUSINESS_CURRENCY`), не enum —
   /// та же причина, что у `capabilities` выше (новая валюта в списке не
   /// должна требовать миграции схемы).
-  currency       String           @default("UAH")
+  currency          String           @default("UAH")
   /// Единая налоговая ставка бизнеса в базисных пунктах (2000 = 20.00%,
   /// 825 = 8.25%) — целое число, не `Float`, по той же причине, что и
   /// деньги (см. `Order.taxCents`): накопление погрешности округления на
@@ -861,13 +861,13 @@ model Business {
   /// одного поля адреса, к которому можно было бы привязать регион, а
   /// заводить таблицу ставок ни для чего было бы тем же самым anti-
   /// pattern, что уже избегался для `ProductVariant`/`Category` (ROADMAP.md).
-  taxRateBps     Int              @default(0)
+  taxRateBps        Int              @default(0)
   /// `none` (по умолчанию) — налог не считается вообще, поведение всех
   /// существующих бизнесов после миграции не меняется. `exclusive` — налог
   /// добавляется сверху цены. `inclusive` — налог уже включён в цену,
   /// считается только для отображения в разбивке заказа (см.
   /// `PricingService`/`PRICING_ARCHITECTURE.md` §4).
-  taxMode        TaxMode          @default(none)
+  taxMode           TaxMode          @default(none)
   /// Часы работы бизнеса (Booking, ROADMAP.md §8 Phase 6 continued) —
   /// `{ mon?: { open: "09:00", close: "18:00" }, tue?: ..., ... }`, ключ дня
   /// недели отсутствует или всё поле `null` значит «не ограничено» (все
@@ -880,7 +880,7 @@ model Business {
   /// CRUD/связями. Читается `AppointmentsService` при создании записи
   /// (отклоняет время вне часов работы) и при подсчёте свободных слотов
   /// (`AppointmentsService.getAvailability`) — единственные два потребителя.
-  workingHours   Json?
+  workingHours      Json?
   /// Web3 (AI_PLATFORM_ROADMAP.md §2.6, AI-7 первый ограниченный слайс) —
   /// адрес СОБСТВЕННОГО кошелька владельца бизнеса, который он хочет
   /// показывать read-only (баланс/NFT) в дашборде и через AI-инструмент
@@ -904,43 +904,43 @@ model Business {
   /// `.env`, здесь тот же итог другим путём — секрет пишется, но не читается
   /// обратно).
   web3AlchemyApiKey String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  website         Website?
-  products        Product[]
-  orders          Order[]
-  services        Service[]
-  appointments    Appointment[]
-  blogPosts       BlogPost[]
-  formSubmissions FormSubmission[]
-  mediaAssets     MediaAsset[]
-  analyticsEvents AnalyticsEvent[]
-  discounts       Discount[]
-  rules           Rule[]
-  customWidgets   CustomWidget[]
+  website                    Website?
+  products                   Product[]
+  orders                     Order[]
+  services                   Service[]
+  appointments               Appointment[]
+  blogPosts                  BlogPost[]
+  formSubmissions            FormSubmission[]
+  mediaAssets                MediaAsset[]
+  analyticsEvents            AnalyticsEvent[]
+  discounts                  Discount[]
+  rules                      Rule[]
+  customWidgets              CustomWidget[]
   customWidgetCatalogInserts CustomWidgetCatalogInsert[]
-  loyaltyAccounts CustomerLoyaltyAccount[]
-  customEntities  CustomEntity[]
+  loyaltyAccounts            CustomerLoyaltyAccount[]
+  customEntities             CustomEntity[]
   /// Payment Plans v1 — см. `BusinessSubscription`'s комментарий. Отсутствие
   /// строки (не `null`-поле здесь) значит «тариф ещё ни разу не выбран» —
   /// это и есть сигнал серверного гейта конструктора
   /// (`/business/[id]/edit`, см. `BillingService.getStatus`).
-  subscription    BusinessSubscription?
+  subscription               BusinessSubscription?
   /// Advertising Infrastructure v1 — кампании, где ЭТОТ бизнес выступает
   /// рекламодателем (self-service, любой бизнес может быть и издателем
   /// (хостить рекламу через `adslot`-блоки на своём сайте, число слотов —
   /// `AdvertisingInventoryService.getInventory`) и рекламодателем
   /// одновременно — оба потребителя выше уже читают эту же
   /// `BusinessCategory`/`BusinessSubscription`, отдельной "роли" не заводится.
-  adCampaigns     AdCampaign[]
+  adCampaigns                AdCampaign[]
   /// Тот же бизнес может рекламироваться и на сайтах (`adCampaigns`), и в
   /// ленте creator'ов (`nativeAdCampaigns`) — независимые кампании, общий
   /// только `AdvertiserBan` ниже.
-  nativeAdCampaigns NativeAdCampaign[]
+  nativeAdCampaigns          NativeAdCampaign[]
   /// `null` — бизнесу разрешено быть рекламодателем (дефолт для всех) — см.
   /// `AdvertiserBan`'s комментарий.
-  advertiserBan   AdvertiserBan?
+  advertiserBan              AdvertiserBan?
   /// Внешний рекламодатель (AI_PLATFORM_ROADMAP.md §71) — создан через
   /// облегчённый кабинет `/advertise/new`, не через обычную форму «Создать
   /// бизнес». Смысл ровно один: `BusinessDashboardWidget` рендерит для
@@ -953,7 +953,7 @@ model Business {
   /// `BusinessesService.create`, транзакция общая для всех бизнесов) — сайт
   /// просто навсегда остаётся черновиком, никогда не публикуется и нигде не
   /// показывается (в проекте нет публичного каталога бизнесов вообще).
-  isAdvertiserOnly Boolean @default(false)
+  isAdvertiserOnly           Boolean                     @default(false)
 
   @@index([ownerId])
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
@@ -1149,9 +1149,9 @@ enum AdBillingModel {
 /// вычисляется по совпадению категории рекламодателя и издателя (см. её
 /// комментарий), не по этому полю.
 model AdCampaign {
-  id                   String           @id @default(uuid())
+  id                   String   @id @default(uuid())
   advertiserBusinessId String
-  advertiserBusiness   Business         @relation(fields: [advertiserBusinessId], references: [id], onDelete: Cascade)
+  advertiserBusiness   Business @relation(fields: [advertiserBusinessId], references: [id], onDelete: Cascade)
 
   name            String
   status          AdCampaignStatus @default(draft)
@@ -1160,13 +1160,13 @@ model AdCampaign {
   /// Деньги — целые центы, тот же принцип, что и везде в проекте
   /// (`Order.totalCents`/`Business.taxRateBps`) — не `Float`, чтобы не
   /// накапливать погрешность округления.
-  budgetCents  Int
+  budgetCents Int
   /// НЕ инкрементируется напрямую по центам за событие (дробные центы на
   /// показ при `cpm` копили бы погрешность округления) — пересчитывается
   /// целиком из счётчиков `impressionsServed`/`clicksServed` при каждом
   /// новом событии (см. `AdCampaignsService.recordImpression/recordClick`).
-  spentCents   Int    @default(0)
-  currency     String
+  spentCents  Int    @default(0)
+  currency    String
 
   /// Реальное биллинг-ранжирование (см. `AdBillingModel`'s комментарий) —
   /// `bidCents` за 1000 показов (`cpm`) или за один клик (`cpc`). Оплата
@@ -1191,8 +1191,8 @@ model AdCampaign {
   /// использует `Viewport` на фронтенде (`entities/website/model/types.ts`);
   /// не enum здесь, потому что это НЕ доменное значение биллинга/платформы,
   /// а чисто таргетинговый фильтр — пустой список значит "любое устройство".
-  targetDevices String[]
-  targetLocales String[]
+  targetDevices    String[]
+  targetLocales    String[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1246,11 +1246,27 @@ model AdCreative {
   ctaLabel    String?
   targetUrl   String
 
+  /// Опциональная связь с конкретным товаром бизнеса — креатив «карточка
+  /// товара» (см. `AdCampaignsService.addCreative`): рекламодатель
+  /// выбирает существующий товар вместо ручного ввода заголовка/картинки,
+  /// backend один раз СНИМАЕТ СЛЕПОК его name/description/images[0] в
+  /// обычные headline/description/imageUrl этого же креатива в момент
+  /// создания — не джойнит `Product` на каждый показ (`AdEngineService`
+  /// остаётся полностью не в курсе `productId`, тот же контракт для
+  /// любого креатива). Так модерация остаётся честной: одобренные
+  /// текст/картинка не могут незаметно измениться, если рекламодатель
+  /// потом отредактирует сам товар. Хранится только для истории/
+  /// аналитики и ссылки в UI дашборда, не как источник отображаемых
+  /// данных. `onDelete: SetNull` — удаление товара не должно ломать уже
+  /// поданные/показанные объявления.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
   /// См. `AdCreativeStatus`'s комментарий — тонкая модерация ПОВЕРХ
   /// `AdCampaign.status`, не вместо неё. `AdEngineService.selectCreative`
   /// отбрасывает `rejected`-креативы, даже если сама кампания `active`.
-  status           AdCreativeStatus @default(approved)
-  rejectionReason  String?
+  status          AdCreativeStatus @default(approved)
+  rejectionReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1320,7 +1336,9 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  orderItems OrderItem[]
+  orderItems  OrderItem[]
+  /// Обратная сторона AdCreative.productId — см. её комментарий там же.
+  adCreatives AdCreative[]
 
   @@unique([businessId, slug])
   @@index([businessId, order])
@@ -2242,13 +2260,13 @@ enum CustomWidgetStatus {
 /// произвести обычный `add_block`/ручное редактирование (см. `resolve-
 /// widget-template.ts`).
 model CustomWidget {
-  id         String             @id @default(uuid())
-  businessId String
-  business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  name       String
-  schema     Json
-  fields     Json               @default("[]")
-  status     CustomWidgetStatus @default(draft)
+  id                 String                      @id @default(uuid())
+  businessId         String
+  business           Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name               String
+  schema             Json
+  fields             Json                        @default("[]")
+  status             CustomWidgetStatus          @default(draft)
   /// Общий каталог виджетов (AI_PLATFORM_ROADMAP.md §74) — заполняется
   /// ТОЛЬКО через `create_custom_widget` (AI-путь, `CustomWidgetsService.
   /// create(..., { autoShare: true })`), никогда вручную через owner-only
@@ -2257,7 +2275,7 @@ model CustomWidget {
   /// создания — `update()` никогда не пересматривает `isShared`, снять с
   /// каталога может только GC (`CustomWidgetCatalogGcService`) по
   /// неиспользованию, см. её комментарий.
-  isShared           Boolean   @default(false)
+  isShared           Boolean                     @default(false)
   /// Момент попадания в каталог — точка отсчёта grace-периода GC. `null`,
   /// пока `isShared: false`.
   sharedAt           DateTime?
@@ -2277,10 +2295,10 @@ model CustomWidget {
   /// Собственные вставки автора не считаются вообще (см. сервис) — иначе GC
   /// не мог бы отличить "автор просто продолжает пользоваться своим" от
   /// "виджет оказался полезен кому-то ещё".
-  catalogInsertCount Int       @default(0)
+  catalogInsertCount Int                         @default(0)
   catalogInserts     CustomWidgetCatalogInsert[]
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
 
   @@index([businessId])
   @@index([isShared])
@@ -2409,14 +2427,14 @@ enum CreatorAdFrequency {
 /// admin-CRUD в этой фазе — редактирование дерева через Admin Panel отмечено
 /// как отложенное, не потерянное, требование.
 model CreatorCategory {
-  id       String  @id @default(uuid())
-  slug     String  @unique
+  id       String            @id @default(uuid())
+  slug     String            @unique
   label    String
   icon     String?
   parentId String?
   parent   CreatorCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children CreatorCategory[] @relation("CategoryHierarchy")
-  order    Int     @default(0)
+  order    Int               @default(0)
 
   assignments CreatorCategoryAssignment[]
 
@@ -2429,12 +2447,12 @@ model CreatorCategory {
 /// частичный уникальный индекс по булеву полю — лишняя сложность миграции
 /// ради того, что и так проверяется в единственном месте записи).
 model CreatorCategoryAssignment {
-  id               String   @id @default(uuid())
+  id               String          @id @default(uuid())
   creatorProfileId String
   creatorProfile   CreatorProfile  @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
   categoryId       String
   category         CreatorCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  isPrimary        Boolean  @default(false)
+  isPrimary        Boolean         @default(false)
 
   @@unique([creatorProfileId, categoryId])
   @@map("creator_category_assignments")
@@ -2478,28 +2496,28 @@ model CreatorProfile {
   stripeConnectedAccountId String?
   stripeConnectStatus      CreatorStripeConnectStatus @default(not_connected)
 
-  monetizationEnabled  Boolean @default(true)
+  monetizationEnabled  Boolean            @default(true)
   adFrequency          CreatorAdFrequency @default(balanced)
   /// "Не более 1 рекламной карточки на N постов" — N. Дефолт 5 — тот же
   /// пример, что и в корневом плане фичи §4.
-  maxAdFrequencyRatio  Int     @default(5)
+  maxAdFrequencyRatio  Int                @default(5)
   /// Свободные строки против небольшого конфигурируемого списка (gambling/
   /// alcohol/political/adult/financial и т. п.), не enum — тот же приём, что
   /// у `Business.capabilities`: список категорий может расшириться позже без
   /// миграции.
-  blockedCategories    String[] @default([])
+  blockedCategories    String[]           @default([])
   /// id забаненных этим creator'ом рекламодателей (`Business.id`) — заведено
   /// уже в Phase 1 по прямой просьбе владельца, хотя нечего фильтровать, пока
   /// Phase 2 не даст реальных кампаний.
-  blockedAdvertiserIds String[] @default([])
+  blockedAdvertiserIds String[]           @default([])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  categories CreatorCategoryAssignment[]
-  nativeAdAssignments NativeAdAssignment[]
+  categories            CreatorCategoryAssignment[]
+  nativeAdAssignments   NativeAdAssignment[]
   nativeAdRevenueEvents NativeAdRevenueEvent[]
-  nativeAdPayouts NativeAdPayout[]
+  nativeAdPayouts       NativeAdPayout[]
 
   @@map("creator_profiles")
 }
@@ -2567,8 +2585,8 @@ model NativeAdCampaign {
 
   billingModel      AdBillingModel
   bidCents          Int
-  impressionsServed Int @default(0)
-  clicksServed      Int @default(0)
+  impressionsServed Int            @default(0)
+  clicksServed      Int            @default(0)
 
   paymentStatus         PaymentStatus @default(unpaid)
   stripePaymentIntentId String?
@@ -2604,13 +2622,13 @@ model NativeAdCreative {
   campaignId String
   campaign   NativeAdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
-  style       NativeAdCreativeStyle
-  headline    String
-  bodyText    String?
-  imageUrl    String?
-  videoUrl    String?
-  ctaLabel    String?
-  targetUrl   String
+  style     NativeAdCreativeStyle
+  headline  String
+  bodyText  String?
+  imageUrl  String?
+  videoUrl  String?
+  ctaLabel  String?
+  targetUrl String
 
   status          NativeAdCreativeStatus @default(approved)
   rejectionReason String?
@@ -2722,7 +2740,7 @@ model NativeAdRevenueSettings {
   /// Ниже этого порога накопленный баланс creator'а не подлежит выплате —
   /// поле готово для Phase 5 (реальные выплаты через Stripe Connect), уже
   /// конфигурируемое, не хардкод, даже до появления самого механизма выплат.
-  minimumPayoutCents Int @default(2000)
+  minimumPayoutCents      Int @default(2000)
 
   updatedAt DateTime @updatedAt
 

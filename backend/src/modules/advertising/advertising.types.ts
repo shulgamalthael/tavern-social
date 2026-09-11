@@ -35,12 +35,35 @@ export interface AdCreativeDto {
   videoUrl: string | null;
   ctaLabel: string | null;
   targetUrl: string;
+  /** Карточка товара — id `Product`, чей снимок стал headline/description/
+   * imageUrl при создании (см. `AdCreative.productId`'s комментарий в
+   * schema.prisma). `null` — обычный, вручную заполненный креатив. Только
+   * provenance для UI (бейдж «Товар» в списке) — сам показ рекламы этим
+   * полем не пользуется. */
+  productId: string | null;
   /** Тонкая модерация ПОВЕРХ `AdCampaign.status` — см. `AdCreativeStatus`'s
    * комментарий в schema.prisma. */
   status: AdCreativeStatus;
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Ответ `AdCampaignsService.getPlacementInsights` — счётчик активных
+ * (`status: 'active', paymentStatus: 'paid'`) кампаний на место размещения
+ * плюс средний eCPM, приведённый к USD (см. `ExchangeRatesService`) —
+ * приводить обязательно, у разных рекламодателей разная `AdCampaign.
+ * currency`, усреднять сырые центы между валютами методологически неверно
+ * (см. `revenueByCurrency` в админ-обзоре, деньги в этом проекте никогда не
+ * суммируются между валютами вслепую). Используется формой создания
+ * кампании, чтобы подсказать «популярные»/«свободные» места. */
+export interface PlacementInsightDto {
+  placement: AdPlacement;
+  activeCampaignCount: number;
+  /** `null` — либо на месте нет активных кампаний, либо ни одну из них не
+   * удалось конвертировать в USD прямо сейчас (см. `ExchangeRatesService.
+   * convertToUsdCents`'s комментарий про недоступные курсы). */
+  avgEffectiveCpmUsdCents: number | null;
 }
 
 export interface AdCampaignDto {
@@ -85,6 +108,7 @@ export function toAdCreativeDto(creative: AdCreative): AdCreativeDto {
     videoUrl: creative.videoUrl,
     ctaLabel: creative.ctaLabel,
     targetUrl: creative.targetUrl,
+    productId: creative.productId,
     status: creative.status,
     rejectionReason: creative.rejectionReason,
     createdAt: creative.createdAt.toISOString(),

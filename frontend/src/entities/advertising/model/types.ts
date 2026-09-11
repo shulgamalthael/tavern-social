@@ -100,6 +100,10 @@ export interface AdCreative {
   videoUrl: string | null;
   ctaLabel: string | null;
   targetUrl: string;
+  /** Карточка товара — id товара, чей снимок стал headline/description/
+   * imageUrl при создании (см. backend `AdCreative.productId`'s комментарий).
+   * `null` — обычный, вручную заполненный креатив. */
+  productId: string | null;
   status: AdCreativeStatus;
   rejectionReason: string | null;
   createdAt: string;
@@ -158,15 +162,24 @@ export interface CreateAdCampaignInput {
 /** Форма, принимаемая `POST .../creatives` (см. backend `AddAdCreativeDto`)
  * — `imageUrl`/`videoUrl` должны быть уже загруженным файлом этого
  * бизнеса (см. `uploadAdCreativeImage`), backend перепроверяет это
- * независимо по `MediaAssetsService`. */
+ * независимо по `MediaAssetsService`.
+ *
+ * `format`/`headline` физически необязательны здесь (не отмечены `?` —
+ * форма всегда одна из двух веток, см. `AdCreativeFormModal`): при заданном
+ * `productId` (карточка товара) backend сам снимает слепок с товара,
+ * присланные `format`/`headline`/`description`/`imageUrl` игнорирует —
+ * поэтому в этой ветке их просто не передают вовсе. */
 export interface AddAdCreativeInput {
-  format: AdFormat;
-  headline: string;
+  format?: AdFormat;
+  headline?: string;
   description?: string;
   imageUrl?: string;
   videoUrl?: string;
   ctaLabel?: string;
   targetUrl: string;
+  /** Карточка товара — id существующего `Product` этого бизнеса. Когда
+   * задан, `format`/`headline`/`description`/`imageUrl` не передаются. */
+  productId?: string;
 }
 
 /** То, что реально отдаётся анонимному посетителю сайта-паблишера (см.
@@ -183,4 +196,19 @@ export interface SelectedAd {
   videoUrl: string | null;
   ctaLabel: string | null;
   targetUrl: string;
+}
+
+/** Ответ `GET .../advertising/placement-insights` (см. backend
+ * `PlacementInsightDto`) — счётчик активных кампаний на место плюс средний
+ * eCPM, ПРИВЕДЁННЫЙ К USD backend'ом (см. `ExchangeRatesService`) — здесь
+ * уже готовое число в минимальных единицах USD, никакой конвертации на
+ * frontend не требуется. Используется `AdCampaignFormModal`, чтобы
+ * подсказать «популярные»/«свободные» места — сортировку по возрастанию/
+ * убыванию делает сам компонент, не этот тип. */
+export interface PlacementInsight {
+  placement: AdPlacement;
+  activeCampaignCount: number;
+  /** `null` — на месте нет активных кампаний, либо ни одну не удалось
+   * конвертировать в USD прямо сейчас (курсы временно недоступны). */
+  avgEffectiveCpmUsdCents: number | null;
 }

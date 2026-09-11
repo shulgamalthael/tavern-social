@@ -30,3 +30,30 @@
     min-width: 0;
   }
 }
+
+// Подсказка «популярные/свободные места» — над основным чекбокс-списком
+// «Места размещения», не источник истины (см. `AdCampaignFormModal.tsx`):
+// клик по чипсе делает тот же `toggle`, что и обычный чекбокс.
+.insights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.insights__column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 200px;
+  gap: 6px;
+}
+
+.insights__title {
+  color: var(--tavern-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}

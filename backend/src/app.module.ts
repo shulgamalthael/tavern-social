@@ -17,6 +17,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
 import { CreatorsModule } from './modules/creators/creators.module';
+import { CurrenciesModule } from './modules/currencies/currencies.module';
 import { DomainsModule } from './modules/domains/domains.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { GalleryModule } from './modules/gallery/gallery.module';
@@ -93,6 +94,7 @@ import { WebsitesModule } from './modules/websites/websites.module';
     AiModule,
     AdvertisingModule,
     CreatorsModule,
+    CurrenciesModule,
     NativeAdsModule,
   ],
   controllers: [AppController],

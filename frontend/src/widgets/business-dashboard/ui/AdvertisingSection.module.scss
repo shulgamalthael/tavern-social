@@ -156,6 +156,16 @@ $status-completed: #2563eb;
   font-weight: 600;
 }
 
+.creative__product-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .creative__meta {
   color: var(--tavern-muted);
   font-size: 11px;

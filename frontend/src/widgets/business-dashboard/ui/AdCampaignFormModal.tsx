@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useCallback, useState, type FormEvent } from 'react';
 import {
   AD_BILLING_MODEL_LABELS,
   AD_PLACEMENT_LABELS,
   createAdCampaign,
+  getPlacementInsights,
   type AdBillingModel,
   type AdPlacement,
+  type PlacementInsight,
 } from '@/entities/advertising';
 import { BUSINESS_CATEGORIES, type BusinessCategory } from '@/entities/business';
 import { getCurrencyMetadata } from '@/shared/config/currencies';
-import { toMinorUnits } from '@/shared/lib/format-money';
+import { formatMoney, toMinorUnits } from '@/shared/lib/format-money';
+import { useAsyncData } from '@/shared/lib/use-async-data';
 import { Button } from '@/shared/ui/Button';
 import { Modal } from '@/shared/ui/Modal';
 import checkboxStyles from './AdCampaignFormModal.module.scss';
@@ -64,6 +67,29 @@ export function AdCampaignFormModal({
   const [endDate, setEndDate] = useState('');
   const [isSubmitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchPlacementInsights = useCallback(() => getPlacementInsights(businessId), [businessId]);
+  // Подсказка необязательна для создания кампании — при `loading`/`error`
+  // просто не рендерим панель (см. ниже), не блокируем форму.
+  const placementInsights = useAsyncData(fetchPlacementInsights);
+  const insights = placementInsights.data ?? [];
+  const popularPlacements = [...insights]
+    .sort((a, b) => b.activeCampaignCount - a.activeCampaignCount)
+    .slice(0, 3);
+  const freePlacements = [...insights]
+    .sort((a, b) => a.activeCampaignCount - b.activeCampaignCount)
+    .slice(0, 3);
+
+  // `avgEffectiveCpmUsdCents` уже приведён backend'ом к USD (см. её
+  // комментарий в `entities/advertising`) — здесь просто форматируем, без
+  // какой-либо конвертации. `null` — курсы валют сейчас недоступны либо на
+  // месте нет ни одной конвертируемой кампании (не значит "мест нет
+  // вовсе" — счётчик кампаний это уже показывает отдельно).
+  function formatInsightChipLabel(insight: PlacementInsight): string {
+    const base = `${AD_PLACEMENT_LABELS[insight.placement]} · ${insight.activeCampaignCount}`;
+    if (insight.avgEffectiveCpmUsdCents === null) return base;
+    return `${base} · ~${formatMoney(insight.avgEffectiveCpmUsdCents, 'USD')} eCPM`;
+  }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -173,6 +199,41 @@ export function AdCampaignFormModal({
             placeholder={billingModel === 'cpm' ? '50' : '5'}
           />
         </label>
+
+        {placementInsights.status === 'success' && insights.length > 0 && (
+          <div className={checkboxStyles.insights}>
+            <div className={checkboxStyles['insights__column']}>
+              <span className={checkboxStyles['insights__title']}>🔥 Популярные сейчас</span>
+              <div className={checkboxStyles.checkboxGroup}>
+                {popularPlacements.map((insight) => (
+                  <Button
+                    key={insight.placement}
+                    type="button"
+                    variant={placements.includes(insight.placement) ? 'primary' : 'chip'}
+                    onClick={() => setPlacements((prev) => toggle(prev, insight.placement))}
+                  >
+                    {formatInsightChipLabel(insight)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className={checkboxStyles['insights__column']}>
+              <span className={checkboxStyles['insights__title']}>✨ Свободные сейчас</span>
+              <div className={checkboxStyles.checkboxGroup}>
+                {freePlacements.map((insight) => (
+                  <Button
+                    key={insight.placement}
+                    type="button"
+                    variant={placements.includes(insight.placement) ? 'primary' : 'chip'}
+                    onClick={() => setPlacements((prev) => toggle(prev, insight.placement))}
+                  >
+                    {formatInsightChipLabel(insight)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className={formStyles.field}>
           <span className={formStyles.label}>Места размещения</span>

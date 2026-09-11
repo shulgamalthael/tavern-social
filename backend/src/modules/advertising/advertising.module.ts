@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CurrenciesModule } from '@/modules/currencies/currencies.module';
 import { MediaAssetsModule } from '@/modules/media-assets/media-assets.module';
 import { PaymentsModule } from '@/modules/payments/payments.module';
 import { AdCampaignsController } from './ad-campaigns.controller';
@@ -19,7 +20,7 @@ import { FeedAdsController } from './feed-ads.controller';
  * применён к `OrdersModule`/`AppointmentsModule`.
  */
 @Module({
-  imports: [PaymentsModule, MediaAssetsModule],
+  imports: [PaymentsModule, MediaAssetsModule, CurrenciesModule],
   controllers: [AdCampaignsController, AdminAdvertisingController, FeedAdsController],
   providers: [AdvertisingInventoryService, AdCampaignsService, AdEngineService],
   exports: [AdvertisingInventoryService, AdCampaignsService, AdEngineService],

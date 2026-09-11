@@ -24,7 +24,7 @@ import { MediaAssetsService } from '@/modules/media-assets/media-assets.service'
 import { AdvertisingInventoryService } from './advertising-inventory.service';
 import { AddAdCreativeDto } from './dto/add-ad-creative.dto';
 import { CreateAdCampaignDto } from './dto/create-ad-campaign.dto';
-import type { AdCampaignDto, AdInventoryDto } from './advertising.types';
+import type { AdCampaignDto, AdInventoryDto, PlacementInsightDto } from './advertising.types';
 import { AdCampaignsService } from './ad-campaigns.service';
 
 /** Владелец-only — тот же принцип разделения владелец/публика, что у
@@ -46,6 +46,17 @@ export class AdCampaignsController {
     @Param('businessId') businessId: string,
   ): Promise<AdInventoryDto> {
     return this.inventoryService.getInventoryForOwner(businessId, currentUser.id);
+  }
+
+  /** Подсказка для формы создания кампании — «популярные»/«свободные» места
+   * по количеству уже активных кампаний, см. `AdCampaignsService.
+   * getPlacementInsights`'s комментарий. */
+  @Get('placement-insights')
+  getPlacementInsights(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('businessId') businessId: string,
+  ): Promise<PlacementInsightDto[]> {
+    return this.adCampaignsService.getPlacementInsights(businessId, currentUser.id);
   }
 
   @Get('campaigns')

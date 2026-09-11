@@ -3,6 +3,7 @@ export { recordAdImpression, recordAdClick } from './api/record-ad-event';
 export { selectFeedAds } from './api/select-feed-ads';
 export { recordFeedAdImpression, recordFeedAdClick } from './api/record-feed-ad-event';
 export { getAdInventory } from './api/get-ad-inventory';
+export { getPlacementInsights } from './api/get-placement-insights';
 export { getAdCampaigns } from './api/get-ad-campaigns';
 export { createAdCampaign } from './api/create-ad-campaign';
 export { addAdCreative } from './api/add-ad-creative';
@@ -28,5 +29,6 @@ export type {
   AdInventory,
   AdPlacement,
   CreateAdCampaignInput,
+  PlacementInsight,
   SelectedAd,
 } from './model/types';

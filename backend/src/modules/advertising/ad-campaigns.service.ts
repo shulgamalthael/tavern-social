@@ -5,8 +5,12 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import type { AdCampaign, AdCreative } from '@prisma/client';
+import type { AdCampaign, AdCreative, AdPlacement } from '@prisma/client';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
+import {
+  convertUsingRates,
+  ExchangeRatesService,
+} from '@/modules/currencies/exchange-rates.service';
 import { MediaAssetsService } from '@/modules/media-assets/media-assets.service';
 import { PaymentAmountTooLowError } from '@/modules/payments/payments.types';
 import { PaymentProvider } from '@/modules/payments/payment-provider';
@@ -17,9 +21,26 @@ import {
   toAdCreativeDto,
   type AdCampaignDto,
   type AdCreativeDto,
+  type PlacementInsightDto,
 } from './advertising.types';
+import { calculateEffectiveCpmCents } from './lib/effective-bid';
+import { AD_PLACEMENT_ALLOWED_FORMATS } from './lib/ad-placement-config';
 
 type CampaignWithCreatives = AdCampaign & { creatives: AdCreative[] };
+
+/** Тот же закрытый набор значений, что и ключи `AD_PLACEMENT_ALLOWED_FORMATS`
+ * (`lib/ad-placement-config.ts`) — отдельная константа здесь, а не импорт
+ * оттуда, потому что там это ключи объекта конфигурации форматов, а не
+ * самостоятельный список; дублировать шесть строковых литералов дешевле,
+ * чем городить общий экспорт ради одного места использования. */
+const ALL_AD_PLACEMENTS: AdPlacement[] = [
+  'header',
+  'content',
+  'sidebar',
+  'footer',
+  'in_feed',
+  'feed_sidebar',
+];
 
 /**
  * Self-service self-serve кампании (согласовано с владельцем — «Self-service
@@ -44,6 +65,7 @@ export class AdCampaignsService {
     private readonly prisma: PrismaService,
     private readonly paymentProvider: PaymentProvider,
     private readonly mediaAssetsService: MediaAssetsService,
+    private readonly exchangeRatesService: ExchangeRatesService,
   ) {}
 
   async list(businessId: string, ownerId: string): Promise<AdCampaignDto[]> {
@@ -54,6 +76,70 @@ export class AdCampaignsService {
       orderBy: { createdAt: 'desc' },
     });
     return campaigns.map((campaign) => toAdCampaignDto(campaign));
+  }
+
+  /** Счётчик активных (`status: 'active', paymentStatus: 'paid'`) кампаний
+   * на место — «популярное» место — где много активных кампаний (высокий
+   * спрос), «свободное» — где мало (меньше конкуренции за показ);
+   * сортировку по этим двум осям делает уже вызывающий (frontend), не этот
+   * метод. Считается в памяти после одного `findMany` — реалистичный
+   * сегодня объём активных кампаний не требует raw SQL по array-колонке
+   * `targetPlacements` (Prisma не умеет `groupBy` по элементам массива),
+   * тот же принцип «не строить впрок сложную агрегацию», что уже у
+   * `AdvertisingInventoryService.getInventory` (тоже считает на лету).
+   *
+   * `avgEffectiveCpmUsdCents` — средний eCPM конкурирующих кампаний,
+   * ПРИВЕДЁННЫЙ К USD через `ExchangeRatesService` (у разных рекламодателей
+   * разная `AdCampaign.currency` — усреднять сырые центы без приведения к
+   * одной валюте методологически неверно, см. `PlacementInsightDto`'s
+   * комментарий). Кампания, чью валюту `ExchangeRatesService` сейчас не
+   * может конвертировать (курс недоступен ИЛИ ЕЦБ не публикует курс для
+   * этой валюты, например `UAH`), просто не участвует в среднем — но
+   * по-прежнему считается в `activeCampaignCount` (это не денежная
+   * метрика, ей конвертация не нужна). */
+  async getPlacementInsights(businessId: string, ownerId: string): Promise<PlacementInsightDto[]> {
+    await this.assertOwnership(businessId, ownerId);
+
+    const campaigns = await this.prisma.adCampaign.findMany({
+      where: { status: 'active', paymentStatus: 'paid' },
+      select: {
+        targetPlacements: true,
+        billingModel: true,
+        bidCents: true,
+        impressionsServed: true,
+        clicksServed: true,
+        currency: true,
+      },
+    });
+
+    const counts = Object.fromEntries(
+      ALL_AD_PLACEMENTS.map((placement) => [placement, 0]),
+    ) as Record<AdPlacement, number>;
+    const usdEcpmByPlacement = Object.fromEntries(
+      ALL_AD_PLACEMENTS.map((placement) => [placement, [] as number[]]),
+    ) as Record<AdPlacement, number[]>;
+
+    // Один Redis-запрос за курсами на весь список кампаний, а не по одному
+    // на кампанию — см. `convertUsingRates`'s комментарий.
+    const rates = await this.exchangeRatesService.getRatesToUsd();
+
+    for (const campaign of campaigns) {
+      const effectiveCpmCents = calculateEffectiveCpmCents(campaign);
+      const usdCents = convertUsingRates(effectiveCpmCents, campaign.currency, rates);
+      for (const placement of campaign.targetPlacements) {
+        counts[placement] += 1;
+        if (usdCents !== null) usdEcpmByPlacement[placement].push(usdCents);
+      }
+    }
+
+    return ALL_AD_PLACEMENTS.map((placement) => {
+      const usdValues = usdEcpmByPlacement[placement];
+      const avgEffectiveCpmUsdCents =
+        usdValues.length > 0
+          ? Math.round(usdValues.reduce((sum, value) => sum + value, 0) / usdValues.length)
+          : null;
+      return { placement, activeCampaignCount: counts[placement], avgEffectiveCpmUsdCents };
+    });
   }
 
   async get(businessId: string, campaignId: string, ownerId: string): Promise<AdCampaignDto> {
@@ -108,40 +194,85 @@ export class AdCampaignsService {
       );
     }
 
-    if (dto.format === 'video' && !dto.videoUrl) {
-      throw new BadRequestException('Формат "video" требует videoUrl');
-    }
-    if (dto.format !== 'video' && dto.videoUrl) {
-      throw new BadRequestException('videoUrl допустим только для формата "video"');
-    }
+    if (dto.productId) {
+      // Карточка товара — снимаем слепок name/description/images[0] РОВНО
+      // ОДИН РАЗ здесь, не доверяя присланным клиентом format/headline/
+      // description/imageUrl (см. комментарий `AddAdCreativeDto`), и
+      // игнорируя их, даже если клиент всё же прислал.
+      const product = await this.prisma.product.findUnique({ where: { id: dto.productId } });
+      if (!product || product.businessId !== businessId || !product.isActive) {
+        throw new BadRequestException('Товар не найден или недоступен для рекламы');
+      }
 
-    if (dto.imageUrl || dto.videoUrl) {
-      const ownedAssets = await this.mediaAssetsService.list(businessId, ownerId);
-      const ownedUrls = new Set(ownedAssets.map((asset) => asset.url));
-      if (dto.imageUrl && !ownedUrls.has(dto.imageUrl)) {
+      // Карточка товара всегда `format: 'card'` — если ни одно из мест
+      // размещения кампании физически не вмещает этот формат (см.
+      // `AD_PLACEMENT_ALLOWED_FORMATS`, например кампания только с
+      // `header`/`footer`), `AdEngineService.selectCreative` никогда не
+      // отберёт этот креатив — кампания будет числиться активной и
+      // оплаченной, но реально никогда не показываться. Лучше отказать
+      // здесь явно, чем дать рекламодателю молча платить за показы,
+      // которых не будет.
+      const fitsAnyTargetPlacement = campaign.targetPlacements.some((placement) =>
+        AD_PLACEMENT_ALLOWED_FORMATS[placement].includes('card'),
+      );
+      if (!fitsAnyTargetPlacement) {
         throw new BadRequestException(
-          'imageUrl должен быть файлом, уже загруженным для этого бизнеса',
+          'Карточка товара не помещается ни в одно из выбранных мест размещения этой кампании',
         );
       }
-      if (dto.videoUrl && !ownedUrls.has(dto.videoUrl)) {
-        throw new BadRequestException(
-          'videoUrl должен быть файлом, уже загруженным для этого бизнеса',
-        );
-      }
-    }
 
-    await this.prisma.adCreative.create({
-      data: {
-        campaignId,
-        format: dto.format,
-        headline: dto.headline,
-        description: dto.description ?? null,
-        imageUrl: dto.imageUrl ?? null,
-        videoUrl: dto.videoUrl ?? null,
-        ctaLabel: dto.ctaLabel ?? null,
-        targetUrl: dto.targetUrl,
-      },
-    });
+      await this.prisma.adCreative.create({
+        data: {
+          campaignId,
+          productId: product.id,
+          format: 'card',
+          headline: product.name,
+          description: product.description || null,
+          imageUrl: product.images[0] ?? null,
+          ctaLabel: dto.ctaLabel ?? null,
+          targetUrl: dto.targetUrl,
+        },
+      });
+    } else {
+      if (!dto.format || !dto.headline) {
+        throw new BadRequestException('Укажите формат и заголовок, либо выберите товар');
+      }
+
+      if (dto.format === 'video' && !dto.videoUrl) {
+        throw new BadRequestException('Формат "video" требует videoUrl');
+      }
+      if (dto.format !== 'video' && dto.videoUrl) {
+        throw new BadRequestException('videoUrl допустим только для формата "video"');
+      }
+
+      if (dto.imageUrl || dto.videoUrl) {
+        const ownedAssets = await this.mediaAssetsService.list(businessId, ownerId);
+        const ownedUrls = new Set(ownedAssets.map((asset) => asset.url));
+        if (dto.imageUrl && !ownedUrls.has(dto.imageUrl)) {
+          throw new BadRequestException(
+            'imageUrl должен быть файлом, уже загруженным для этого бизнеса',
+          );
+        }
+        if (dto.videoUrl && !ownedUrls.has(dto.videoUrl)) {
+          throw new BadRequestException(
+            'videoUrl должен быть файлом, уже загруженным для этого бизнеса',
+          );
+        }
+      }
+
+      await this.prisma.adCreative.create({
+        data: {
+          campaignId,
+          format: dto.format,
+          headline: dto.headline,
+          description: dto.description ?? null,
+          imageUrl: dto.imageUrl ?? null,
+          videoUrl: dto.videoUrl ?? null,
+          ctaLabel: dto.ctaLabel ?? null,
+          targetUrl: dto.targetUrl,
+        },
+      });
+    }
 
     const updated = await this.findOwnedCampaign(businessId, campaignId);
     return toAdCampaignDto(updated);

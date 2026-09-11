@@ -168,7 +168,12 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
                         )}
                       </div>
                       <div className={styles['creative__body']}>
-                        <span className={styles['creative__title']}>{creative.headline}</span>
+                        <span className={styles['creative__title']}>
+                          {creative.headline}
+                          {creative.productId && (
+                            <span className={styles['creative__product-badge']}>🔗 Товар</span>
+                          )}
+                        </span>
                         <span className={styles['creative__meta']}>
                           {creative.status === 'rejected'
                             ? `Отклонён администратором${creative.rejectionReason ? `: ${creative.rejectionReason}` : ''}`

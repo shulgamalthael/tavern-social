@@ -55,8 +55,13 @@ export const AD_PLACEMENT_CONFIG: Record<
     height: 250,
   },
   sidebar: {
+    // `card` добавлен для карточки товара (`AdCampaignsService.
+    // addCreative`'s `productId`-ветка, всегда `format: 'card'`, 300×120)
+    // — та же правка, синхронно зеркалящая backend `AD_PLACEMENT_ALLOWED_
+    // FORMATS` (см. её комментарий там же); card уже и ниже этой коробки,
+    // лишнее место остаётся пустым, как и у `square`.
     label: 'Сайдбар',
-    allowedFormats: ['rectangle', 'square'],
+    allowedFormats: ['rectangle', 'square', 'card'],
     width: 300,
     height: 250,
   },
