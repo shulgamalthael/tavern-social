@@ -69,7 +69,13 @@ export async function backendFetch<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  // Контроллер, возвращающий `null` (например, `GET /creators/me` без
+  // профиля), отдаёт Express'ом пустое тело (`Content-Length: 0`), а не
+  // JSON-строку `"null"` — `response.json()` на пустом теле бросает
+  // `SyntaxError`. Пустое тело трактуем как `null`, не как ошибку.
+  const text = await response.text();
+  if (!text) return null as T;
+  return JSON.parse(text) as T;
 }
 
 /**

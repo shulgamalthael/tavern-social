@@ -113,7 +113,7 @@ export class ThreadsController {
       dto,
       files ?? [],
     );
-    this.realtimeGateway.emitToUsers(participantUserIds, 'message:new', message);
+    await this.broadcastMessage('message:new', message, currentUser.id, participantUserIds);
     return message;
   }
 
@@ -130,7 +130,7 @@ export class ThreadsController {
       currentUser.id,
       dto,
     );
-    this.realtimeGateway.emitToUsers(participantUserIds, 'message:edited', message);
+    await this.broadcastMessage('message:edited', message, currentUser.id, participantUserIds);
     return message;
   }
 
@@ -168,7 +168,7 @@ export class ThreadsController {
     // То же событие, что и у обычной отправки — получателю нет разницы,
     // переслали сообщение или написали заново, `forwardedFrom` в самом
     // `MessageDto` уже несёт всё нужное для рендера.
-    this.realtimeGateway.emitToUsers(participantUserIds, 'message:new', message);
+    await this.broadcastMessage('message:new', message, currentUser.id, participantUserIds);
     return message;
   }
 
@@ -183,7 +183,7 @@ export class ThreadsController {
       messageId,
       currentUser.id,
     );
-    this.realtimeGateway.emitToUsers(participantUserIds, 'thread:pinned-changed', thread);
+    await this.broadcastThread('thread:pinned-changed', thread, currentUser.id, participantUserIds);
     return thread;
   }
 
@@ -198,7 +198,7 @@ export class ThreadsController {
       messageId,
       currentUser.id,
     );
-    this.realtimeGateway.emitToUsers(participantUserIds, 'thread:pinned-changed', thread);
+    await this.broadcastThread('thread:pinned-changed', thread, currentUser.id, participantUserIds);
     return thread;
   }
 
@@ -209,5 +209,48 @@ export class ThreadsController {
     @Param('id') threadId: string,
   ): Promise<void> {
     await this.threadsService.markRead(threadId, currentUser.id);
+  }
+
+  /** Рассылка `MessageDto` участникам треда — НЕ один и тот же объект всем
+   * (в отличие от прежнего поведения до §104): `sharedPost` внутри
+   * `MessageDto` — per-viewer (см. `ThreadsService.toMessageDto`'s
+   * комментарий), так что каждый получатель, кроме уже посчитанного actor'а
+   * (он получает уже готовый `senderDto`, второй раз не пересчитываем),
+   * получает собственный пересчитанный DTO. */
+  private async broadcastMessage(
+    event: 'message:new' | 'message:edited',
+    actorDto: MessageDto,
+    actorId: string,
+    participantUserIds: string[],
+  ): Promise<void> {
+    await Promise.all(
+      participantUserIds.map(async (participantId) => {
+        const dto =
+          participantId === actorId
+            ? actorDto
+            : await this.threadsService.getMessageDtoForViewer(actorDto.id, participantId);
+        this.realtimeGateway.emitToUser(participantId, event, dto);
+      }),
+    );
+  }
+
+  /** То же самое, но для `ThreadDto` целиком (закреп/откреп — `thread:
+   * pinned-changed` несёт весь список сообщений треда, включая их
+   * `sharedPost`, тот же per-viewer случай, что у `broadcastMessage`). */
+  private async broadcastThread(
+    event: 'thread:pinned-changed',
+    actorDto: ThreadDto,
+    actorId: string,
+    participantUserIds: string[],
+  ): Promise<void> {
+    await Promise.all(
+      participantUserIds.map(async (participantId) => {
+        const dto =
+          participantId === actorId
+            ? actorDto
+            : await this.threadsService.getThreadDtoForViewer(actorDto.id, participantId);
+        this.realtimeGateway.emitToUser(participantId, event, dto);
+      }),
+    );
   }
 }

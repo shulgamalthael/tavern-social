@@ -1,0 +1,85 @@
+.shared {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: 6px;
+  padding: 8px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-surface);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.shared--restricted {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shared__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shared__author {
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shared__text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--tavern-muted);
+}
+
+.shared__image {
+  width: 100%;
+  max-height: 160px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.shared__locked-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--tavern-muted);
+}
+
+.shared__lock-icon {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.shared__deleted {
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--tavern-muted);
+}

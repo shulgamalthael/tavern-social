@@ -109,3 +109,27 @@
     aspect-ratio: 1;
   }
 }
+
+// Позиционирует `ImageUploadButton` (сам рендерит `<button>`) как бейдж в
+// углу большой аватарки своей страницы — `entities/story`'s `StoryAvatar`
+// не может нести эту вёрстку сама (нет доступа к `features/upload-image`,
+// см. коммент у `StoryAvatarProps.addTrigger`), тот же приём, что у
+// `widgets/feed`'s `StoriesTray.module.scss`'s `.tray__add-trigger`.
+.profile__story-add-trigger {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--tavern-surface);
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+}
+
+.profile__story-add-icon {
+  width: 14px;
+  height: 14px;
+}

@@ -1,3 +1,5 @@
+@use '@/shared/styles/mixins' as *;
+
 .scroll-area {
   position: relative;
   display: flex;
@@ -13,9 +15,10 @@
 // собственных детей `.scroll-area` (стандартное поведение, без z-index),
 // поэтому ложится позади `.scroll-area__viewport` сам собой: цвет
 // проступает только там, где контент над ним уже погашен маской, а не
-// поверх читаемого текста. `--tavern-soft` — уже устоявшийся в проекте тон
-// лёгкого акцентного подсвета (бейджи, active-состояния), а не новый цвет
-// с потолка.
+// поверх читаемого текста. `edge-fade-color()` (`shared/styles/_mixins.scss`)
+// — тёмный тон, общий с затуханием под `Header`, вместо прежнего светло-
+// голубого `--tavern-soft`: на фото (например, в галерее вложений чата)
+// светлая подложка читалась как мутное бельмо, а не как тень.
 .scroll-area::before {
   content: '';
   position: absolute;
@@ -23,10 +26,10 @@
   pointer-events: none;
   background: linear-gradient(
     to bottom,
-    var(--tavern-soft) 0,
+    edge-fade-color() 0,
     transparent var(--scroll-fade-top, 0px),
     transparent calc(100% - var(--scroll-fade-bottom, 0px)),
-    var(--tavern-soft) 100%
+    edge-fade-color() 100%
   );
 }
 

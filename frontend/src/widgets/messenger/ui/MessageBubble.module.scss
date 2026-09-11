@@ -125,6 +125,7 @@
   border: 1px solid var(--tavern-line);
   border-radius: 16px 16px 16px 4px;
   background: var(--tavern-surface);
+  box-shadow: 0 1px 2px rgb(16 30 54 / 5%);
   font-size: 14.5px;
   line-height: 1.45;
   word-break: break-word;
@@ -133,7 +134,12 @@
 .bubble--mine {
   border: 0;
   border-radius: 16px 16px 4px 16px;
-  background: var(--tavern-accent);
+  background: linear-gradient(
+    155deg,
+    var(--tavern-accent),
+    color-mix(in srgb, var(--tavern-accent) 82%, #142a5c)
+  );
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--tavern-accent) 28%, transparent);
   color: var(--tavern-accent-ink);
 }
 

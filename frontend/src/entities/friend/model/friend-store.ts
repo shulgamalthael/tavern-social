@@ -132,3 +132,14 @@ export const useFriendStore = create<FriendStore>((set, get) => ({
   receiveRemoved: () => void get().loadRequests(),
   receiveFriendRemoved: () => void get().loadFriends(),
 }));
+
+/** Счётчик для бейджа на пункте «Друзья» в навигации (`NavigationDock`) —
+ * тот же приём, что и `selectUnreadThreadCount` у `entities/thread`:
+ * простой производный селектор поверх уже загруженных данных, а не
+ * отдельное инкрементируемое поле в сторе (в отличие от `useNotification
+ * Store.unreadCount`) — `incoming` и так обновляется целиком при каждом
+ * real-time событии (см. `receiveNewRequest`/`receiveAccepted`/
+ * `receiveRemoved` выше), заводить второй источник правды незачем. */
+export function selectPendingIncomingRequestsCount(state: FriendStore): number {
+  return state.incoming.length;
+}

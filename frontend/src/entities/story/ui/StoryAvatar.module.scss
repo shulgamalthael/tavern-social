@@ -1,0 +1,39 @@
+.story-avatar {
+  position: relative;
+  display: inline-flex;
+}
+
+.story-avatar__ring {
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+// Историй нет вообще — без кольца совсем (не просто прозрачный фон при том
+// же padding: тогда аватарка всё равно чуть «сжималась» бы отступом кольца
+// и на глаз путалась с просмотренной историей, у которой тот же отступ, но
+// едва заметный серый фон — оба состояния выглядели почти одинаково).
+.story-avatar__ring--none {
+  padding: 0;
+}
+
+.story-avatar__ring--seen {
+  background: var(--tavern-line);
+}
+
+.story-avatar__ring--unseen {
+  background: conic-gradient(
+    from 180deg,
+    var(--tavern-accent),
+    var(--tavern-danger),
+    var(--tavern-accent)
+  );
+}

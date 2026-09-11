@@ -13,4 +13,7 @@ export class UpdateSettingsDto {
 
   @IsBoolean()
   morningDigest!: boolean;
+
+  @IsBoolean()
+  isPrivate!: boolean;
 }

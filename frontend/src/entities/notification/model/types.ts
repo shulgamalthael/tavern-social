@@ -3,6 +3,8 @@
 export type NotificationType =
   | 'friend_request'
   | 'friend_accepted'
+  | 'subscription_request'
+  | 'subscription_accepted'
   | 'post_like'
   | 'post_comment'
   | 'post_repost'

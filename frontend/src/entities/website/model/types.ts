@@ -159,8 +159,11 @@ export interface BlockStyle {
   /** `undefined`/`'block'` — старое поведение (вертикальный стек через CSS-
    * класс блока, см. `layout.module.scss`), полностью без участия этих
    * полей — ни один существующий документ не меняется визуально, пока
-   * автор явно не включит `'flex'`/`'grid'`. */
-  display?: LayoutDisplay;
+   * автор явно не включит `'flex'`/`'grid'`. Responsive — тот же паттерн
+   * «сеткой на десктопе, стопкой на телефоне», что и `direction` ниже
+   * (карточная сетка, которая на узком экране должна стать обычным
+   * вертикальным списком, а не сжатой мелкой сеткой). */
+  display?: StyleValue<LayoutDisplay>;
   /** Только при `display: 'flex'`. Responsive — самый частый «взрослый»
    * паттерн: ряд на десктопе, стопка на телефоне (сайдбар/шапка), без
    * ручного дублирования блока под каждый вьюпорт. */
@@ -188,6 +191,20 @@ export interface BlockStyle {
   grow?: 'grow' | 'fixed';
   /** Только при `grow: 'fixed'`. */
   fixedWidth?: number;
+  /** Только когда РОДИТЕЛЬ — `display: 'grid'` (`gridColumns` родителя,
+   * выше) — сколько колонок родительской сетки занимает этот конкретный
+   * блок (`grid-column: span N`), а не только `grow`/`fixedWidth` на
+   * ROW-раскладке. Даёт настоящий bento/asymmetric-эффект (одна крупная
+   * плитка на 2 колонки среди обычных) — до этого поля `gridColumns` мог
+   * произвести только РАВНЫЕ колонки. `undefined`/`1` — обычная одна
+   * колонка, старое поведение любого grid-ребёнка без изменений. Безопасный
+   * no-op на любом родителе, который сам не `display:'grid'` — браузер
+   * просто игнорирует `grid-column` вне grid-контекста, тот же принцип, что
+   * у `grow`/`sticky` выше. */
+  gridColumnSpan?: StyleValue<number>;
+  /** Тот же смысл, что `gridColumnSpan`, для строк (`grid-row: span N`) —
+   * настоящая bento-плитка обычно крупнее и по ширине, и по высоте сразу. */
+  gridRowSpan?: StyleValue<number>;
 
   // --- Позиция ------------------------------------------------------------
   /** `position: sticky` относительно ближайшего скролл-контейнера — вместе
@@ -216,7 +233,40 @@ export interface BlockStyle {
    * перед стартом анимации после появления в зоне видимости (не задержка
    * самого срабатывания обсёрвера). По умолчанию `0`. */
   entranceDelay?: number;
+
+  // --- "Продвинутый CSS" (AI_PLATFORM_ROADMAP.md §78) -----------------------
+  /** Ограниченная, явно перечисленная "форточка" для дизайнов, которые не
+   * укладываются в закрытые токены выше (наклон/поворот, произвольная форма,
+   * размытие/glass-эффект, свободная тень/скругление, межбуквенный
+   * интервал/насыщенность шрифта) — НЕ произвольный CSS: только эти 12
+   * свойств, каждое отдельным значением. Применяется через объект `style`
+   * React (`computeBlockWrapperStyle`, `block-style.ts`), НИКОГДА как текст
+   * в `<style>`/`dangerouslySetInnerHTML` — структурно невозможно вставить
+   * новый селектор/правило этим путём, что бы ни было в значении; сервер
+   * (`buildValidatedStyle`, backend `block-style-schema.ts`) дополнительно
+   * запрещает `url(...)`/`expression(...)`/`@import`/спецсимволы. Флат (не
+   * `ResponsiveValue<T>`), не поддерживает `{{placeholder}}` в виджетах —
+   * узкий v1, тот же принцип, что и остальные не-responsive поля выше
+   * (border/shadow/textColor/entranceAnimation). */
+  advanced?: Partial<Record<AdvancedCssProperty, string>>;
 }
+
+/** Ключи `BlockStyle.advanced` — см. её комментарий. Отдельный именованный
+ * тип (не инлайн-union), потому что нужен и в `block-style.ts` (мёрж в
+ * `computeBlockWrapperStyle`), и в инспекторе билдера ("Продвинутый CSS"). */
+export type AdvancedCssProperty =
+  | 'transform'
+  | 'clipPath'
+  | 'filter'
+  | 'backdropFilter'
+  | 'mixBlendMode'
+  | 'opacity'
+  | 'borderRadius'
+  | 'boxShadow'
+  | 'letterSpacing'
+  | 'textTransform'
+  | 'fontStyle'
+  | 'fontWeight';
 
 /**
  * Один блок дерева сайта — сознательно плоская, декларативная форма

@@ -31,6 +31,10 @@ function describeBody(notification: Notification): string {
       return 'хочет добавить вас в друзья';
     case 'friend_accepted':
       return 'принял(а) вашу заявку в друзья';
+    case 'subscription_request':
+      return 'хочет подписаться на вашу страницу';
+    case 'subscription_accepted':
+      return 'одобрил(а) вашу заявку на подписку';
     case 'post_like':
       return `${others} оценил${extra > 0 ? 'и' : '(а)'} ${target}`;
     case 'post_repost':

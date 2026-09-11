@@ -17,7 +17,16 @@ import type { NotificationType } from '../model/types';
 export function resolveNotificationSection(
   type: NotificationType,
 ): 'profile' | 'friends' | 'groups' {
-  if (type === 'friend_request' || type === 'friend_accepted') return 'friends';
+  // Заявки на подписку (§103) показываются вторым блоком там же, где заявки
+  // в друзья (widgets/friends/FriendsWidget, вкладка «Заявки»), тот же раздел.
+  if (
+    type === 'friend_request' ||
+    type === 'friend_accepted' ||
+    type === 'subscription_request' ||
+    type === 'subscription_accepted'
+  ) {
+    return 'friends';
+  }
   if (type === 'group_join_request' || type === 'group_join_accepted') return 'groups';
   return 'profile';
 }

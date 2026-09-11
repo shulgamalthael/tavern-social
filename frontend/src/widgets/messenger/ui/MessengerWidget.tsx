@@ -14,7 +14,14 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { AddPersonIcon, BackIcon, PinIcon, SearchIcon } from '@/shared/ui/icons';
+import {
+  AddPersonIcon,
+  BackIcon,
+  ChevronDownIcon,
+  MessagesIcon,
+  PinIcon,
+  SearchIcon,
+} from '@/shared/ui/icons';
 import { Modal } from '@/shared/ui/Modal';
 import { ScrollArea } from '@/shared/ui/ScrollArea';
 import { Skeleton } from '@/shared/ui/Skeleton';
@@ -38,9 +45,28 @@ function threadPreviewText(message: ChatMessage | undefined): string {
   return '';
 }
 
+/** Точка «в зале» на аватаре собеседника в списке диалогов/шапке чата —
+ * только для 1:1 (у группы нет единого собеседника, см. `thread.isGroup`).
+ * `Thread.status` — уже готовая для показа строка с backend
+ * (`ThreadsService.toDto`: `'здесь'` при `presenceService.isOnline`, иначе
+ * `'не в зале сейчас'`, у группы вообще другой текст — число участников), а
+ * не отдельный булев флаг: заводить под один-единственный индикатор ещё одно
+ * поле в DTO/сокет-пейлоуде было бы дублированием того же присутствия, что
+ * уже видно из текста статуса под именем. */
+function isOnlineStatus(status: string): boolean {
+  return status === 'здесь';
+}
+
 /** Сколько держится подсветка «сюда прыгнули» после скролла — достаточно,
  * чтобы заметить, но не настолько долго, чтобы выглядело зависшим. */
 const MESSAGE_HIGHLIGHT_MS = 1500;
+
+/** Порог «читаем конец переписки» для автоскролла к новым сообщениям (см.
+ * ниже, эффект на `activeThread.messages.length`) — небольшой запас, а не
+ * ровно 0px: инерционная прокрутка тачпадом/колесом может оставить
+ * `scrollTop` на пару пикселей выше реального дна, что не должно считаться
+ * «пролистал историю». */
+const NEAR_BOTTOM_THRESHOLD_PX = 80;
 
 /** Скроллит к сообщению по стабильному `id` бабла (см. `MessageBubble.tsx`,
  * `message-${id}`) — используется закреплёнными сообщениями, поиском (в
@@ -69,7 +95,7 @@ const THREADS_SKELETON_COUNT = 7;
 function ThreadItemSkeleton() {
   return (
     <div className={styles['messenger__thread-item']}>
-      <Skeleton width={30} height={30} radius="50%" />
+      <Skeleton width={38} height={38} radius="50%" />
       <span className={styles['messenger__thread-body']}>
         <Skeleton width="55%" height={14} />
         <Skeleton width="80%" height={12.5} />
@@ -179,15 +205,39 @@ export function MessengerWidget() {
   // state during render», что и `MessageComposer` (см. там же — почему не
   // эффект).
   const [syncedPinnedThreadId, setSyncedPinnedThreadId] = useState<string | null>(null);
+  // Плавающая кнопка «к последним сообщениям» — видна, когда прокрутили
+  // историю вверх; счётчик — сколько новых сообщений пришло, пока читали
+  // (см. эффект на `activeThread.messages.length` и слушатель скролла ниже).
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [newMessageCount, setNewMessageCount] = useState(0);
 
   const activeThread = threads.find((thread) => thread.id === activeThreadId);
   const chatBodyRef = useRef<HTMLDivElement>(null);
   const lastScrolledThreadId = useRef<string | null>(null);
   const addParticipantContainerRef = useRef<HTMLDivElement>(null);
+  // Зеркало `!showScrollButton` в ref — читается синхронно внутри эффекта
+  // автоскролла ниже (который реагирует на новые сообщения, не на сам
+  // скролл) без необходимости перезапускать его при каждом пикселе
+  // прокрутки, если бы `showScrollButton` было у него в зависимостях.
+  const isNearBottomRef = useRef(true);
 
   if (activeThread && activeThread.id !== syncedPinnedThreadId) {
     setSyncedPinnedThreadId(activeThread.id);
     setPinnedIndex(0);
+  }
+
+  // Открепили (сами или другой участник по сокету — `thread:pinned-changed`)
+  // именно то закреплённое сообщение, на которое сейчас указывает
+  // `pinnedIndex`, пока смотрели не на первое — массив укоротился, но
+  // индекс остался прежним и стал указывать за его пределы
+  // (`pinnedMessages[pinnedIndex] === undefined`). Без этой клэмпинги клик
+  // по плашке падал с `TypeError`, а счётчик «N/M» временно показывал
+  // индекс больше общего числа. Тот же приём «adjust state during render»,
+  // что и сброс при смене треда выше — не эффект, чтобы не мелькать одним
+  // лишним кадром со старым индексом перед перерисовкой.
+  const pinnedCount = activeThread?.pinnedMessages.length ?? 0;
+  if (pinnedCount > 0 && pinnedIndex >= pinnedCount) {
+    setPinnedIndex(pinnedCount - 1);
   }
 
   // Маленькое превью-фото у закреплённого сообщения в плашке — просто
@@ -228,22 +278,73 @@ export function MessengerWidget() {
     const container = chatBodyRef.current;
     if (!container || !activeThread) return;
 
-    // Открыли другой диалог — прыгаем к последнему сообщению мгновенно;
-    // новое сообщение в уже открытом (отправленное или полученное живьём
-    // через сокет — оба пути меняют `messages.length`) — плавно.
+    // Открыли другой диалог — прыгаем к последнему сообщению мгновенно и
+    // сбрасываем плашку «новые сообщения» от предыдущего треда.
     const isThreadSwitch = lastScrolledThreadId.current !== activeThread.id;
     lastScrolledThreadId.current = activeThread.id;
 
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior: isThreadSwitch ? 'auto' : 'smooth',
-    });
+    if (isThreadSwitch) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'auto' });
+      isNearBottomRef.current = true;
+      setShowScrollButton(false);
+      setNewMessageCount(0);
+      return;
+    }
+
+    // Новое сообщение в уже открытом диалоге. Своё (только что отправленное)
+    // всегда подскролливает вниз — иначе не увидеть, что сам только что
+    // написал. Чужое (живьём через сокет) — только если и так читали
+    // недавние сообщения; если пролистали вверх к истории, принудительный
+    // скролл выдернул бы из чтения, поэтому вместо этого просто считаем
+    // непоказанные (см. `.messenger__scroll-bottom` ниже).
+    const lastMessage = activeThread.messages[activeThread.messages.length - 1];
+    const isOwnMessage = Boolean(lastMessage?.mine);
+    if (isNearBottomRef.current || isOwnMessage) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        // Уже у дна — короткая дистанция, плавно. Своё сообщение, но
+        // пролистали далеко вверх — потенциально вся история треда, тот же
+        // случай, что и у ручной кнопки «вниз» (`scrollToBottom` выше):
+        // долгая плавная анимация шлёт кучу промежуточных `scroll`-событий,
+        // на которых слушатель ниже ещё видит дистанцию больше порога и
+        // снова показывает кнопку прямо поверх только что сброшенного
+        // состояния — мгновенный прыжок этого окна не оставляет.
+        behavior: isNearBottomRef.current ? 'smooth' : 'auto',
+      });
+      isNearBottomRef.current = true;
+      setShowScrollButton(false);
+      setNewMessageCount(0);
+    } else {
+      setNewMessageCount((count) => count + 1);
+    }
     // Намеренно только id и число сообщений — сам объект `activeThread`
     // (и, значит, весь `threads`) меняет ссылку при любом обновлении стора
     // (например, «не в зале сейчас» → «в зале»), что вызывало бы лишний
     // скролл без нового сообщения.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeThread?.id, activeThread?.messages.length]);
+
+  // Отслеживает, читаем ли мы сейчас конец истории — влияет на решение выше
+  // (подскролливать ли автоматически к новому чужому сообщению) и на
+  // видимость плавающей кнопки «вниз». Переустанавливается при смене треда
+  // на случай, если сам DOM-узел viewport'а между тредами меняется (переход
+  // из плейсхолдера «выберите диалог», где `ScrollArea` не смонтирован, в
+  // открытый тред).
+  useEffect(() => {
+    const container = chatBodyRef.current;
+    if (!container) return undefined;
+
+    const onScroll = () => {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD_PX;
+      isNearBottomRef.current = nearBottom;
+      setShowScrollButton(!nearBottom);
+      if (nearBottom) setNewMessageCount(0);
+    };
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [activeThread?.id]);
 
   useEffect(() => {
     if (!isAddParticipantOpen) return undefined;
@@ -261,6 +362,26 @@ export function MessengerWidget() {
     setChatOpen(true);
     setAddParticipantOpen(false);
     setThreadSearchOpen(false);
+    setShowScrollButton(false);
+    setNewMessageCount(0);
+  };
+
+  const scrollToBottom = () => {
+    const container = chatBodyRef.current;
+    if (!container) return;
+    // `behavior: 'auto'` (мгновенный прыжок), не `'smooth'` — при большой
+    // дистанции (сотни непрочитанных сообщений над экраном) плавная анимация
+    // растягивается на сотни миллисекунд и всё это время шлёт промежуточные
+    // `scroll`-события; слушатель ниже на каждое из них честно пересчитывает
+    // «у дна ли мы» и на подлёте к цели видит дистанцию ещё больше порога
+    // (`NEAR_BOTTOM_THRESHOLD_PX`) — `setShowScrollButton(false)` тут же
+    // перезатирался обратно в `true`, и кнопка не пропадала по клику.
+    // Мгновенный скролл даёт один `scroll`-тик уже у самого дна — без окна,
+    // в которое может влезть протух­шее промежуточное состояние.
+    container.scrollTo({ top: container.scrollHeight, behavior: 'auto' });
+    isNearBottomRef.current = true;
+    setShowScrollButton(false);
+    setNewMessageCount(0);
   };
 
   const openThreadAndScrollTo = (threadId: string, messageId: string) => {
@@ -356,15 +477,15 @@ export function MessengerWidget() {
           <div className={styles['messenger__thread-panel']}>
             <div className={styles['messenger__thread-list-head']}>
               <span className={styles['messenger__thread-list-title']}>Сообщения</span>
-              <button
-                type="button"
-                className={styles['messenger__thread-list-search-button']}
-                aria-label="Поиск по чатам, сообщениям и людям"
-                onClick={() => setAllThreadsSearchOpen(true)}
-              >
-                <SearchIcon />
-              </button>
             </div>
+            <button
+              type="button"
+              className={styles['messenger__search-field']}
+              onClick={() => setAllThreadsSearchOpen(true)}
+            >
+              <SearchIcon />
+              <span>Поиск по чатам, сообщениям и людям</span>
+            </button>
             <ScrollArea
               className={styles['messenger__thread-list']}
               viewportClassName={styles['messenger__thread-list-viewport']}
@@ -378,10 +499,16 @@ export function MessengerWidget() {
                     className={cn(
                       styles['messenger__thread-item'],
                       thread.id === activeThreadId && styles['messenger__thread-item--active'],
+                      Boolean(thread.unread) && styles['messenger__thread-item--unread'],
                     )}
                     onClick={() => openThread(thread.id)}
                   >
-                    <Avatar initials={thread.initials} src={thread.avatarUrl} size="sm" />
+                    <Avatar
+                      initials={thread.initials}
+                      src={thread.avatarUrl}
+                      size="md"
+                      online={!thread.isGroup && isOnlineStatus(thread.status)}
+                    />
                     <span className={styles['messenger__thread-body']}>
                       <span className={styles['messenger__thread-name']}>{thread.name}</span>
                       <span className={styles['messenger__thread-preview']}>
@@ -419,7 +546,7 @@ export function MessengerWidget() {
                       <Avatar
                         initials={activeThread.initials}
                         src={activeThread.avatarUrl}
-                        size="sm"
+                        size="md"
                       />
                       <span className={styles['messenger__chat-head-body']}>
                         <span className={styles['messenger__thread-name']}>
@@ -438,7 +565,8 @@ export function MessengerWidget() {
                         <Avatar
                           initials={activeThread.initials}
                           src={activeThread.avatarUrl}
-                          size="sm"
+                          size="md"
+                          online={isOnlineStatus(activeThread.status)}
                         />
                       </button>
                       <button
@@ -540,76 +668,94 @@ export function MessengerWidget() {
                   </div>
                 )}
 
-                <ScrollArea
-                  className={styles['messenger__chat-body']}
-                  viewportClassName={styles['messenger__chat-body-viewport']}
-                  viewportRef={chatBodyRef}
-                >
-                  {buildChatRows(activeThread.messages).map((row) =>
-                    row.kind === 'day' ? (
-                      <div key={row.key} className={styles['messenger__day-divider']}>
-                        <span>{row.label}</span>
-                      </div>
-                    ) : (
-                      <div
-                        key={row.key}
-                        className={cn(
-                          styles['messenger__cluster'],
-                          row.mine && styles['messenger__cluster--mine'],
-                        )}
-                      >
-                        {activeThread.isGroup && !row.mine && (
-                          <ClusterSenderLabel
-                            participants={activeThread.participants}
-                            senderId={row.senderId}
-                          />
-                        )}
-                        {row.messages.map((message, index) => (
-                          <MessageBubble
-                            key={message.id}
-                            message={message}
-                            position={{
-                              isFirstInCluster: index === 0,
-                              isLastInCluster: index === row.messages.length - 1,
-                            }}
-                            onEdit={() =>
-                              startEditingMessage(activeThread.id, message.id, message.text)
-                            }
-                            onDelete={() =>
-                              setDeletingMessage({
-                                threadId: activeThread.id,
-                                messageId: message.id,
-                              })
-                            }
-                            onReply={() =>
-                              startReplyingToMessage(
-                                activeThread.id,
-                                message.id,
-                                message.mine
-                                  ? currentUser.name
-                                  : (activeThread.participants.find(
-                                      (participant) => participant.id === message.senderId,
-                                    )?.name ?? 'Собеседник'),
-                                message.text,
-                                message.attachments.length > 0,
-                              )
-                            }
-                            onForward={() =>
-                              setForwardingMessage({
-                                sourceThreadId: activeThread.id,
-                                messageId: message.id,
-                              })
-                            }
-                            onPin={() => void pinMessage(activeThread.id, message.id)}
-                            onUnpin={() => void unpinMessage(activeThread.id, message.id)}
-                            onAuthorClick={goToUserProfile}
-                            onReplyQuoteClick={scrollToMessage}
-                          />
-                        ))}
-                      </div>
-                    ),
+                <div className={styles['messenger__chat-body-wrap']}>
+                  <ScrollArea
+                    className={styles['messenger__chat-body']}
+                    viewportClassName={styles['messenger__chat-body-viewport']}
+                    viewportRef={chatBodyRef}
+                  >
+                    {buildChatRows(activeThread.messages).map((row) =>
+                      row.kind === 'day' ? (
+                        <div key={row.key} className={styles['messenger__day-divider']}>
+                          <span>{row.label}</span>
+                        </div>
+                      ) : (
+                        <div
+                          key={row.key}
+                          className={cn(
+                            styles['messenger__cluster'],
+                            row.mine && styles['messenger__cluster--mine'],
+                          )}
+                        >
+                          {activeThread.isGroup && !row.mine && (
+                            <ClusterSenderLabel
+                              participants={activeThread.participants}
+                              senderId={row.senderId}
+                            />
+                          )}
+                          {row.messages.map((message, index) => (
+                            <MessageBubble
+                              key={message.id}
+                              message={message}
+                              position={{
+                                isFirstInCluster: index === 0,
+                                isLastInCluster: index === row.messages.length - 1,
+                              }}
+                              onEdit={() =>
+                                startEditingMessage(activeThread.id, message.id, message.text)
+                              }
+                              onDelete={() =>
+                                setDeletingMessage({
+                                  threadId: activeThread.id,
+                                  messageId: message.id,
+                                })
+                              }
+                              onReply={() =>
+                                startReplyingToMessage(
+                                  activeThread.id,
+                                  message.id,
+                                  message.mine
+                                    ? currentUser.name
+                                    : (activeThread.participants.find(
+                                        (participant) => participant.id === message.senderId,
+                                      )?.name ?? 'Собеседник'),
+                                  message.text,
+                                  message.attachments.length > 0,
+                                )
+                              }
+                              onForward={() =>
+                                setForwardingMessage({
+                                  sourceThreadId: activeThread.id,
+                                  messageId: message.id,
+                                })
+                              }
+                              onPin={() => void pinMessage(activeThread.id, message.id)}
+                              onUnpin={() => void unpinMessage(activeThread.id, message.id)}
+                              onAuthorClick={goToUserProfile}
+                              onReplyQuoteClick={scrollToMessage}
+                            />
+                          ))}
+                        </div>
+                      ),
+                    )}
+                  </ScrollArea>
+
+                  {showScrollButton && (
+                    <button
+                      type="button"
+                      className={styles['messenger__scroll-bottom']}
+                      onClick={scrollToBottom}
+                      aria-label="Прокрутить к последним сообщениям"
+                    >
+                      <ChevronDownIcon />
+                      {newMessageCount > 0 && (
+                        <span className={styles['messenger__scroll-bottom-badge']}>
+                          {newMessageCount}
+                        </span>
+                      )}
+                    </button>
                   )}
-                </ScrollArea>
+                </div>
 
                 <MessageComposer threadId={activeThread.id} />
               </>
@@ -633,7 +779,7 @@ export function MessengerWidget() {
                     className={styles['messenger__chat-head-trigger']}
                     onClick={() => goToUserProfile(draftTarget.id)}
                   >
-                    <Avatar initials={draftTarget.initials} src={draftTarget.avatarUrl} size="sm" />
+                    <Avatar initials={draftTarget.initials} src={draftTarget.avatarUrl} size="md" />
                   </button>
                   <button
                     type="button"
@@ -660,11 +806,15 @@ export function MessengerWidget() {
                 <MessageComposer threadId={null} />
               </>
             ) : (
-              <EmptyState
-                className={styles['messenger__placeholder']}
-                title="Выберите диалог"
-                description="Список слева — откройте разговор, чтобы увидеть сообщения."
-              />
+              <div className={styles['messenger__placeholder']}>
+                <span className={styles['messenger__placeholder-icon']}>
+                  <MessagesIcon />
+                </span>
+                <p className={styles['messenger__placeholder-title']}>Выберите диалог</p>
+                <p className={styles['messenger__placeholder-text']}>
+                  Список слева — откройте разговор, чтобы увидеть сообщения.
+                </p>
+              </div>
             )}
           </div>
         </div>

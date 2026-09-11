@@ -39,6 +39,29 @@ $bp-desktop: 1440px;
   }
 }
 
+// Цвет тёмной, малозаметной виньетки на затухающем краю контента — общий
+// источник для `edge-fade` ниже и для цветной подложки под `mask-image`
+// у `ScrollArea` (`shared/ui/ScrollArea/ScrollArea.module.scss`): раньше
+// это были два независимых светлых приёма (полупрозрачная `--tavern-
+// surface`-плашка под `Header` и светло-голубая `--tavern-soft` подложка у
+// `ScrollArea`) — оба на фото/цветном контенте читались как мутное бельмо,
+// а не как аккуратная тень. Тёмный `--tavern-ink` вместо светлого тона
+// работает одинаково поверх любого фона — слегка притемняет его, а не
+// «стирает» цвет, как естественная тень под приподнятым слоем интерфейса.
+@function edge-fade-color($strength: 12%) {
+  @return color-mix(in srgb, var(--tavern-ink) #{$strength}, transparent);
+}
+
+// Сам градиент-виньетка — `$direction` как у `linear-gradient`
+// (`to bottom`/`to top`/…), `$strength` — см. `edge-fade-color` выше.
+// Используется как overlay поверх контента (`Header`) — для затухания
+// самого контента (как у `ScrollArea`, через `mask-image`) этот миксин не
+// подходит, там нужна только заливка позади маски, берите
+// `edge-fade-color()` напрямую.
+@mixin edge-fade($direction: to bottom, $strength: 12%) {
+  background: linear-gradient($direction, edge-fade-color($strength), transparent);
+}
+
 @mixin card {
   background: var(--tavern-surface);
   border: 1px solid var(--tavern-line);

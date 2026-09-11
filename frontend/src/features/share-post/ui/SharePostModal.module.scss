@@ -1,0 +1,129 @@
+@use '@/shared/styles/mixins' as *;
+
+.share {
+  width: min(400px, 100%);
+}
+
+.share__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.share__preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 10px;
+  background: var(--tavern-sunk);
+}
+
+.share__preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.share__preview-author {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.share__preview-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--tavern-muted);
+}
+
+.share__preview-image {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.share__input {
+  @include control;
+  width: 100%;
+  margin-top: 12px;
+  background: var(--tavern-sunk);
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.share__error {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--tavern-danger);
+}
+
+.share__state {
+  padding: 12px 0;
+}
+
+.share__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.share__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--tavern-sunk);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.share__row-name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share__row-sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--tavern-accent);
+}
+
+.share__row-sent-icon {
+  width: 13px;
+  height: 13px;
+}

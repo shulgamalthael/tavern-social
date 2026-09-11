@@ -37,6 +37,7 @@
   max-width: 380px;
   min-height: 0;
   border-right: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
 }
 
 .messenger__thread-list-head {
@@ -44,29 +45,67 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  padding: 13px 15px;
-  border-bottom: 1px solid var(--tavern-line);
+  padding: 18px 17px 12px;
 }
 
 .messenger__thread-list-title {
-  font-size: 14.5px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 19px;
   font-weight: 600;
+  letter-spacing: 0.1px;
 }
 
-.messenger__thread-list-search-button {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 50%;
-  background: none;
+// Поле поиска всегда на виду под заголовком списка, а не спрятано за
+// иконкой — так делают Telegram Desktop и Slack: сама строка списка чатов
+// первой подсказывает, что искать можно прямо отсюда. Кнопка, а не
+// настоящий `<input>` — поиск всё равно открывается отдельной модалкой
+// (`MessengerSearchModal`) со своим полем ввода и результатами сразу по
+// трём категориям (чаты/сообщения/люди), а не инлайн-фильтром этого списка.
+// `height: 44px` — не через паддинг: та же высота пилюли, что и у поля
+// сообщения внизу чата (`MessageComposer.module.scss`, `.composer__field`,
+// состояние одной строки) — два похожих по форме поля на одной странице не
+// должны быть на глаз разной высоты.
+.messenger__search-field {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 44px;
+  gap: 9px;
+  margin: 0 14px 12px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--tavern-sunk);
   color: var(--tavern-muted);
+  font-size: 13.5px;
+  text-align: left;
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
   &:hover {
-    background: var(--tavern-sunk);
+    background: var(--tavern-soft);
     color: var(--tavern-ink);
+  }
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+    background: var(--tavern-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tavern-accent) 14%, transparent);
   }
 }
 
@@ -78,61 +117,103 @@
 .messenger__thread-list-viewport {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  padding: 2px 8px 8px;
 }
 
 .messenger__thread-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 13px 15px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 0;
-  border-bottom: 1px solid var(--tavern-line);
-  border-left: 2px solid transparent;
+  border-radius: 15px;
   background: none;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background-color 0.15s ease;
 
   &:hover {
     background: var(--tavern-sunk);
   }
+
+  &:active {
+    background: var(--tavern-soft);
+  }
 }
 
+// Активный диалог — мягкая акцентная заливка вместо прежней плоской
+// `--tavern-sunk` с полосой слева: полоса остаётся (теперь как короткий
+// скруглённый маркер по центру высоты строки, а не на всю её высоту — тот
+// же приём, что у активного пункта в `navigation-dock`), но заливка сама по
+// себе уже достаточно чётко отделяет активную строку от списка.
 .messenger__thread-item--active {
-  background: var(--tavern-sunk);
-  border-left-color: var(--tavern-accent);
+  background: color-mix(in srgb, var(--tavern-accent) 10%, var(--tavern-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tavern-accent) 16%, transparent);
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    width: 3px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--tavern-accent);
+    transform: translateY(-50%);
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--tavern-accent) 14%, var(--tavern-surface));
+  }
 }
 
 .messenger__thread-body {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
   flex: 1;
 }
 
 .messenger__thread-name {
   overflow: hidden;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 14.5px;
+  font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .messenger__thread-preview {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--tavern-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+// Непрочитанное — имя и время чуть настойчивее, тот же приём, что в
+// большинстве мессенджеров, чтобы список читался «по весу» даже без
+// отдельного взгляда на бейдж счётчика.
+.messenger__thread-item--unread {
+  .messenger__thread-name {
+    font-weight: 700;
+  }
+
+  .messenger__thread-time {
+    color: var(--tavern-accent);
+    font-weight: 600;
+  }
+}
+
 .messenger__thread-meta {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 5px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -147,19 +228,26 @@
 }
 
 .messenger__chat {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 3 1 420px;
   min-width: 0;
   min-height: 0;
+  background: var(--tavern-surface);
 }
 
 .messenger__chat-head {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 13px 18px;
+  flex-shrink: 0;
+  gap: 12px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+  box-shadow: 0 1px 0 rgb(16 30 54 / 3%);
 }
 
 .messenger__chat-head-body {
@@ -228,19 +316,28 @@
   background: var(--tavern-surface);
   color: inherit;
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 
   &:hover {
+    border-color: var(--tavern-accent);
     background: var(--tavern-sunk);
+    color: var(--tavern-accent);
   }
 }
 
 .messenger__pinned-bar {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 18px;
+  flex-shrink: 0;
+  gap: 9px;
+  padding: 9px 20px;
   border-bottom: 1px solid var(--tavern-line);
-  background: var(--tavern-surface);
+  background: color-mix(in srgb, var(--tavern-accent) 7%, var(--tavern-surface));
 }
 
 .messenger__pinned-icon {
@@ -277,44 +374,87 @@
 
 .messenger__pinned-next {
   flex-shrink: 0;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border: 1px solid var(--tavern-line);
   border-radius: 999px;
-  background: var(--tavern-sunk);
+  background: var(--tavern-surface);
   color: var(--tavern-muted);
   font-size: 11px;
   cursor: pointer;
+  transition: color 0.15s ease;
 
   &:hover {
-    color: var(--tavern-ink);
+    color: var(--tavern-accent);
   }
 }
 
+// Обёртка вокруг ленты сообщений и плавающей кнопки «вниз» — своя система
+// координат для этой кнопки (см. `.messenger__scroll-bottom` ниже), не
+// завязанная на высоту композера под ней. Композер растёт вместе с
+// многострочным вводом (см. `MessageComposer.module.scss`, автоподрост
+// textarea) — если бы кнопка позиционировалась от нижнего края всего
+// `.messenger__chat` фиксированным отступом, при выросшем композере она
+// оказалась бы поверх поля ввода вместо места прямо над ним.
+.messenger__chat-body-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+// Едва заметная «обстановка» позади ленты сообщений вместо ровной заливки —
+// та же пара холодных световых пятен, что и на фоне всего приложения (см.
+// `globals.css`, `body::before`), только сильно приглушённая, чтобы не
+// спорить с читаемостью баблов поверх неё. Обычное свойство `background`,
+// а не `::before` — на этом же узле уже висит цветной `::before` затухания
+// края скролла (`ScrollArea.module.scss`, `.scroll-area::before`), второй
+// псевдоэлемент здесь бы его перекрыл, а не сложился с ним.
 .messenger__chat-body {
   flex: 1;
   min-height: 0;
-  background: var(--tavern-sunk);
+  background:
+    radial-gradient(
+      ellipse 60% 40% at 12% 0%,
+      color-mix(in srgb, var(--tavern-accent) 5%, transparent) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 55% 45% at 100% 100%,
+      color-mix(in srgb, var(--tavern-accent) 4%, transparent) 0%,
+      transparent 60%
+    ),
+    var(--tavern-sunk);
 }
 
 .messenger__chat-body-viewport {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px 20px;
+  padding: 18px 22px 22px;
 }
 
+// Прилипает к верху ленты при прокрутке (как в Telegram/WhatsApp) — так
+// видно, какой день сейчас читаешь, даже пролистав давно за пределы первого
+// разделителя. `z-index` выше кластеров сообщений — иначе бабл, доскроллив
+// вплотную, лёг бы поверх прилипшего разделителя вместо того, чтобы уйти
+// под него.
 .messenger__day-divider {
+  position: sticky;
+  top: 6px;
+  z-index: 3;
   display: flex;
   justify-content: center;
   margin: 4px 0;
 
   span {
-    padding: 4px 12px;
+    padding: 4px 14px;
     border-radius: 999px;
     background: var(--tavern-surface);
+    box-shadow: 0 1px 4px rgb(16 30 54 / 10%);
     color: var(--tavern-muted);
     font-size: 11.5px;
-    font-weight: 500;
+    font-weight: 600;
   }
 }
 
@@ -323,10 +463,27 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+  // Появление новой цепочки сообщений — лёгкий подъём+проявление. Дёшево
+  // (только `opacity`/`transform`, композитятся на GPU) и срабатывает
+  // разово при монтировании, так что не мешает даже при открытии треда с
+  // сотнями сообщений сразу.
+  animation: message-cluster-in 0.2s ease;
 }
 
 .messenger__cluster--mine {
   align-items: flex-end;
+}
+
+@keyframes message-cluster-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 // Аватар + имя над цепочкой чужих сообщений в групповом чате (см.
@@ -346,12 +503,123 @@
   color: var(--tavern-muted);
 }
 
+// Плавающая кнопка «к последним сообщениям» — появляется, когда прокрутили
+// историю вверх (см. `showScrollButton` в MessengerWidget.tsx). Привязана к
+// `.messenger__chat-body-wrap`, а не ко всему `.messenger__chat` — так её
+// положение не зависит от текущей высоты композера под ней.
+.messenger__scroll-bottom {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--tavern-line);
+  border-radius: 50%;
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  box-shadow: 0 10px 28px rgb(16 30 54 / 20%);
+  cursor: pointer;
+  animation: scroll-bottom-in 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--tavern-accent);
+    color: var(--tavern-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--tavern-accent) 22%, transparent);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.94);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@keyframes scroll-bottom-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.messenger__scroll-bottom-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--tavern-surface);
+  border-radius: 9px;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
 .messenger__placeholder {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  text-align: center;
+}
+
+// Кружок с иконкой над «Выберите диалог» — единственный экран мессенджера
+// без активного треда, поэтому единственное место, где уместен акцент
+// покрупнее вместо обычного `EmptyState` (тот — для настоящей пустоты типа
+// «сообщений ещё нет», см. `messenger-page__status` выше, где он и
+// используется).
+.messenger__placeholder-icon {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tavern-accent) 10%, var(--tavern-surface));
+  color: var(--tavern-accent);
+
+  svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.messenger__placeholder-title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.messenger__placeholder-text {
+  margin: 0;
+  max-width: 30ch;
+  color: var(--tavern-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
 .messenger__delete-modal {
@@ -398,6 +666,11 @@
 
   .messenger__back-button {
     display: grid;
+  }
+
+  .messenger__scroll-bottom {
+    right: 12px;
+    bottom: 12px;
   }
 
   .messenger[data-chat-open='false'] .messenger__chat {

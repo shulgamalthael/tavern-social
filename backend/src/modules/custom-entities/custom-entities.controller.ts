@@ -15,6 +15,7 @@ import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import type { RequestUser } from '@/common/types/authenticated-request';
 import { AddCustomEntityFieldDto } from './dto/add-custom-entity-field.dto';
 import { CreateCustomEntityDto } from './dto/create-custom-entity.dto';
+import { SetCustomEntityVisibilityDto } from './dto/set-custom-entity-visibility.dto';
 import { UpdateCustomEntityDto } from './dto/update-custom-entity.dto';
 import { UpsertCustomEntityRecordDto } from './dto/upsert-custom-entity-record.dto';
 import type { CustomEntityDto, CustomEntityRecordDto } from './custom-entities.types';
@@ -66,6 +67,16 @@ export class CustomEntitiesController {
     @Body() dto: AddCustomEntityFieldDto,
   ): Promise<CustomEntityDto> {
     return this.customEntitiesService.addField(businessId, entityId, currentUser.id, dto);
+  }
+
+  @Patch(':entityId/visibility')
+  setVisibility(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('businessId') businessId: string,
+    @Param('entityId') entityId: string,
+    @Body() dto: SetCustomEntityVisibilityDto,
+  ): Promise<CustomEntityDto> {
+    return this.customEntitiesService.setVisibility(businessId, entityId, currentUser.id, dto);
   }
 
   @Delete(':entityId')

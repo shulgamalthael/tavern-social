@@ -1,7 +1,11 @@
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { WebsitesService } from '@/modules/websites/websites.service';
 import type { ToolContext, ToolDefinition } from '../ai.types';
-import { buildValidatedStyle, STYLE_FIELD_KEYS } from './lib/block-style-schema';
+import {
+  ADVANCED_CSS_PROPERTIES,
+  buildValidatedStyle,
+  STYLE_FIELD_KEYS,
+} from './lib/block-style-schema';
 import { findBlockInPages, replaceBlockInPages } from './lib/block-tree';
 import { ToolRegistryService } from './tool-registry.service';
 
@@ -76,7 +80,9 @@ export class SetStyleTool implements OnModuleInit {
               `Используй умеренно — анимация на каждом блоке страницы подряд утомляет, не усиливает: обычно достаточно героя и 2-3 акцентных секций, не всех. ` +
               `Эффект виден в Предпросмотре/на опубликованном сайте, не в самом холсте редактора — это осознанно (холст перерисовывается на каждое действие редактирования). ` +
               `Пример сайдбара: на columns — display:"flex"; на первой колонке — grow:"fixed", fixedWidth:280, sticky:true; на второй — ничего не менять (grow:"grow" по умолчанию). ` +
-              `Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}.`,
+              `advanced — необязательный объект "продвинутого CSS" для дизайна, который НЕ укладывается в поля выше (наклон/поворот, произвольная форма, размытие/glass-эффект, свободная тень/скругление, межбуквенный интервал/насыщенность шрифта): ${ADVANCED_CSS_PROPERTIES.join(', ')} — каждое значение просто строка (например transform:"rotate(-4deg)", clipPath:"polygon(0 0, 100% 0, 100% 85%, 0 100%)", filter:"blur(6px) saturate(1.3)", boxShadow:"0 20px 60px rgba(0,0,0,.35)", borderRadius:"40% 60% 60% 40%"). ` +
+              `Используй advanced РЕДКО, только когда обычные поля выше реально не могут дать нужный вид — не на каждом блоке подряд. Ссылки (url(...)) и внешние ресурсы в значениях advanced запрещены — только само CSS-значение свойства. ` +
+              `Допустимые ключи: ${STYLE_FIELD_KEYS.join(', ')}, advanced.`,
           },
         },
         required: ['blockId', 'style'],

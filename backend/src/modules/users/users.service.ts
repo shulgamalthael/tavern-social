@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { OAuthProvider, User } from '@prisma/client';
 import { deleteUploadedFile } from '@/common/lib/upload';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
+import { FriendsService } from '@/modules/friends/friends.service';
+import { SubscriptionsService } from '@/modules/subscriptions/subscriptions.service';
 import type { UpdateProfileDto } from './dto/update-profile.dto';
 import type { UpdateSettingsDto } from './dto/update-settings.dto';
 import * as usersMapper from './users.mapper';
@@ -9,7 +11,11 @@ import type { MeProfile, PublicProfile } from './users.types';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly friendsService: FriendsService,
+    private readonly subscriptionsService: SubscriptionsService,
+  ) {}
 
   async findByIdOrThrow(id: string): Promise<User> {
     const user = await this.prisma.user.findUnique({ where: { id } });
@@ -116,15 +122,48 @@ export class UsersService {
         showPresence: dto.showPresence,
         allowStrangerInvites: dto.allowStrangerInvites,
         morningDigest: dto.morningDigest,
+        isPrivate: dto.isPrivate,
       },
     });
+  }
+
+  /** Доступ к контенту приватного профиля (§103) — всё, кроме верхнего
+   * блока (обложка/аватар/имя/тэглайн), см. `UserProfileDto.canViewFullProfile`
+   * и вызовы этого метода в `PostsService.listWall`/`create`,
+   * `GalleryController.list`, `UsersController.getFriends`/`getFollowers`/
+   * `getFollowing`. Публичный профиль, сам владелец и админы (модерация) —
+   * всегда доступны; иначе только друзья или одобренные подписчики. */
+  async canViewRestrictedContent(
+    target: Pick<User, 'id' | 'isPrivate'>,
+    viewerId: string,
+  ): Promise<boolean> {
+    if (!target.isPrivate || target.id === viewerId) return true;
+    const viewer = await this.prisma.user.findUnique({
+      where: { id: viewerId },
+      select: { role: true },
+    });
+    if (viewer?.role === 'admin') return true;
+    const [{ isFriend }, { isFollowing }] = await Promise.all([
+      this.friendsService.getStatus(viewerId, target.id),
+      this.subscriptionsService.getStatus(viewerId, target.id),
+    ]);
+    return isFriend || isFollowing;
+  }
+
+  async assertCanViewRestrictedContent(
+    target: Pick<User, 'id' | 'isPrivate'>,
+    viewerId: string,
+  ): Promise<void> {
+    if (!(await this.canViewRestrictedContent(target, viewerId))) {
+      throw new ForbiddenException('Эта страница приватная');
+    }
   }
 
   toPublicProfile(user: User): PublicProfile {
     return usersMapper.toPublicProfile(user);
   }
 
-  toMeProfile(user: User): MeProfile {
+  toMeProfile(user: User): Omit<MeProfile, 'followersCount' | 'followingCount' | 'friendsCount'> {
     return usersMapper.toMeProfile(user);
   }
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
   DISCOUNT_REJECTION_LABELS,
@@ -15,9 +14,9 @@ import {
 } from '@/entities/order';
 import { DEFAULT_BUSINESS_CURRENCY } from '@/shared/config/currencies';
 import { formatMoney } from '@/shared/lib/format-money';
-import { getStripe } from '@/shared/lib/stripe-client';
 import { Button } from '@/shared/ui/Button';
 import { Modal } from '@/shared/ui/Modal';
+import { StripePaymentForm } from '@/shared/ui/StripePaymentForm';
 import { CloseIcon, MinusIcon, PlusIcon, ShoppingBagIcon, TrashIcon } from '@/shared/ui/icons';
 import { selectCartItemCount, selectCartTotalCents, useCartStore } from '../model/cart-store';
 import styles from './CartWidget.module.scss';
@@ -34,59 +33,6 @@ export interface CartWidgetProps {
 }
 
 type Step = 'cart' | 'checkout' | 'payment' | 'payment-unavailable' | 'success';
-
-interface PaymentFormProps {
-  onPaid: () => void;
-}
-
-/** Живёт ВНУТРИ `<Elements>` (см. `CartWidget` ниже) — `useStripe`/
- * `useElements` работают только там, поэтому не могут быть вызваны прямо в
- * `CartWidget` до появления `clientSecret`. `redirect: 'if_required'` —
- * большинство способов оплаты (карта) подтверждаются без ухода со страницы;
- * Stripe уводит на `return_url` только если конкретный выбранный способ
- * реально этого требует (некоторые локальные методы оплаты), а не всегда. */
-function PaymentForm({ onPaid }: PaymentFormProps) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isSubmitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!stripe || !elements) return;
-
-    setSubmitting(true);
-    setError(null);
-    const { error: confirmError } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: window.location.href },
-      redirect: 'if_required',
-    });
-
-    if (confirmError) {
-      setError(confirmError.message ?? 'Не удалось провести оплату');
-      setSubmitting(false);
-      return;
-    }
-    onPaid();
-  }
-
-  return (
-    <form className={styles.form} onSubmit={(event) => void onSubmit(event)}>
-      <PaymentElement />
-
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
-      )}
-
-      <Button type="submit" disabled={!stripe || isSubmitting}>
-        {isSubmitting ? 'Оплачиваем…' : 'Оплатить'}
-      </Button>
-    </form>
-  );
-}
 
 /**
  * Глобальная плавающая корзина — монтируется один раз на весь публичный
@@ -469,14 +415,13 @@ export function CartWidget({ businessId, hideFab }: CartWidgetProps) {
                 <span>{formatMoney(submittedOrder.totalCents, submittedOrder.currency)}</span>
               </div>
 
-              <Elements stripe={getStripe()} options={{ clientSecret }}>
-                <PaymentForm
-                  onPaid={() => {
-                    clear();
-                    setStep('success');
-                  }}
-                />
-              </Elements>
+              <StripePaymentForm
+                clientSecret={clientSecret}
+                onPaid={() => {
+                  clear();
+                  setStep('success');
+                }}
+              />
             </>
           )}
 

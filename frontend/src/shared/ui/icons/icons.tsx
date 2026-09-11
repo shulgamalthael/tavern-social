@@ -162,6 +162,15 @@ export function LocationIcon(props: IconProps): ReactElement {
   );
 }
 
+export function LockIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={5} y={11} width={14} height={9} rx={2} />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </BaseIcon>
+  );
+}
+
 export function ShieldIcon(props: IconProps): ReactElement {
   return (
     <BaseIcon {...props}>
@@ -251,6 +260,17 @@ export function ReplyIcon(props: IconProps): ReactElement {
     <BaseIcon {...props}>
       <path d="M10.5 6 4.5 12l6 6" />
       <path d="M5 12h10.5A4.5 4.5 0 0 1 20 16.5V17" />
+    </BaseIcon>
+  );
+}
+
+/** Бумажный самолётик — кнопка отправки сообщения (см.
+ * `features/send-message/ui/MessageComposer.tsx`). */
+export function SendIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props} strokeLinejoin="round">
+      <path d="M21 3 3 10.2l7.1 2.7L21 3Z" />
+      <path d="M21 3 12.7 20.8l-2.6-7.9L21 3Z" />
     </BaseIcon>
   );
 }
@@ -826,6 +846,62 @@ export function PreviewDividerIcon(props: IconProps): ReactElement {
     <BaseIcon {...props}>
       <rect x={2.5} y={3.5} width={19} height={17} rx={1.5} />
       <path d="M6 12h12" />
+    </BaseIcon>
+  );
+}
+
+export function PreviewSplitHeroIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <rect x={2.5} y={3.5} width={19} height={17} rx={1.5} />
+      <rect
+        x={5}
+        y={8}
+        width={7}
+        height={2}
+        rx={1}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+      <rect
+        x={5}
+        y={11}
+        width={9}
+        height={1.6}
+        rx={0.8}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+      <rect
+        x={5}
+        y={14}
+        width={4.5}
+        height={2}
+        rx={1}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.55}
+      />
+      <rect
+        x={15}
+        y={7}
+        width={4.5}
+        height={10}
+        rx={0.8}
+        fill="currentColor"
+        stroke="none"
+        opacity={0.35}
+      />
+    </BaseIcon>
+  );
+}
+
+export function WaveIcon(props: IconProps): ReactElement {
+  return (
+    <BaseIcon {...props}>
+      <path d="M2 12c1.5-4 4.5-4 6 0s4.5 4 6 0 4.5-4 6 0" />
     </BaseIcon>
   );
 }

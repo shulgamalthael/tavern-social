@@ -124,3 +124,16 @@
 .item__label {
   padding: 0 2px;
 }
+
+.auto-place {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}

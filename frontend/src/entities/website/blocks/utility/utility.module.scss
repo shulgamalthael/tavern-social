@@ -33,3 +33,118 @@
   font-size: 13px;
   text-align: center;
 }
+
+// --- Scroll progress ---------------------------------------------------
+
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  height: 3px;
+  background: transparent;
+}
+
+// В билдере (`isEditing`) — обычный блок в потоке страницы, не приклеенный
+// к вьюпорту (см. комментарий на `ScrollProgressRenderer`).
+.scroll-progress--preview {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  background: var(--site-border);
+}
+
+.scroll-progress__fill {
+  height: 100%;
+  transition: width 0.1s linear;
+
+  &[data-color='primary'] {
+    background: var(--site-primary);
+  }
+
+  &[data-color='text'] {
+    background: var(--site-text);
+  }
+}
+
+// --- Back to top ---------------------------------------------------------
+
+// Не занимает места в потоке — сама кнопка `position: fixed`, этому узлу
+// нужно быть в DOM только как якорь для рефа `useScrollPosition`.
+.back-to-top__anchor {
+  display: contents;
+}
+
+.back-to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--site-primary);
+  color: var(--site-bg);
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    filter: brightness(1.06);
+  }
+}
+
+// В билдере — обычный блок в потоке, та же причина, что у `.scroll-
+// progress--preview` выше.
+.back-to-top--preview {
+  position: relative;
+  right: auto;
+  bottom: auto;
+}
+
+// --- Scroll cue ------------------------------------------------------------
+
+.scroll-cue {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 1.5px solid var(--site-border);
+  border-radius: 50%;
+  color: var(--site-text);
+  animation: scroll-cue-bounce 1.8s ease-in-out infinite;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    border-color: var(--site-primary);
+    color: var(--site-primary);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes scroll-cue-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}

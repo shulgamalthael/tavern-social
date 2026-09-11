@@ -1,0 +1,121 @@
+@use '@/shared/styles/mixins' as *;
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 60vh;
+  padding: 24px;
+  text-align: center;
+}
+
+.statusMessage {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.statusHint {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13px;
+}
+
+.root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--tavern-bg);
+}
+
+.bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+}
+
+.barTitle {
+  color: var(--tavern-ink);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+
+  @include mobileOrTablet {
+    flex-direction: column;
+  }
+}
+
+.nav {
+  display: flex;
+  flex: 0 0 200px;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 12px;
+  border-right: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+
+  @include mobileOrTablet {
+    flex: 0 0 auto;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 10px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--tavern-line);
+  }
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--tavern-radius-control);
+  background: none;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--tavern-sunk);
+    color: var(--tavern-ink);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  @include mobileOrTablet {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
+
+.navItem--active {
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+  overflow-y: auto;
+}

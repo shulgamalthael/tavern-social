@@ -1,0 +1,139 @@
+@use '@/shared/styles/mixins' as *;
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 560px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title {
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hint {
+  margin: -6px 0 0;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.input {
+  @include control;
+  outline: none;
+
+  &:focus-visible {
+    border-color: var(--tavern-accent);
+  }
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.checkboxGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkboxOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  color: var(--tavern-ink);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: var(--tavern-accent);
+    background: color-mix(in srgb, var(--tavern-accent) 10%, transparent);
+  }
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+
+  > input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.listItemText {
+  overflow: hidden;
+  color: var(--tavern-ink);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listItemRemove {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--tavern-danger);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.saved {
+  margin: 0;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 600;
+}

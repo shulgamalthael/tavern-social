@@ -21,6 +21,8 @@ const FORM_TYPE_LABELS: Record<string, string> = {
   contactform: 'Обратная связь',
   newsletterform: 'Подписка',
   simpleform: 'Заявка',
+  newsletterpopup: 'Всплывающая подписка',
+  herosplitform: 'Заявка с главного экрана',
 };
 
 /**

@@ -1,0 +1,66 @@
+// Свой почти-чёрный графитовый тон — сознательно не `--tavern-ink` (уже
+// `AdminBar`) и не кирпично-красный `BusinessOwnerBar` — три плашки должны
+// различаться на глаз, даже стоя одна под другой (см. `CreatorBar.tsx`'s
+// комментарий). Тёплый золотистый акцент вместо `--tavern-accent` — тот же
+// приём, что у `BusinessOwnerBar`'s кирпично-красной палитры: свой набор
+// оттенков только для этой плашки, не переиспользует чужие токены.
+.creator-bar {
+  position: sticky;
+  // Садится под ОБЕИМИ плашками, если они есть (`--admin-bar-h`/
+  // `--business-bar-h`, см. `page.module.scss`) — самая нижняя из трёх,
+  // всегда прямо над `Header`, независимо от того, сколько плашек выше
+  // сейчас реально показано (0, 1 или 2).
+  top: calc(var(--admin-bar-h, 0px) + var(--business-bar-h, 0px));
+  // Тот же приём и та же причина, что у `AdminBar`/`BusinessOwnerBar` (см. их
+  // комментарии) — выше `Header` (`z-index: 30`), чтобы дочерний контент
+  // этой плашки не красился под ним из-за родительского stacking context.
+  z-index: 31;
+  background: #17140f;
+  color: #f1ece1;
+}
+
+.creator-bar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 36px;
+  padding: 0 clamp(14px, 3vw, 24px);
+}
+
+.creator-bar__brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.creator-bar__brand-icon {
+  flex-shrink: 0;
+  color: #d4af6a;
+}
+
+.creator-bar__cta {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #d4af6a;
+  color: #221a08;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    filter: brightness(1.08);
+  }
+}

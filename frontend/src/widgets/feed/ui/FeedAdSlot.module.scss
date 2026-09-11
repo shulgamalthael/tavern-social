@@ -1,0 +1,100 @@
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+// Только у честного приглашения "купите размещение" — реальный оплаченный
+// креатив (см. `.slot__creative`) ниже так не оформляется, иначе выглядел бы
+// как ещё один незаполненный слот, а не как настоящая чужая реклама.
+.slot--invitation {
+  border-style: dashed;
+}
+
+.slot--compact {
+  padding: 12px 16px;
+}
+
+.slot__creative {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+// Фиксированное соотношение сторон (~300×250, "прямоугольник" — самый
+// частый формат этого места размещения, см. backend `AD_PLACEMENT_ALLOWED_
+// FORMATS.feed_sidebar`) забронировано ещё до загрузки картинки — тот же
+// приём против CLS, что и у `NativeAdCard`/сайтового `AdSlotRenderer`
+// (`entities/website/blocks/advertising`), а не точный расчёт под формат
+// конкретного креатива (`square` в этот же контейнер вписывается через
+// `object-fit: cover`, с обрезкой по краям — тот же компромисс, что уже
+// принят для сайтового сайдбара).
+.slot__creative-media {
+  position: relative;
+  width: 100%;
+  padding-bottom: 68%;
+  overflow: hidden;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.slot__creative-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slot__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+}
+
+.slot__title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 15px;
+  color: var(--tavern-ink);
+}
+
+.slot__description {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tavern-muted);
+}
+
+.slot__cta {
+  display: inline-flex;
+  margin-top: 4px;
+  padding: 8px 16px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--tavern-accent);
+    color: var(--tavern-accent-ink);
+  }
+}

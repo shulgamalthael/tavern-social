@@ -7,7 +7,13 @@ import './blocks/registry-index';
 
 export { computeBlockWrapperStyle } from './model/block-style';
 export type { BlockWrapperStyle } from './model/block-style';
-export { createBlockId, countBlocks, findBlock, findParentId } from './model/block-tree';
+export {
+  createBlockId,
+  countBlocks,
+  findBlock,
+  findParentId,
+  isBlockOrDescendant,
+} from './model/block-tree';
 export { createEmptyWebsiteDocument, DEFAULT_THEME } from './model/default-theme';
 export {
   BLOCK_CATEGORY_LABELS,
@@ -82,6 +88,7 @@ export type {
   ThemeRadius,
   Viewport,
   WebsiteBlock,
+  AdvancedCssProperty,
   BlockStyle,
   LinkTarget,
   WebsiteDocument,

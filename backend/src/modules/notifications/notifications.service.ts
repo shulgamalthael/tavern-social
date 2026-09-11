@@ -28,7 +28,7 @@ const BUSINESS_FEED_LIMIT = 30;
  * исключена только из ЭТИХ двух read-путей, не из записи; отдельный
  * business-notifications экран (`listForBusiness`/`GET /businesses/
  * :businessId/notifications`, §15.4) читает те же строки напрямую. */
-const FEED_EXCLUDED_TYPES: NotificationType[] = ['rule_triggered'];
+const FEED_EXCLUDED_TYPES: NotificationType[] = ['rule_triggered', 'creator_status_changed'];
 const MAX_RECENT_ACTORS = 3;
 /** Сколько раз повторить транзакцию при конфликте сериализации (Postgres
  * код 40001 / Prisma P2034) — параллельные лайки на один пост случаются
@@ -97,6 +97,32 @@ export class NotificationsService {
   ): Promise<{ id: string; actor: PublicProfile }> {
     const notification = await this.prisma.notification.create({
       data: { recipientId, actorId, type: 'friend_accepted', recentActorIds: [actorId] },
+      select: { id: true, actor: true },
+    });
+    // См. `notifyFriendRequest`'s комментарий — `actor` здесь тоже
+    // гарантированно не `null`.
+    return { id: notification.id, actor: toPublicProfile(notification.actor!) };
+  }
+
+  async notifySubscriptionRequest(
+    recipientId: string,
+    actorId: string,
+  ): Promise<{ id: string; actor: PublicProfile }> {
+    const notification = await this.prisma.notification.create({
+      data: { recipientId, actorId, type: 'subscription_request', recentActorIds: [actorId] },
+      select: { id: true, actor: true },
+    });
+    // См. `notifyFriendRequest`'s комментарий — `actor` здесь тоже
+    // гарантированно не `null`.
+    return { id: notification.id, actor: toPublicProfile(notification.actor!) };
+  }
+
+  async notifySubscriptionAccepted(
+    recipientId: string,
+    actorId: string,
+  ): Promise<{ id: string; actor: PublicProfile }> {
+    const notification = await this.prisma.notification.create({
+      data: { recipientId, actorId, type: 'subscription_accepted', recentActorIds: [actorId] },
       select: { id: true, actor: true },
     });
     // См. `notifyFriendRequest`'s комментарий — `actor` здесь тоже
@@ -277,6 +303,21 @@ export class NotificationsService {
   ): Promise<{ id: string }> {
     const notification = await this.prisma.notification.create({
       data: { recipientId, type: 'rule_triggered', actorId: null, businessId, summary },
+      select: { id: true },
+    });
+    return { id: notification.id };
+  }
+
+  /** Creator Monetization Phase 1 (AI_PLATFORM_ROADMAP.md §79) — статус
+   * `CreatorProfile` пользователя изменился (вебхук Stripe Identity/действие
+   * админа). Та же "нет actor'а" форма, что и `notifyRuleTriggered` — но
+   * `businessId: null` (создатель — `User`), и без своего "listForX" экрана:
+   * текущий статус читается из `CreatorProfile` напрямую (`GET /creators/me`),
+   * эта строка — только для истории + повод для realtime-тоста (см.
+   * `CreatorsService`, единственный вызывающий). */
+  async notifyCreatorStatusChanged(recipientId: string, summary: string): Promise<{ id: string }> {
+    const notification = await this.prisma.notification.create({
+      data: { recipientId, type: 'creator_status_changed', actorId: null, summary },
       select: { id: true },
     });
     return { id: notification.id };

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getBusinesses } from '@/entities/business';
+import { getMyCreatorProfile } from '@/entities/creator';
 import {
   canDeletePost,
   canRepostPost,
@@ -9,20 +11,27 @@ import {
   usePostStore,
   type Post,
 } from '@/entities/post';
+import { getStoryViewers, StoryAvatar, useStoryStore } from '@/entities/story';
 import { useCurrentUser } from '@/entities/user';
 import { ProfileEditForm } from '@/features/edit-profile';
 import { EditPostModal, PostComposer } from '@/features/publish-post';
 import { useNavigationStore } from '@/features/section-navigation';
+import { StoryViewer } from '@/features/stories';
+import { ImageUploadButton } from '@/features/upload-image';
+import { useAsyncData } from '@/shared/lib/use-async-data';
 import { useInfiniteScroll } from '@/shared/lib/use-infinite-scroll';
-import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { PlusIcon } from '@/shared/ui/icons';
 import { MediaPlaceholder } from '@/shared/ui/MediaPlaceholder';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
 import { AboutCard } from './AboutCard';
+import { CreatorPromoCard } from './CreatorPromoCard';
 import { GalleryGrid } from './GalleryGrid';
+import { ProfileBadgesCard } from './ProfileBadgesCard';
+import { ProfileFollowStatsCard } from './ProfileFollowStatsCard';
 import { ProfileFriendsCard } from './ProfileFriendsCard';
 import styles from './ProfileWidget.module.scss';
 import { UserProfileView } from './UserProfileView';
@@ -31,6 +40,37 @@ const WALL_SKELETON_COUNT = 3;
 
 export function ProfileWidget() {
   const { currentUser } = useCurrentUser();
+  // Те же данные, что `ProfileBadges` показывает на ЧУЖОЙ странице (роль,
+  // Creator-статус, опубликованные сайты) — здесь про самого себя, поэтому
+  // свой независимый `useAsyncData` вместо проп-дриллинга через `HomeApp`
+  // (который грузит то же самое для глобальных плашек `CreatorBar`/
+  // `BusinessOwnerBar`, но не передаёт это внутрь секций-виджетов, см. её
+  // комментарий про `SECTION_WIDGETS`) — тот же приём дублирования запроса
+  // одних и тех же данных двумя независимыми потребителями, что и у
+  // `otherProfile` в `HomeApp` vs `UserProfileView`'s собственного
+  // `getUserProfile`.
+  const ownCreatorProfile = useAsyncData(getMyCreatorProfile).data ?? null;
+  const ownBusinesses = useAsyncData(getBusinesses).data ?? [];
+  const storyTray = useStoryStore((state) => state.tray);
+  const storyTrayStatus = useStoryStore((state) => state.status);
+  const loadStoryTray = useStoryStore((state) => state.loadTray);
+  const addStory = useStoryStore((state) => state.addStory);
+  const markStoryViewed = useStoryStore((state) => state.markViewed);
+  const removeStory = useStoryStore((state) => state.removeStory);
+  const [isStoryViewerOpen, setStoryViewerOpen] = useState(false);
+  // Пока лента историй ещё не загрузилась (или для этого пользователя в ней
+  // нет записи), подставляем собственные данные как пустую группу — иначе
+  // аватарка на миг показалась бы без инициалов/фото до ответа `loadTray`.
+  const ownStoryGroup = storyTray.find((group) => group.author.id === currentUser.id) ?? {
+    author: {
+      id: currentUser.id,
+      name: currentUser.name,
+      initials: currentUser.initials,
+      avatarUrl: currentUser.avatarUrl,
+    },
+    stories: [],
+    hasUnseen: false,
+  };
   const viewedUserId = useNavigationStore((state) => state.viewedUserId);
   const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
   const wallPosts = usePostStore((state) => state.wallPostsByUserId[currentUser.id]) ?? [];
@@ -67,6 +107,13 @@ export function ProfileWidget() {
     void loadWallPosts(currentUser.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- грузим один раз при открытии своей страницы
   }, [currentUser.id]);
+
+  // Лента историй обычно уже загружена `StoriesTray` в новостях, но при
+  // заходе сразу на «Страницу» (без захода в «Новости») стор ещё `idle` —
+  // подгружаем сами, экшен идемпотентен к повторному вызову.
+  useEffect(() => {
+    if (storyTrayStatus === 'idle') void loadStoryTray();
+  }, [storyTrayStatus, loadStoryTray]);
 
   if (viewedUserId && viewedUserId !== currentUser.id) {
     return <UserProfileView userId={viewedUserId} />;
@@ -105,7 +152,20 @@ export function ProfileWidget() {
           />
         )}
         <div className={styles['profile__top']}>
-          <Avatar initials={currentUser.initials} src={currentUser.avatarUrl} size="xl" bordered />
+          <StoryAvatar
+            group={ownStoryGroup}
+            size="xl"
+            onClick={() => setStoryViewerOpen(true)}
+            addTrigger={
+              <ImageUploadButton
+                aspect={9 / 16}
+                upload={(file) => addStory(file)}
+                className={styles['profile__story-add-trigger']}
+              >
+                <PlusIcon className={styles['profile__story-add-icon']} />
+              </ImageUploadButton>
+            }
+          />
           <div className={styles['profile__titles']}>
             <span className={styles['profile__name']}>{currentUser.name}</span>
             <span className={styles['profile__subtitle']}>
@@ -122,6 +182,21 @@ export function ProfileWidget() {
 
       <div className={styles['profile__grid']}>
         <div className={styles['profile__side']}>
+          <ProfileBadgesCard
+            role={currentUser.role}
+            creatorStatus={ownCreatorProfile?.status ?? null}
+            businesses={ownBusinesses
+              .filter((business) => business.status === 'published')
+              .map((business) => ({ id: business.id, name: business.name }))}
+            isPrivate={currentUser.isPrivate}
+          />
+
+          <ProfileFollowStatsCard
+            userId={currentUser.id}
+            followersCount={currentUser.followersCount}
+            followingCount={currentUser.followingCount}
+          />
+
           <AboutCard
             about={currentUser.about}
             city={currentUser.city}
@@ -129,12 +204,14 @@ export function ProfileWidget() {
             isOwn
           />
 
+          <CreatorPromoCard />
+
           <Card>
             <h2 className={styles['profile__card-title']}>Фотографии</h2>
             <GalleryGrid key={galleryReloadKey} userId={currentUser.id} isOwn />
           </Card>
 
-          <ProfileFriendsCard userId={currentUser.id} />
+          <ProfileFriendsCard userId={currentUser.id} friendsCount={currentUser.friendsCount} />
         </div>
 
         <div className={styles['profile__wall']}>
@@ -201,6 +278,17 @@ export function ProfileWidget() {
       </div>
 
       {editingPost && <EditPostModal post={editingPost} onClose={() => setEditingPost(null)} />}
+      {isStoryViewerOpen && (
+        <StoryViewer
+          groups={[ownStoryGroup]}
+          startGroupIndex={0}
+          currentUserId={currentUser.id}
+          onClose={() => setStoryViewerOpen(false)}
+          onStoryViewed={markStoryViewed}
+          onStoryDeleted={(storyId) => void removeStory(storyId)}
+          onLoadViewers={getStoryViewers}
+        />
+      )}
     </SectionContainer>
   );
 }

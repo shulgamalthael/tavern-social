@@ -279,7 +279,11 @@ export class FriendsService {
     }
   }
 
-  private async getFriendIds(userId: string): Promise<string[]> {
+  /** Публичный (не `private`) — тот же приём, что и `AdCampaignsService.
+   * assertOwnership`: `PostsService.listFeed` вызывает его для
+   * relationship-based фильтра главной ленты (AI_PLATFORM_ROADMAP.md §73),
+   * не дублируя запрос к `Friendship`. */
+  async getFriendIds(userId: string): Promise<string[]> {
     const friendships = await this.prisma.friendship.findMany({
       where: { OR: [{ userAId: userId }, { userBId: userId }] },
       select: { userAId: true, userBId: true },
@@ -287,6 +291,16 @@ export class FriendsService {
     return friendships.map((friendship) =>
       friendship.userAId === userId ? friendship.userBId : friendship.userAId,
     );
+  }
+
+  /** Публичный, тот же приём, что `getFriendIds` — `CreatorsService.
+   * getEligibility` (AI_PLATFORM_ROADMAP.md §79) нужно только ЧИСЛО друзей
+   * для сравнения с порогом, `count()` вместо `findMany` намеренно: не тянет
+   * все id, когда нужен только размер множества. */
+  async countFriends(userId: string): Promise<number> {
+    return this.prisma.friendship.count({
+      where: { OR: [{ userAId: userId }, { userBId: userId }] },
+    });
   }
 
   private async countMutualFriends(userId: string, otherUserId: string): Promise<number> {

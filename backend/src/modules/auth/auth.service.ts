@@ -7,7 +7,10 @@ import { OAuthExchangeService } from '@/infrastructure/redis/oauth-exchange.serv
 import { OAuthStateService } from '@/infrastructure/redis/oauth-state.service';
 import { SessionsService } from '@/infrastructure/redis/sessions.service';
 import { SocketTicketsService } from '@/infrastructure/redis/socket-tickets.service';
+import { FriendsService } from '@/modules/friends/friends.service';
+import { SubscriptionsService } from '@/modules/subscriptions/subscriptions.service';
 import { UsersService } from '@/modules/users/users.service';
+import type { MeProfile } from '@/modules/users/users.types';
 import type { GoogleProfile } from './providers/google-oauth-adapter.service';
 import { GoogleOAuthAdapter } from './providers/google-oauth-adapter.service';
 import type { AuthSession } from './auth.types';
@@ -21,6 +24,8 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly friendsService: FriendsService,
     private readonly sessionsService: SessionsService,
     private readonly socketTicketsService: SocketTicketsService,
     private readonly googleOAuthAdapter: GoogleOAuthAdapter,
@@ -73,7 +78,7 @@ export class AuthService {
     });
 
     const token = await this.sessionsService.create(user.id);
-    return { token, user: this.usersService.toMeProfile(user) };
+    return { token, user: await this.withCounts(user.id) };
   }
 
   async login(dto: LoginDto): Promise<AuthSession> {
@@ -92,7 +97,7 @@ export class AuthService {
     }
 
     const token = await this.sessionsService.create(user.id);
-    return { token, user: this.usersService.toMeProfile(user) };
+    return { token, user: await this.withCounts(user.id) };
   }
 
   async logout(token: string): Promise<void> {
@@ -160,7 +165,27 @@ export class AuthService {
       throw new UnauthorizedException('Сессия недействительна');
     }
     const user = await this.usersService.findByIdOrThrow(userId);
-    return { token, user: this.usersService.toMeProfile(user) };
+    return { token, user: await this.withCounts(user.id) };
+  }
+
+  /** Домешивает `followersCount`/`followingCount`/`friendsCount` (§85) в
+   * ответ на login/register/exchange — тот же приём, что `UsersController.
+   * withCounts`, но `toMeProfile` — чистая функция, а не запрос, так что
+   * перечитываем пользователя здесь же, а не тащим уже устаревший объект
+   * через несколько вызовов подряд. */
+  private async withCounts(userId: string): Promise<MeProfile> {
+    const [user, followersCount, followingCount, friendsCount] = await Promise.all([
+      this.usersService.findByIdOrThrow(userId),
+      this.subscriptionsService.countFollowers(userId),
+      this.subscriptionsService.countFollowing(userId),
+      this.friendsService.countFriends(userId),
+    ]);
+    return {
+      ...this.usersService.toMeProfile(user),
+      followersCount,
+      followingCount,
+      friendsCount,
+    };
   }
 
   /** Единая find-or-create-or-link логика, переиспользуемая будущими

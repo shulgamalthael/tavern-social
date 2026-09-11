@@ -1,0 +1,34 @@
+.follow-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.follow-stats__item {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  cursor: pointer;
+
+  strong {
+    color: var(--tavern-ink);
+    font-weight: 700;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Приватный профиль без доступа (§103) — цифры видны, но список за ними
+// недоступен, так что клик не имеет смысла: убираем курсор-указатель и
+// подчёркивание при наведении, которые иначе выглядели бы как рабочая ссылка.
+.follow-stats__item--static {
+  cursor: default;
+
+  &:hover {
+    text-decoration: none;
+  }
+}

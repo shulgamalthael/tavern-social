@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import type { Prisma, WebsitePage as WebsitePageRow } from '@prisma/client';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
+import type { SocialLinkDto } from '@/modules/businesses/businesses.types';
+import type { WorkingHours } from '@/modules/businesses/lib/working-hours';
 import type { UpdateWebsiteDocumentDto } from './dto/update-website-document.dto';
 import { sanitizeRichBlocks } from './lib/sanitize-rich-blocks';
 import type {
@@ -179,6 +181,11 @@ export class WebsitesService {
         seoTitle: website.business.seoTitle,
         seoDescription: website.business.seoDescription,
         currency: website.business.currency,
+        email: website.business.email,
+        phone: website.business.phone,
+        address: website.business.address,
+        socialLinks: (website.business.socialLinks as unknown as SocialLinkDto[] | null) ?? [],
+        workingHours: (website.business.workingHours as unknown as WorkingHours | null) ?? null,
       },
       document,
       isPublished: website.publishedAt !== null,

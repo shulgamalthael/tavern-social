@@ -1,0 +1,57 @@
+.tray {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 10px;
+}
+
+.tray__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4px;
+  width: 64px;
+}
+
+.tray__label {
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 11px;
+  color: var(--tavern-muted);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Позиционирует `ImageUploadButton` (сам рендерит `<button>`) как бейдж в
+// углу аватарки — `entities/story`'s `StoryAvatar` не может нести эту
+// вёрстку сама (не имеет доступа к `features/upload-image`, см. коммент у
+// `StoryAvatarProps.addTrigger`), поэтому стиль здесь, у вызывающего.
+.tray__add-trigger {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--tavern-surface);
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+}
+
+.tray__add-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.tray__skeleton {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--tavern-soft);
+}

@@ -16,6 +16,12 @@ import profileStyles from './ProfileWidget.module.scss';
 
 export interface ProfileFriendsCardProps {
   userId: string;
+  /** Общее число друзей — НЕ `friends.length` ниже (тот обрезан
+   * `MAX_PAGINATION_LIMIT` на backend, честен только для превью-сетки).
+   * Передаётся родителем (`ProfileWidget`/`UserProfileView`), у которых уже
+   * есть `CurrentUser`/`UserProfile` с этим полем — тот же приём, что и у
+   * `ProfileFollowStats`. */
+  friendsCount: number;
 }
 
 /** Столько плиток показывает превью-сетка — как и с фотографиями
@@ -24,10 +30,11 @@ export interface ProfileFriendsCardProps {
 const MAX_VISIBLE_TILES = 9;
 const SKELETON_COUNT = 6;
 
-export function ProfileFriendsCard({ userId }: ProfileFriendsCardProps) {
+export function ProfileFriendsCard({ userId, friendsCount }: ProfileFriendsCardProps) {
   const fetcher = useCallback(() => getUserFriends(userId), [userId]);
   const { status, data, error, refetch } = useAsyncData(fetcher);
   const [overrideFriends, setOverrideFriends] = useState<Friend[] | null>(null);
+  const [countOverride, setCountOverride] = useState<number | null>(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const goToUserProfile = useNavigationStore((state) => state.goToUserProfile);
   const { currentUser } = useCurrentUser();
@@ -39,17 +46,21 @@ export function ProfileFriendsCard({ userId }: ProfileFriendsCardProps) {
   const hasOverflow = friends.length > MAX_VISIBLE_TILES;
   const visibleFriends = hasOverflow ? friends.slice(0, MAX_VISIBLE_TILES - 1) : friends;
   const hiddenCount = friends.length - visibleFriends.length;
+  const displayedCount = countOverride ?? friendsCount;
 
   const handleRemove = isOwn
     ? async (friendId: string) => {
         await removeFriend(friendId);
         setOverrideFriends(friends.filter((friend) => friend.id !== friendId));
+        setCountOverride((prev) => Math.max(0, (prev ?? friendsCount) - 1));
       }
     : undefined;
 
   return (
     <Card>
-      <h2 className={profileStyles['profile__card-title']}>Друзья</h2>
+      <h2 className={profileStyles['profile__card-title']}>
+        Друзья · {displayedCount.toLocaleString('ru-RU')}
+      </h2>
 
       {(status === 'loading' || status === 'idle') && (
         <div className={styles['friends__grid']}>

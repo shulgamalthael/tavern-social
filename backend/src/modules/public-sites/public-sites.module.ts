@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { AdvertisingModule } from '@/modules/advertising/advertising.module';
 import { AnalyticsModule } from '@/modules/analytics/analytics.module';
 import { AppointmentsModule } from '@/modules/appointments/appointments.module';
 import { BlogPostsModule } from '@/modules/blog-posts/blog-posts.module';
+import { CustomEntitiesModule } from '@/modules/custom-entities/custom-entities.module';
 import { DiscountsModule } from '@/modules/discounts/discounts.module';
 import { DomainsModule } from '@/modules/domains/domains.module';
 import { FormSubmissionsModule } from '@/modules/form-submissions/form-submissions.module';
@@ -22,11 +24,13 @@ import { PublicSitesController } from './public-sites.controller';
     ServicesModule,
     AppointmentsModule,
     BlogPostsModule,
+    CustomEntitiesModule,
     FormSubmissionsModule,
     AnalyticsModule,
     DiscountsModule,
     RulesModule,
     Web3Module,
+    AdvertisingModule,
   ],
   controllers: [PublicSitesController],
 })

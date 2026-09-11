@@ -87,6 +87,24 @@
   font-weight: 500;
 }
 
+/** Тот же бейдж, что `.row__hidden`, но для «эта сущность отдаётся
+ * анонимному посетителю сайта» (`CustomEntitiesSection` — единственный
+ * сегодняшний потребитель) — акцентный цвет вместо приглушённого, чтобы
+ * состояние "уже публично" было заметно, не терялось среди остального
+ * текста строки. */
+.row__public {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tavern-accent) 14%, transparent);
+  color: var(--tavern-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.row__action--active {
+  color: var(--tavern-accent);
+}
+
 .row__meta {
   color: var(--tavern-muted);
   font-size: 12px;

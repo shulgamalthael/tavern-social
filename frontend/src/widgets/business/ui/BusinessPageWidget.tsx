@@ -43,21 +43,26 @@ function toBusinessContext(
       phone: owned.phone,
       address: owned.address,
       socialLinks: owned.socialLinks,
+      workingHours: owned.workingHours,
     };
   }
-  // Не владелец — backend отдаёт по-настоящему публичному эндпоинту только
-  // минимальный профиль (см. `entities/website/api/get-public-website.ts`,
-  // комментарий про то, что полноценный анонимный доступ — задача на
-  // будущее): контакты/соцсети блоков `contact`/`footer`/`sociallinks`
-  // для стороннего зрителя сейчас честно пустые, а не подставные.
+  // Не владелец — тот же публичный эндпоинт (`entities/website/api/get-
+  // public-website.ts`), что видит любой анонимный посетитель настоящего
+  // сайта, теперь честно отдаёт контакты/соцсети/часы работы (раньше не
+  // отдавал вообще — см. комментарий `WebsitePublicDto.business` в backend
+  // `websites.types.ts`, найдено и исправлено при добавлении виджета
+  // «сейчас открыто», партия виджетов №7): нет причины показывать
+  // вошедшему в Таверну пользователю МЕНЬШЕ, чем уже видит случайный
+  // анонимный визитор той же самой публичной страницы.
   return {
     businessId: publicWebsite.business.id,
     name: publicWebsite.business.name,
     logoUrl: publicWebsite.business.logoUrl,
-    email: null,
-    phone: null,
-    address: null,
-    socialLinks: [],
+    email: publicWebsite.business.email,
+    phone: publicWebsite.business.phone,
+    address: publicWebsite.business.address,
+    socialLinks: publicWebsite.business.socialLinks,
+    workingHours: publicWebsite.business.workingHours,
   };
 }
 

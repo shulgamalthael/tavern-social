@@ -53,6 +53,7 @@ export class BusinessesService {
           description: dto.description ?? '',
           category: dto.category,
           currency: dto.currency ?? DEFAULT_BUSINESS_CURRENCY,
+          isAdvertiserOnly: dto.isAdvertiserOnly ?? false,
         },
       });
       const defaultDocument = createDefaultWebsiteDocument(created.name);
@@ -347,6 +348,7 @@ export class BusinessesService {
       workingHours: (business.workingHours as unknown as WorkingHours | null) ?? null,
       web3WalletAddress: business.web3WalletAddress,
       hasOwnWeb3ApiKey: Boolean(business.web3AlchemyApiKey),
+      isAdvertiserOnly: business.isAdvertiserOnly,
       status: business.website?.publishedAt ? 'published' : 'draft',
       createdAt: business.createdAt.toISOString(),
       updatedAt: business.updatedAt.toISOString(),

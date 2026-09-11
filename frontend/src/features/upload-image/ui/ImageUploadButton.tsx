@@ -18,6 +18,13 @@ export interface ImageUploadButtonProps {
    * весь оригинальный кадр. Для галереи, где важно сохранить полное фото,
    * а не подгонять его под квадрат, как аватар. */
   crop?: boolean;
+  /** Допустимые MIME для `<input accept>` — по умолчанию три статичных
+   * формата (без GIF: обрезка ниже всё равно переэкодирует в статичный JPEG,
+   * так что раньше не было смысла их принимать). Вызывающий, которому
+   * реально нужен GIF (см. `onFileChange` ниже — такой файл обходит кроп
+   * модалку целиком, чтобы не потерять анимацию), передаёт более широкий
+   * список явно. */
+  accept?: string;
   /** Реальная загрузка на сервер — своя функция для аватара/обложки/галереи,
    * получает Blob (обрезанный, если `crop` не выключен, иначе исходный файл). */
   upload: (file: Blob) => Promise<void>;
@@ -35,6 +42,7 @@ export function ImageUploadButton({
   aspect = 1,
   shape = 'rect',
   crop: cropEnabled = true,
+  accept = 'image/jpeg,image/png,image/webp',
   upload,
   children,
   className,
@@ -67,7 +75,13 @@ export function ImageUploadButton({
     event.target.value = '';
     if (!file) return;
 
-    if (!cropEnabled) {
+    // GIF всегда обходит кроп-модалку, даже если `crop` включён — `crop
+    // ImageToBlob` рисует один кадр на canvas и экспортирует статичный JPEG,
+    // что необратимо убило бы анимацию. Безопасно игнорировать здесь: ни
+    // один существующий вызывающий (`accept` по умолчанию) не пропускает
+    // GIF во `<input>` вообще, так что эта ветка активна только там, где
+    // `accept` явно расширен.
+    if (!cropEnabled || file.type === 'image/gif') {
       void uploadWithoutCrop(file);
       return;
     }
@@ -115,7 +129,7 @@ export function ImageUploadButton({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={accept}
         className={styles['visually-hidden']}
         onChange={onFileChange}
       />

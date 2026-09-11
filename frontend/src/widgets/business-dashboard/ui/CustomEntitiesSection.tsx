@@ -1,13 +1,19 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { deleteCustomEntity, getCustomEntities, type CustomEntity } from '@/entities/custom-entity';
+import {
+  deleteCustomEntity,
+  getCustomEntities,
+  setCustomEntityVisibility,
+  type CustomEntity,
+} from '@/entities/custom-entity';
+import { cn } from '@/shared/lib/cn';
 import { useAsyncData } from '@/shared/lib/use-async-data';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { Loader } from '@/shared/ui/Loader';
-import { ChevronRightIcon, DatabaseIcon, PlusIcon, TrashIcon } from '@/shared/ui/icons';
+import { ChevronRightIcon, DatabaseIcon, GlobeIcon, PlusIcon, TrashIcon } from '@/shared/ui/icons';
 import { CustomEntityFormModal } from './CustomEntityFormModal';
 import { CustomEntityRecordsSection } from './CustomEntityRecordsSection';
 // Разметка списка идентична `DiscountsSection`/`RulesSection` (иконка/
@@ -36,6 +42,24 @@ export function CustomEntitiesSection({ businessId }: CustomEntitiesSectionProps
   const [confirmTarget, setConfirmTarget] = useState<CustomEntity | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [toggleError, setToggleError] = useState<string | null>(null);
+
+  async function handleToggleVisibility(entity: CustomEntity) {
+    setTogglingId(entity.id);
+    setToggleError(null);
+    try {
+      await setCustomEntityVisibility(businessId, entity.id, !entity.isPublic);
+      await refetch();
+    } catch {
+      // Важно НЕ проглатывать молча — это переключатель "отдавать ли
+      // записи анонимному посетителю сайта", владелец должен точно знать,
+      // применилось ли изменение, а не гадать по неизменившемуся бейджу.
+      setToggleError('Не удалось изменить видимость — попробуйте ещё раз');
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   async function handleDelete(entity: CustomEntity) {
     setDeletingId(entity.id);
@@ -97,6 +121,11 @@ export function CustomEntitiesSection({ businessId }: CustomEntitiesSectionProps
           {deleteError}
         </p>
       )}
+      {toggleError && (
+        <p className={styles.error} role="alert">
+          {toggleError}
+        </p>
+      )}
 
       {data.length === 0 ? (
         <EmptyState
@@ -111,12 +140,29 @@ export function CustomEntitiesSection({ businessId }: CustomEntitiesSectionProps
                 <DatabaseIcon />
               </div>
               <div className={styles.row__body}>
-                <span className={styles.row__title}>{entity.name}</span>
+                <span className={styles.row__title}>
+                  {entity.name}
+                  {entity.isPublic && <span className={styles.row__public}>Публично</span>}
+                </span>
                 <span className={styles.row__meta}>
                   {entity.fields.length} {entity.fields.length === 1 ? 'поле' : 'полей'}:{' '}
                   {entity.fields.map((field) => field.label).join(', ')}
                 </span>
               </div>
+              <button
+                type="button"
+                className={cn(styles.row__action, entity.isPublic && styles['row__action--active'])}
+                aria-label={
+                  entity.isPublic
+                    ? `Сделать «${entity.name}» приватной — записи перестанут отдаваться анонимным посетителям сайта`
+                    : `Сделать «${entity.name}» публичной — записи станут доступны анонимным посетителям сайта`
+                }
+                aria-pressed={entity.isPublic}
+                disabled={togglingId === entity.id}
+                onClick={() => void handleToggleVisibility(entity)}
+              >
+                <GlobeIcon />
+              </button>
               <button
                 type="button"
                 className={styles.row__action}

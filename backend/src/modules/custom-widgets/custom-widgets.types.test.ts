@@ -8,6 +8,11 @@ describe('parseWidgetSchema', () => {
     expect(() => parseWidgetSchema('heading')).toThrow('непустым массивом');
   });
 
+  it('rejects a schema with more than the allowed number of blocks (AI_PLATFORM_ROADMAP.md §75)', () => {
+    const tooMany = Array.from({ length: 31 }, () => ({ blockType: 'spacer' }));
+    expect(() => parseWidgetSchema(tooMany)).toThrow('не может содержать больше');
+  });
+
   it('builds a valid block array with fresh ids, reusing add_block validation', () => {
     const result = parseWidgetSchema([
       { blockType: 'heading', props: { text: 'Привет' } },
@@ -66,6 +71,97 @@ describe('parseWidgetSchema', () => {
       heading: 'Наш кошелёк',
       description: '',
       nftLimit: 10,
+    });
+  });
+
+  describe('§62.1 — widget kind placeholders (declaredFieldKeys)', () => {
+    it('without declaredFieldKeys (default), a placeholder-looking value in a non-string field is rejected exactly as before — full backward compatibility', () => {
+      expect(() =>
+        parseWidgetSchema([{ blockType: 'spacer', props: { height: '{{size}}' } }]),
+      ).toThrow(/должно быть одним из/);
+    });
+
+    it('accepts a whole-value placeholder for a declared field, in a non-string field (enum)', () => {
+      const result = parseWidgetSchema(
+        [{ blockType: 'spacer', props: { height: '{{size}}' } }],
+        new Set(['size']),
+      );
+      expect(result[0].props.height).toBe('{{size}}');
+    });
+
+    it('does not accept a placeholder for an UNdeclared key — falls through to normal validation and fails', () => {
+      expect(() =>
+        parseWidgetSchema(
+          [{ blockType: 'spacer', props: { height: '{{other}}' } }],
+          new Set(['size']),
+        ),
+      ).toThrow(/должно быть одним из/);
+    });
+
+    it('a partial/embedded placeholder inside a string-kind field needs no special-casing — already a valid string', () => {
+      const result = parseWidgetSchema(
+        [{ blockType: 'heading', props: { text: 'Цена: {{price}}' } }],
+        new Set(['price']),
+      );
+      expect(result[0].props.text).toBe('Цена: {{price}}');
+    });
+
+    it('still merges in defaults for props not touched by a placeholder', () => {
+      const result = parseWidgetSchema(
+        [{ blockType: 'heading', props: { text: '{{headline}}' } }],
+        new Set(['headline']),
+      );
+      expect(result[0].props).toEqual({
+        text: '{{headline}}',
+        level: 'h2',
+        size: 'md',
+        color: 'default',
+      });
+    });
+  });
+
+  describe('§78 — style is preserved, not silently dropped', () => {
+    it('is absent on the resulting block when not passed', () => {
+      const result = parseWidgetSchema([{ blockType: 'spacer' }]);
+      expect(result[0].style).toBeUndefined();
+    });
+
+    it('validates and stores a passed style', () => {
+      const result = parseWidgetSchema([
+        {
+          blockType: 'heading',
+          props: { text: 'Скидка недели' },
+          style: { background: 'surface' },
+        },
+      ]);
+      expect(result[0].style).toEqual({ background: 'surface' });
+    });
+
+    it('rejects an unknown style field, same error shape as set_style', () => {
+      expect(() =>
+        parseWidgetSchema([{ blockType: 'spacer', style: { notARealField: 'x' } }]),
+      ).toThrow(/schema\[0\]\.style.*Неизвестные поля стиля/);
+    });
+
+    it('rejects an invalid value for a known style field', () => {
+      expect(() =>
+        parseWidgetSchema([{ blockType: 'spacer', style: { background: 'not-a-real-value' } }]),
+      ).toThrow(/schema\[0\]\.style/);
+    });
+
+    it('accepts the "advanced" CSS bucket the same way set_style does', () => {
+      const result = parseWidgetSchema([
+        { blockType: 'spacer', style: { advanced: { transform: 'rotate(-4deg)' } } },
+      ]);
+      expect(result[0].style).toEqual({ advanced: { transform: 'rotate(-4deg)' } });
+    });
+
+    it('rejects an "advanced" value containing url(...)', () => {
+      expect(() =>
+        parseWidgetSchema([
+          { blockType: 'spacer', style: { advanced: { filter: 'url(https://evil.example)' } } },
+        ]),
+      ).toThrow(/schema\[0\]\.style/);
     });
   });
 });

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AdvertisingModule } from '@/modules/advertising/advertising.module';
 import { BusinessesModule } from '@/modules/businesses/businesses.module';
 import { CustomEntitiesModule } from '@/modules/custom-entities/custom-entities.module';
 import { CustomWidgetsModule } from '@/modules/custom-widgets/custom-widgets.module';
@@ -39,11 +40,13 @@ import { GetBlockSchemaTool } from './tools/get-block-schema.tool';
 import { GetPageBlocksTool } from './tools/get-page-blocks.tool';
 import { GetProjectTreeTool } from './tools/get-project-tree.tool';
 import { GetWalletInfoTool } from './tools/get-wallet-info.tool';
+import { InsertCustomWidgetTool } from './tools/insert-custom-widget.tool';
 import { ListEntitiesTool } from './tools/list-entities.tool';
 import { ListMediaAssetsTool } from './tools/list-media-assets.tool';
 import { MoveBlockTool } from './tools/move-block.tool';
 import { PublishWebsiteTool } from './tools/publish-website.tool';
 import { SetStyleTool } from './tools/set-style.tool';
+import { SetThemeTool } from './tools/set-theme.tool';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
 
@@ -55,6 +58,7 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
     CustomEntitiesModule,
     MediaAssetsModule,
     Web3Module,
+    AdvertisingModule,
   ],
   controllers: [AiController, OnboardingController, AiInfrastructureController],
   providers: [
@@ -95,11 +99,13 @@ import { UpdateBlockPropsTool } from './tools/update-block-props.tool';
     CreatePageTool,
     AddBlockTool,
     SetStyleTool,
+    SetThemeTool,
     UpdateBlockPropsTool,
     DeleteBlockTool,
     MoveBlockTool,
     ListMediaAssetsTool,
     CreateCustomWidgetTool,
+    InsertCustomWidgetTool,
     GetWalletInfoTool,
     ListEntitiesTool,
     CreateEntityTool,

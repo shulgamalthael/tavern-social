@@ -24,6 +24,10 @@ enum PostKind {
 enum NotificationType {
   friend_request
   friend_accepted
+  /// Заявка на подписку на приватный профиль (§103, `SubscriptionRequest`)
+  /// — тот же приём, что `friend_request`/`friend_accepted` пара выше.
+  subscription_request
+  subscription_accepted
   post_like
   post_comment
   post_repost
@@ -41,6 +45,20 @@ enum NotificationType {
   /// события нет человека-"актёра" (см. `Notification.actorId`'s комментарий
   /// про то, почему оно nullable именно из-за этого типа).
   rule_triggered
+  /// Creator Monetization Phase 1 (AI_PLATFORM_ROADMAP.md §79) — статус
+  /// `CreatorProfile` изменился (верификация Stripe Identity прошла/не
+  /// прошла, аккаунт забанен/разбанен админом). Та же "нет человека-актёра"
+  /// причина `actorId: null`, что и у `rule_triggered` — событие приходит от
+  /// вебхука Stripe или от системного действия админа, не от другого
+  /// пользователя, поэтому `toDto` (см. `notifications.service.ts`) так же
+  /// не умеет его рендерить — тоже входит в `FEED_EXCLUDED_TYPES`. В отличие
+  /// от `rule_triggered`, `businessId` здесь всегда `null` (создатель —
+  /// `User`, не `Business`) — нет своего "business-notifications"-экрана:
+  /// текущий статус читается напрямую из `CreatorProfile` (`GET /creators/me`),
+  /// эта строка нужна только для realtime-тоста (`creator:status-changed`) и
+  /// истории на будущее, отдельный список для неё не строим, пока не
+  /// появится реальный запрос на него.
+  creator_status_changed
 }
 
 enum ReactionType {
@@ -110,6 +128,13 @@ model User {
   showPresence         Boolean   @default(true)
   allowStrangerInvites Boolean   @default(false)
   morningDigest        Boolean   @default(true)
+  /// Приватная страница — весь контент профиля, кроме верхнего блока
+  /// (обложка/аватар/имя/тэглайн), виден только друзьям и одобренным
+  /// подписчикам (см. `UsersService.canViewRestrictedContent`). Подписка на
+  /// такой профиль перестаёт быть мгновенной (`Subscription`) и требует
+  /// подтверждения через `SubscriptionRequest` — тот же приём, что и
+  /// `FriendRequest`/`Friendship`.
+  isPrivate            Boolean   @default(false)
   role                 UserRole  @default(user)
   /// Защищённый уровень поверх role=admin — суперадмина нельзя ни удалить,
   /// ни забанить, ни понизить в роли ни одному другому админу (см.
@@ -139,12 +164,26 @@ model User {
   communityMemberships CommunityMembership[]
   groupMemberships     GroupMembership[]
   groupJoinRequests    GroupJoinRequest[]
+  postBoosts           PostBoost[]
+  stories              Story[]               @relation("StoryAuthor")
+  storyViews           StoryView[]           @relation("StoryViewer")
+  /// Creator Monetization Phase 1 (AI_PLATFORM_ROADMAP.md §79) — 1:1,
+  /// опционально: большинство пользователей никогда не заводят
+  /// `CreatorProfile` (см. её собственный комментарий про то, когда строка
+  /// вообще появляется).
+  creatorProfile       CreatorProfile?
 
   friendshipsAsUserA Friendship[] @relation("FriendshipUserA")
   friendshipsAsUserB Friendship[] @relation("FriendshipUserB")
 
   sentFriendRequests     FriendRequest[] @relation("FriendRequestSender")
   receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+
+  subscriptionsAsFollower  Subscription[] @relation("SubscriptionFollower")
+  subscriptionsAsFollowing Subscription[] @relation("SubscriptionFollowing")
+
+  sentSubscriptionRequests     SubscriptionRequest[] @relation("SubscriptionRequestSender")
+  receivedSubscriptionRequests SubscriptionRequest[] @relation("SubscriptionRequestReceiver")
 
   notificationsReceived Notification[] @relation("NotificationRecipient")
   notificationsActedIn  Notification[] @relation("NotificationActor")
@@ -235,10 +274,72 @@ model Post {
   /// Обратная сторона GalleryImage.postId — see комментарий там же.
   galleryImage GalleryImage?
 
+  /// Обратная сторона Message.sharedPostId — см. комментарий там же.
+  sharedInMessages Message[] @relation("MessageSharedPost")
+
+  /// Продвижение поста (AI_PLATFORM_ROADMAP.md §73) — см. комментарий
+  /// модели `PostBoost` ниже. Массив, не одна запись: пост можно продвигать
+  /// повторно после того, как предыдущее продвижение истекло.
+  boosts PostBoost[]
+
   @@unique([authorId, repostOfId])
   @@index([authorId, createdAt])
   @@index([wallOwnerId, createdAt])
   @@map("posts")
+}
+
+/// Платное продвижение поста (AI_PLATFORM_ROADMAP.md §73 — "Instagram-style
+/// post boost") — единственный способ, которым пост обходит новый
+/// relationship-based фильтр главной ленты (`PostsService.listFeed`): пока
+/// у поста есть строка с `paymentStatus: paid` и `endsAt` в будущем, он
+/// виден в ленте ЛЮБОМУ пользователю, не только друзьям автора/участникам
+/// его сообществ. "Сейчас ли пост продвигается" всегда вычисляется на лету
+/// (`paymentStatus: paid AND endsAt > now()`), отдельного поля `status` и
+/// фонового джоба для авто-истечения нет — тот же принцип "не хранить то,
+/// что можно вывести", что и у `Business.website`'s `status`
+/// (`published`/`draft`, тоже производное поле).
+///
+/// НЕ переиспользует `AdCampaign`/`AdEngineService` (Advertising
+/// Infrastructure, §68) — та модель заточена под другое: `advertiserBusinessId`
+/// обязательно ссылается на `Business` (пост пишет `User`), а весь словарь
+/// таргетинга (`BusinessCategory`-исключение конкурентов, `AdPlacement` —
+/// шапка/подвал/сайдбар ВЕБ-САЙТА) не имеет смысла для "показать этот пост
+/// большему числу читателей ленты". Общий с `AdCampaign`/`Order`/
+/// `Appointment` — только `PaymentProvider` (тот же `createPaymentIntent`/
+/// webhook-диспетчер по `metadata`-ключу, четвёртый вызывающий).
+///
+/// Нет отдельной модерации и нет возврата денег при досрочной отмене —
+/// осознанные решения этого слайса (см. `PostBoostsService`'s комментарий):
+/// продвижение меняет только охват уже опубликованного, уже видимого своему
+/// кругу поста, не вводит непроверенный контент, поэтому риск-профиль ниже,
+/// чем у внешней рекламы на чужих сайтах.
+model PostBoost {
+  id                    String        @id @default(uuid())
+  postId                String
+  post                  Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgetCents           Int
+  /// Снэпшот на момент создания — у `User`, в отличие от `Business`, нет
+  /// собственного поля валюты, поэтому её каждый раз выбирают в форме
+  /// продвижения (см. `CreatePostBoostDto`).
+  currency              String
+  /// Куратированный набор (1/3/5/7 дней, см. `CreatePostBoostDto`), не
+  /// свободное число.
+  durationDays          Int
+  paymentStatus         PaymentStatus @default(unpaid)
+  stripePaymentIntentId String?
+  /// Оба `null` до реального подтверждения оплаты вебхуком
+  /// (`PostBoostsService.markPaidByPaymentIntent`) — до этого момента мы
+  /// не знаем, состоится ли платёж вообще, назначать даты раньше времени
+  /// было бы нечестно.
+  startsAt              DateTime?
+  endsAt                DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([postId])
+  @@map("post_boosts")
 }
 
 /// Изображение в личной галерее пользователя. Файл на диске удаляется
@@ -263,6 +364,45 @@ model GalleryImage {
 
   @@index([userId, createdAt])
   @@map("gallery_images")
+}
+
+/// Эфемерная история (Instagram-style) — самостоятельная сущность, не
+/// разновидность `Post`: живёт 24 часа (см. `StoriesService.
+/// STORY_LIFETIME_MS`), не имеет лайков/комментариев/видимости на стене.
+/// `createdAt > now() - 24h` — единственный источник «активна ли ещё»
+/// (тот же приём, что `PostBoost.endsAt`, ничего не хранится отдельным
+/// статусом); `StoriesService.sweepExpired` фоновым таймером реально
+/// удаляет протухшие строки и их файлы, а не просто перестаёт их отдавать.
+model Story {
+  id        String   @id @default(uuid())
+  authorId  String
+  author    User     @relation("StoryAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  imageUrl  String
+  createdAt DateTime @default(now())
+
+  views StoryView[]
+
+  @@index([authorId, createdAt])
+  @@map("stories")
+}
+
+/// Отметка «этот пользователь посмотрел эту историю» — по одной строке на
+/// пару (storyId, viewerId), см. `@@unique` ниже: повторный просмотр не
+/// плодит дубликаты (`StoriesService.markViewed` делает `upsert`).
+/// Используется и для кольца «просмотрено/нет» у зрителя, и для списка
+/// «кто посмотрел» у автора (`StoriesService.getViewers`, доступен только
+/// автору — это его приватные данные о зрителях).
+model StoryView {
+  id       String   @id @default(uuid())
+  storyId  String
+  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewerId String
+  viewer   User     @relation("StoryViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
+
+  @@unique([storyId, viewerId])
+  @@index([storyId])
+  @@map("story_views")
 }
 
 /// Учётная строка «этот файл принадлежит этому посту» — НЕ источник
@@ -382,6 +522,18 @@ model Message {
   replyTo   Message?  @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
   replies   Message[] @relation("MessageReply")
 
+  /// Пересланный ПОСТ (не сообщение — см. forwardedFromId выше) — «Поделиться»
+  /// с ленты/чужой стены в личку. SetNull, тот же принцип, что у
+  /// forwardedFromId/replyToId: удаление поста не должно ронять сообщение,
+  /// просто сообщение теряет превью. В отличие от forwardedFromId (снимок
+  /// текста на момент пересылки) это «живая» ссылка — видимость шаренного
+  /// поста для конкретного получателя пересчитывается на каждое чтение
+  /// (`PostsService.getShareSummary`), потому что приватность автора стены
+  /// может измениться уже ПОСЛЕ пересылки (§103) — тот же принцип, что у
+  /// replyTo, только вместо текста оригинала пересчитывается доступность.
+  sharedPostId String?
+  sharedPost   Post?   @relation("MessageSharedPost", fields: [sharedPostId], references: [id], onDelete: SetNull)
+
   attachments MessageAttachment[]
 
   createdAt DateTime @default(now())
@@ -440,6 +592,49 @@ model FriendRequest {
   @@unique([senderId, receiverId])
   @@index([receiverId])
   @@map("friend_requests")
+}
+
+/// Односторонняя подписка — сознательно отдельная от `Friendship` (та —
+/// взаимная, с подтверждением через `FriendRequest`). Для публичного
+/// профиля (`User.isPrivate = false`) по-прежнему мгновенная, без
+/// подтверждения, как подписка на любой контент-платформе; для приватного —
+/// строка здесь появляется только после того, как владелец одобрит
+/// `SubscriptionRequest` ниже (тот же двухшаговый приём, что у
+/// `FriendRequest`/`Friendship`). Реальная аудитория creator'а для целей
+/// монетизации и распространения трафика (см. `PostsService.listFeed`,
+/// `CreatorsService.getEligibility`) — не `Friendship`. Без канонической
+/// сортировки пары (в отличие от `Friendship`) — направление здесь
+/// осмысленно само по себе, не искусственно.
+model Subscription {
+  id          String   @id @default(uuid())
+  followerId  String
+  follower    User     @relation("SubscriptionFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("SubscriptionFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followingId])
+  @@map("subscriptions")
+}
+
+/// Заявка на подписку — появляется вместо мгновенной `Subscription`, когда
+/// `followingId`/`receiverId` пользователь приватный (`User.isPrivate`).
+/// Один в один зеркалит `FriendRequest` выше: пока не принята/отклонена/
+/// отменена, строка просто удаляется, истории заявок не храним.
+/// `SubscriptionsService.acceptRequest` удаляет эту строку и создаёт
+/// `Subscription`.
+model SubscriptionRequest {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("SubscriptionRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("SubscriptionRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId])
+  @@map("subscription_requests")
 }
 
 model Community {
@@ -724,6 +919,7 @@ model Business {
   discounts       Discount[]
   rules           Rule[]
   customWidgets   CustomWidget[]
+  customWidgetCatalogInserts CustomWidgetCatalogInsert[]
   loyaltyAccounts CustomerLoyaltyAccount[]
   customEntities  CustomEntity[]
   /// Payment Plans v1 — см. `BusinessSubscription`'s комментарий. Отсутствие
@@ -731,6 +927,33 @@ model Business {
   /// это и есть сигнал серверного гейта конструктора
   /// (`/business/[id]/edit`, см. `BillingService.getStatus`).
   subscription    BusinessSubscription?
+  /// Advertising Infrastructure v1 — кампании, где ЭТОТ бизнес выступает
+  /// рекламодателем (self-service, любой бизнес может быть и издателем
+  /// (хостить рекламу через `adslot`-блоки на своём сайте, число слотов —
+  /// `AdvertisingInventoryService.getInventory`) и рекламодателем
+  /// одновременно — оба потребителя выше уже читают эту же
+  /// `BusinessCategory`/`BusinessSubscription`, отдельной "роли" не заводится.
+  adCampaigns     AdCampaign[]
+  /// Тот же бизнес может рекламироваться и на сайтах (`adCampaigns`), и в
+  /// ленте creator'ов (`nativeAdCampaigns`) — независимые кампании, общий
+  /// только `AdvertiserBan` ниже.
+  nativeAdCampaigns NativeAdCampaign[]
+  /// `null` — бизнесу разрешено быть рекламодателем (дефолт для всех) — см.
+  /// `AdvertiserBan`'s комментарий.
+  advertiserBan   AdvertiserBan?
+  /// Внешний рекламодатель (AI_PLATFORM_ROADMAP.md §71) — создан через
+  /// облегчённый кабинет `/advertise/new`, не через обычную форму «Создать
+  /// бизнес». Смысл ровно один: `BusinessDashboardWidget` рендерит для
+  /// такого бизнеса урезанный `AdvertiserDashboardWidget` (только вкладка
+  /// «Реклама», без Товаров/Заказов/Конструктора/Настроек) — сама модель
+  /// `Business`/`AdCampaign` НЕ меняется и не дублируется, это чисто
+  /// презентационный флаг, тот же принцип, что и решение НЕ заводить
+  /// отдельную сущность рекламодателя (см. корневой план фичи). У такого
+  /// бизнеса `website`/системный домен всё равно создаются (побочный эффект
+  /// `BusinessesService.create`, транзакция общая для всех бизнесов) — сайт
+  /// просто навсегда остаётся черновиком, никогда не публикуется и нигде не
+  /// показывается (в проекте нет публичного каталога бизнесов вообще).
+  isAdvertiserOnly Boolean @default(false)
 
   @@index([ownerId])
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
@@ -834,6 +1057,227 @@ model PlanSelectionEvent {
   @@index([businessId])
   @@index([createdAt])
   @@map("plan_selection_events")
+}
+
+/// Advertising Infrastructure v1 — статус рекламной кампании. `draft` — ещё
+/// редактируется рекламодателем, не оплачена. `pending_review` — оплата
+/// прошла (`paymentStatus: paid`), ждёт модерации (см. `AdminAdvertising
+/// Controller`). `active`/`paused` — решает рекламодатель (после одобрения).
+/// `rejected` — модератор отклонил (см. `rejectionReason`). `completed` —
+/// вышел `endDate`. Модерация — только на уровне кампании целиком (не
+/// по-крипативно) — узкий v1, см. implementation plan §5.
+enum AdCampaignStatus {
+  draft
+  pending_review
+  active
+  paused
+  rejected
+  completed
+}
+
+/// Стандартные форматы креатива — закрытый enum (не строка), потому что
+/// `AdEngineService`/фронтенд `AD_PLACEMENT_CONFIG` должны точно знать,
+/// какие форматы вообще могут существовать, чтобы посчитать реальные
+/// размеры/aspect ratio (см. `AD_PLACEMENT_CONFIG`, frontend). `video`
+/// сознательно не включён в этой версии (см. implementation plan,
+/// "Explicitly deferred") — добавляется позже без миграции боли (enum
+/// расширяемый).
+enum AdFormat {
+  banner
+  large_banner
+  rectangle
+  square
+  mobile_banner
+  native
+  card
+  /// Добавлен без миграции существующих данных — `AdCreative.videoUrl`
+  /// заполняется только для этого формата (см. её комментарий), уже
+  /// сохранённые креативы других форматов не затронуты.
+  video
+}
+
+/// Где на странице сайта может стоять рекламный слот — определяет допустимые
+/// форматы/размеры через `AD_PLACEMENT_CONFIG` (frontend), не хранится как
+/// произвольная строка (закрытое множество мест размещения, которые
+/// `AdEngineService` умеет таргетировать).
+enum AdPlacement {
+  header
+  content
+  sidebar
+  footer
+  in_feed
+  /// Сайдбары ленты самой Таверны (`widgets/feed`, не сайт бизнеса-паблишера
+  /// — для того случая уже есть `sidebar` выше). Своё значение, а не переиспользование
+  /// `sidebar`, потому что здесь нет паблишера-бизнеса с категорией: показ
+  /// отбирается `AdEngineService.selectCreativesForFeed` без конкурентного
+  /// исключения/таргетинга по категории паблишера, только по ставке (см. её
+  /// комментарий).
+  feed_sidebar
+}
+
+/// Модель оплаты за показ — рекламодатель выбирает при создании кампании
+/// (см. `CreateAdCampaignDto.billingModel`), не платформа навязывает одну
+/// модель всем. `cpm` — `AdCampaign.bidCents` за 1000 показов, `cpc` — за
+/// один клик. Обе модели существуют РЯДОМ (кампании с разными моделями
+/// конкурируют за один и тот же слот, см. `AdEngineService`'s комментарий
+/// про ранжирование) — намеренное упрощение v1: сравнение `bidCents`
+/// "как есть" между `cpm` и `cpc` не эквивалентно экономически (честный eCPM
+/// для `cpc` требовал бы оценки CTR, которой в проекте пока нет), это
+/// зафиксировано как известное ограничение, а не незамеченный баг.
+enum AdBillingModel {
+  cpm
+  cpc
+}
+
+/// Рекламная кампания — создаётся САМИМ рекламодателем (любой `Business` на
+/// платформе, self-service, см. implementation plan §3), не только
+/// платформой/админом. Оплата — через уже существующий провайдеро-
+/// независимый `PaymentProvider` (тот же `createPaymentIntent`, которым
+/// `OrdersService`/`AppointmentsService` уже пользуются для разовых
+/// платежей) — `stripePaymentIntentId`/`paymentStatus` здесь НЕ новая
+/// платёжная система, а третий вызывающий той же самой. `paymentStatus`
+/// переиспользует уже существующий `PaymentStatus` enum (`Order`/
+/// `Appointment`), не собственный.
+///
+/// `targetCategories`/`targetPlacements`/`targetDevices`/`targetLocales` —
+/// таргетинг. Пустой массив `targetCategories` значит "любая категория"
+/// (не "ни одна") — та же семантика, что у необязательных списков в
+/// проекте (например, `Business.capabilities`, где отсутствие значения не
+/// равно "явно запрещено"). `targetCategories` использует УЖЕ существующий
+/// `BusinessCategory` — ни отдельной таксономии, ни отдельного "конкурент"-
+/// поля не заводится: конкурентское исключение в `AdEngineService`
+/// вычисляется по совпадению категории рекламодателя и издателя (см. её
+/// комментарий), не по этому полю.
+model AdCampaign {
+  id                   String           @id @default(uuid())
+  advertiserBusinessId String
+  advertiserBusiness   Business         @relation(fields: [advertiserBusinessId], references: [id], onDelete: Cascade)
+
+  name            String
+  status          AdCampaignStatus @default(draft)
+  rejectionReason String?
+
+  /// Деньги — целые центы, тот же принцип, что и везде в проекте
+  /// (`Order.totalCents`/`Business.taxRateBps`) — не `Float`, чтобы не
+  /// накапливать погрешность округления.
+  budgetCents  Int
+  /// НЕ инкрементируется напрямую по центам за событие (дробные центы на
+  /// показ при `cpm` копили бы погрешность округления) — пересчитывается
+  /// целиком из счётчиков `impressionsServed`/`clicksServed` при каждом
+  /// новом событии (см. `AdCampaignsService.recordImpression/recordClick`).
+  spentCents   Int    @default(0)
+  currency     String
+
+  /// Реальное биллинг-ранжирование (см. `AdBillingModel`'s комментарий) —
+  /// `bidCents` за 1000 показов (`cpm`) или за один клик (`cpc`). Оплата
+  /// вперёд (`budgetCents`, через уже существующий `PaymentProvider`) не
+  /// меняется — `bidCents` определяет только СКОРОСТЬ расходования уже
+  /// оплаченного бюджета и место в ранжировании (`AdEngineService`), не
+  /// новый способ платежа.
+  billingModel      AdBillingModel
+  bidCents          Int
+  impressionsServed Int            @default(0)
+  clicksServed      Int            @default(0)
+
+  paymentStatus         PaymentStatus @default(unpaid)
+  stripePaymentIntentId String?
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  targetCategories BusinessCategory[]
+  targetPlacements AdPlacement[]
+  /// `'desktop' | 'tablet' | 'mobile'` — те же строковые значения, что уже
+  /// использует `Viewport` на фронтенде (`entities/website/model/types.ts`);
+  /// не enum здесь, потому что это НЕ доменное значение биллинга/платформы,
+  /// а чисто таргетинговый фильтр — пустой список значит "любое устройство".
+  targetDevices String[]
+  targetLocales String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creatives AdCreative[]
+
+  @@index([advertiserBusinessId])
+  @@index([status])
+  @@map("ad_campaigns")
+}
+
+/// Модерация одного креатива внутри уже одобренной кампании — НЕЗАВИСИМО
+/// от `AdCampaign.status`: кампания с 3 креативами может остаться `active`,
+/// пока ОДИН конкретный креатив, найденный нарушающим правила уже ПОСЛЕ
+/// одобрения кампании, снят (`rejected`) без отзыва всей кампании и её
+/// остальных креативов. Не заменяет модерацию на уровне кампании (см.
+/// `AdCampaignStatus`) — дополняет её более тонким контролем уже ПОСЛЕ
+/// первого одобрения. `pending_review` не используется как отдельный шаг:
+/// креативы одобренной кампании уже были осмотрены целиком при её
+/// одобрении (см. `AdCampaignsService.approve` — создаёт креативы со
+/// статусом `approved`), поэтому дефолт — `approved`, а не отдельный этап
+/// ожидания.
+enum AdCreativeStatus {
+  approved
+  rejected
+}
+
+/// Рекламный креатив — намеренно ОТДЕЛЬНАЯ модель от `AdCampaign` (см.
+/// implementation plan §2/§4 архитектурного ТЗ — "разделить AdSlot и
+/// AdCreative"): кампания отвечает за таргетинг/бюджет/оплату/модерацию,
+/// креатив — только за то, что реально показывается. Одна кампания может
+/// содержать несколько креативов разных форматов (движок сам выбирает
+/// подходящий под конкретный слот, см. `AdEngineService.selectCreative`).
+model AdCreative {
+  id         String     @id @default(uuid())
+  campaignId String
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  format      AdFormat
+  headline    String
+  description String?
+  /// URL уже загруженного файла (та же медиатека, что и у остального
+  /// проекта — `MediaAsset`/`WebsitesController.uploadAsset`), не бинарные
+  /// данные в этой таблице.
+  imageUrl    String?
+  /// Только для `format: video` — тот же принцип, что `imageUrl` (URL уже
+  /// загруженного файла, не бинарные данные здесь). Ровно одно из
+  /// `imageUrl`/`videoUrl` реально используется на любом креативе —
+  /// проверяется на уровне DTO (`AddAdCreativeDto`), не здесь.
+  videoUrl    String?
+  ctaLabel    String?
+  targetUrl   String
+
+  /// См. `AdCreativeStatus`'s комментарий — тонкая модерация ПОВЕРХ
+  /// `AdCampaign.status`, не вместо неё. `AdEngineService.selectCreative`
+  /// отбрасывает `rejected`-креативы, даже если сама кампания `active`.
+  status           AdCreativeStatus @default(approved)
+  rejectionReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignId])
+  @@map("ad_creatives")
+}
+
+/// Компlaance-примитив "banned advertisers" (см. корневой план фичи,
+/// "Advertising safety rules") — платформа может запретить КОНКРЕТНОМУ
+/// бизнесу быть рекламодателем (мошенничество/явные нарушения правил),
+/// независимо от тарифа/категории. Намеренно НЕ поле на `Business` (тот
+/// модель и так велика, и это не общий "бан пользователя" — см. `User.
+/// isBanned` в admin-модуле, отдельный, не связанный механизм для другого
+/// домена) — отдельная маленькая таблица, тот же принцип "не смешивать
+/// разные оси бана", что и раньше в проекте. Не запрещает бизнесу быть
+/// ПАБЛИШЕРОМ (показывать чужую рекламу у себя на сайте) — только
+/// рекламодателем; это разные роли одного и того же `Business` (см.
+/// комментарий поля `Business.adCampaigns`).
+model AdvertiserBan {
+  id         String   @id @default(uuid())
+  businessId String   @unique
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reason     String?
+  bannedAt   DateTime @default(now())
+
+  @@map("advertiser_bans")
 }
 
 /// Первая реальная капабилити-сущность (Commerce, см. ROADMAP.md §2.2/§5) —
@@ -1781,18 +2225,87 @@ enum CustomWidgetStatus {
 /// curated allowlist, что AI-2's `add_block` (`heading`/`text`/`quote`/
 /// `spacer`, см. `custom-widgets.types.ts` → `ai/tools/lib/add-block-schemas.ts`) —
 /// не новая валидация, переиспользование уже проверенной.
+/// `fields` — необязательная схема ТИПИЗИРОВАННЫХ параметров виджета (см.
+/// `WidgetFieldSchema`, `custom-widgets.types.ts`): каждый элемент —
+/// `{ key, label, kind, ... }`, `kind` — узкое закрытое подмножество
+/// `CuratedField.kind` (`string`/`number`/`boolean`/`enum`/`mediaAsset`/
+/// `linkTarget` — без `list`/`dataSource`, см. форвард-комментарий у
+/// `parseWidgetFields`). Пустой массив (дефолт) — виджет ведёт себя ровно
+/// как раньше, статичный снимок без параметров, полностью обратная
+/// совместимость. Если `fields` не пуст, `schema`'s строковые значения
+/// пропсов МОГУТ содержать плейсхолдеры `{{key}}` (целиком или частью
+/// строки) — при вставке экземпляра (`insert_custom_widget`) они
+/// подставляются РЕАЛЬНЫМИ, заново провалидированными значениями через ТУ ЖЕ
+/// `validateOneField`, что и обычные пропсы блока (`add-block-schemas.ts`),
+/// и результат ещё раз проверяется полной схемой блока-владельца перед
+/// вставкой — виджет с полями не может произвести проп, который не мог бы
+/// произвести обычный `add_block`/ручное редактирование (см. `resolve-
+/// widget-template.ts`).
 model CustomWidget {
   id         String             @id @default(uuid())
   businessId String
   business   Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name       String
   schema     Json
+  fields     Json               @default("[]")
   status     CustomWidgetStatus @default(draft)
+  /// Общий каталог виджетов (AI_PLATFORM_ROADMAP.md §74) — заполняется
+  /// ТОЛЬКО через `create_custom_widget` (AI-путь, `CustomWidgetsService.
+  /// create(..., { autoShare: true })`), никогда вручную через owner-only
+  /// REST (`CustomWidgetsController`) — осознанная граница слайса, см.
+  /// комментарий `CustomWidgetsService.create`. Решается ОДИН раз, в момент
+  /// создания — `update()` никогда не пересматривает `isShared`, снять с
+  /// каталога может только GC (`CustomWidgetCatalogGcService`) по
+  /// неиспользованию, см. её комментарий.
+  isShared           Boolean   @default(false)
+  /// Момент попадания в каталог — точка отсчёта grace-периода GC. `null`,
+  /// пока `isShared: false`.
+  sharedAt           DateTime?
+  /// Канонический хэш `schema` (без учёта id блоков) — считается ВСЕГДА,
+  /// не только для расшаренных виджетов, чтобы искать почти-дубликаты среди
+  /// уже существующих записей каталога перед тем, как разрешить новую (см.
+  /// `widget-quality.lib.ts`, `assessWidgetQuality`).
+  schemaHash         String?
+  /// Сколько РАЗНЫХ бизнесов (не событий) вставили этот виджет — единственное
+  /// доказательство, что каталожная запись кому-то ещё реально пригодилась
+  /// (см. `CustomWidgetsService.recordCatalogInsert`). Намеренно НЕ голый
+  /// накопительный счётчик без защиты от повтора: без `CustomWidgetCatalog
+  /// Insert`'s `@@unique([widgetId, businessId])` ниже один и тот же бизнес
+  /// мог бы вызвать `POST /widget-catalog/:id/record-insert` в цикле и
+  /// искусственно накрутить себе бессмертие в каталоге, обходя GC — см.
+  /// найденную и закрытую уязвимость, AI_PLATFORM_ROADMAP.md §75.
+  /// Собственные вставки автора не считаются вообще (см. сервис) — иначе GC
+  /// не мог бы отличить "автор просто продолжает пользоваться своим" от
+  /// "виджет оказался полезен кому-то ещё".
+  catalogInsertCount Int       @default(0)
+  catalogInserts     CustomWidgetCatalogInsert[]
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
 
   @@index([businessId])
+  @@index([isShared])
+  @@index([schemaHash])
   @@map("custom_widgets")
+}
+
+/// Один бизнес, реально вставивший конкретный каталожный виджет —
+/// `@@unique([widgetId, businessId])` физически не даёт одному и тому же
+/// бизнесу быть посчитанным дважды, сколько бы раз он ни дёргал
+/// `POST /widget-catalog/:id/record-insert` (см. комментарий
+/// `CustomWidget.catalogInsertCount` выше). Строка создаётся ОДИН раз на
+/// пару (виджет, бизнес) — `CustomWidgetsService.recordCatalogInsert`
+/// инкрементирует `catalogInsertCount` только если `create` этой строки
+/// реально произошёл (не столкнулся с уже существующей).
+model CustomWidgetCatalogInsert {
+  id         String       @id @default(uuid())
+  widgetId   String
+  widget     CustomWidget @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  businessId String
+  business   Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt  DateTime     @default(now())
+
+  @@unique([widgetId, businessId])
+  @@map("custom_widget_catalog_inserts")
 }
 
 /// AI-8 первый ограниченный слайс (AI_PLATFORM_ROADMAP.md §2.2, §19) —
@@ -1813,6 +2326,15 @@ model CustomEntity {
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   name       String
   fields     Json
+  /// По умолчанию `false` — записи могут содержать что угодно, включая
+  /// приватное (CRM-клиенты, заявки), поэтому анонимный публичный эндпоинт
+  /// (`GET /sites/:businessId/custom-entities/:name/records`,
+  /// `CustomEntitiesService.listPublicRecords`) должен быть осознанным
+  /// действием владельца (переключатель в дашборде,
+  /// `CustomEntitiesService.setVisibility`), а не побочным эффектом
+  /// создания сущности. Гейт только на ЧТЕНИИ анонимом — владелец видит
+  /// свои записи всегда, независимо от этого флага.
+  isPublic   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -1838,4 +2360,408 @@ model CustomEntityRecord {
 
   @@index([entityId])
   @@map("custom_entity_records")
+}
+
+/// Creator Monetization & Native Advertising, Phase 1 (AI_PLATFORM_ROADMAP.md
+/// §79) — деньги/матчинг/native-реклама намеренно НЕ в этой фазе (см.
+/// roadmap-документ, фазы 2-5): это только фундамент — eligibility,
+/// иерархические категории, верификация личности, и переключатели
+/// монетизации, которые ничего пока не двигают, но уже реальны и сохраняются.
+///
+/// `NOT_ELIGIBLE`/`ELIGIBLE` НЕ хранятся нигде — чисто вычисляемые состояния
+/// (`CreatorsService.getEligibility`, живой `COUNT` дружб): пока пользователь
+/// не начал онбординг, для него просто нет строки `CreatorProfile` вообще.
+enum CreatorStatus {
+  verification_pending
+  verified
+  active
+  rejected
+  suspended
+}
+
+/// Статус Stripe Connect аккаунта creator'а (Phase 5, см. `CreatorProfile.
+/// stripeConnectStatus`'s комментарий) — `active` значит `stripe_transfers`
+/// капабилити реально включена у Stripe (не то же самое, что "аккаунт
+/// создан": созданный, но не прошедший хостед-онбординг аккаунт остаётся
+/// `restricted` у Stripe, здесь — `onboarding`).
+enum CreatorStripeConnectStatus {
+  not_connected
+  onboarding
+  active
+}
+
+/// Как часто в контент показывается реклама (Phase 2+ читает это поле;
+/// здесь только хранение переключателя, см. корневой план фичи §4/§15).
+enum CreatorAdFrequency {
+  low
+  balanced
+  high
+}
+
+/// Иерархическая (не плоская, в отличие от `BusinessCategory`) таксономия
+/// деятельности creator'а — сама категория, а НЕ вхождение конкретного
+/// creator'а в неё (см. `CreatorCategoryAssignment` ниже, join-таблица).
+/// Само-ссылающееся дерево через `parentId` (тот же приём, что могла бы
+/// использовать любая произвольная вложенность — `onDelete: Cascade` на
+/// `parent`, значит удаление родительской категории убирает и детей, что
+/// корректно для курируемого, редко меняющегося дерева, а не пользовательских
+/// данных). Сидируется один раз (`prisma/seed-creator-categories.ts`), не
+/// admin-CRUD в этой фазе — редактирование дерева через Admin Panel отмечено
+/// как отложенное, не потерянное, требование.
+model CreatorCategory {
+  id       String  @id @default(uuid())
+  slug     String  @unique
+  label    String
+  icon     String?
+  parentId String?
+  parent   CreatorCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children CreatorCategory[] @relation("CategoryHierarchy")
+  order    Int     @default(0)
+
+  assignments CreatorCategoryAssignment[]
+
+  @@index([parentId])
+  @@map("creator_categories")
+}
+
+/// Один выбор creator'а — ровно одна строка с `isPrimary: true` на профиль
+/// (проверяется в `CreatorsService.startOnboarding`, не ограничением схемы:
+/// частичный уникальный индекс по булеву полю — лишняя сложность миграции
+/// ради того, что и так проверяется в единственном месте записи).
+model CreatorCategoryAssignment {
+  id               String   @id @default(uuid())
+  creatorProfileId String
+  creatorProfile   CreatorProfile  @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  categoryId       String
+  category         CreatorCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  isPrimary        Boolean  @default(false)
+
+  @@unique([creatorProfileId, categoryId])
+  @@map("creator_category_assignments")
+}
+
+/// Появляется только когда пользователь реально начинает Creator-онбординг
+/// (`CreatorsService.startOnboarding`) — не создаётся заранее просто из
+/// факта прохождения порога друзей (`ELIGIBLE` — состояние, вычисляемое из
+/// `Friendship`, не из существования этой строки). `status` — государственная
+/// машина, описанная в корневом плане фичи §2 (второго follow-up сообщения
+/// владельца): `verification_pending` (стартовое) → `verified`/`rejected`
+/// (вебхук Stripe Identity) → `active` (сразу вслед за `verified` — сегодня
+/// между ними нет отдельного ручного шага, но оставлены двумя разными
+/// значениями на случай, если он появится) → `suspended` (только вручную,
+/// админом, не Stripe).
+model CreatorProfile {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status          CreatorStatus @default(verification_pending)
+  rejectionReason String?
+  verifiedAt      DateTime?
+  activatedAt     DateTime?
+  suspendedAt     DateTime?
+  suspendedReason String?
+
+  /// id `stripe.identity.verificationSessions` — единственное, что мы вообще
+  /// храним про верификацию личности: сам документ/селфи никогда не попадает
+  /// на этот backend, целиком остаётся у Stripe (см. корневой план фичи,
+  /// раздел про выбор Stripe Identity вместо самодельного приватного
+  /// хранилища файлов).
+  stripeIdentitySessionId String?
+
+  /// Stripe Connect (v2 Accounts API, "recipient" конфигурация) — реальные
+  /// выплаты creator'у (Creator Monetization Phase 5, AI_PLATFORM_ROADMAP.md
+  /// §83). `stripeConnectStatus` — локальный кэш реального статуса аккаунта
+  /// у Stripe (`StripeConnectService.refreshStatus` перечитывает его живьём
+  /// при каждом обращении к статусу, не полагается на вебхуки — см. её
+  /// комментарий), не источник истины сам по себе.
+  stripeConnectedAccountId String?
+  stripeConnectStatus      CreatorStripeConnectStatus @default(not_connected)
+
+  monetizationEnabled  Boolean @default(true)
+  adFrequency          CreatorAdFrequency @default(balanced)
+  /// "Не более 1 рекламной карточки на N постов" — N. Дефолт 5 — тот же
+  /// пример, что и в корневом плане фичи §4.
+  maxAdFrequencyRatio  Int     @default(5)
+  /// Свободные строки против небольшого конфигурируемого списка (gambling/
+  /// alcohol/political/adult/financial и т. п.), не enum — тот же приём, что
+  /// у `Business.capabilities`: список категорий может расшириться позже без
+  /// миграции.
+  blockedCategories    String[] @default([])
+  /// id забаненных этим creator'ом рекламодателей (`Business.id`) — заведено
+  /// уже в Phase 1 по прямой просьбе владельца, хотя нечего фильтровать, пока
+  /// Phase 2 не даст реальных кампаний.
+  blockedAdvertiserIds String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  categories CreatorCategoryAssignment[]
+  nativeAdAssignments NativeAdAssignment[]
+  nativeAdRevenueEvents NativeAdRevenueEvent[]
+  nativeAdPayouts NativeAdPayout[]
+
+  @@map("creator_profiles")
+}
+
+// --- Native Advertising (Creator Monetization Phase 2, AI_PLATFORM_ROADMAP.md
+// §80) — та же независимая admin-DTO-стиль пара кампания/креатив, что
+// `AdCampaign`/`AdCreative` (advertising.module), НЕ построена НА них: та
+// модель таргетируется по `Business.category`/сайтовому `AdPlacement`, у
+// creator'а нет ни того, ни другого (см. `PostBoost`'s прошлая история — та
+// же причина, по которой он тоже не переиспользовал `AdCampaign`). Реюзается
+// только то, что реально универсально: `AdBillingModel` (cpm/cpc — та же
+// экономика), `PaymentStatus` (тот же `PaymentProvider`, третий... точнее
+// теперь уже пятый вызывающий рядом с Order/Appointment/AdCampaign/PostBoost),
+// и `AdvertiserBan` (бан рекламодателя — платформенное понятие, не привязанное
+// к конкретному рекламному движку).
+
+enum NativeAdCampaignStatus {
+  draft
+  pending_review
+  active
+  paused
+  rejected
+  completed
+}
+
+enum NativeAdCreativeStyle {
+  minimal
+  editorial
+  product
+  video
+}
+
+enum NativeAdCreativeStatus {
+  approved
+  rejected
+}
+
+enum NativeAdAssignmentStatus {
+  active
+  paused
+}
+
+/// Рекламная кампания, нацеленная на creator'ов, а не на сайты. Создаётся
+/// самим рекламодателем (любой `Business`, self-service — тот же принцип, что
+/// `AdCampaign`). `targetCategoryIds`/`targetGeography` — ИНФОРМАЦИОННЫЕ поля
+/// в Phase 2 (видны админу при ручном назначении, см. `NativeAdAssignment`
+/// ниже), НЕ используются для автоматического подбора — реальный
+/// AI-подбор по совпадению категорий/аудитории это Phase 3 (см. корневой план
+/// фичи), здесь назначение целиком ручное. `adCategory` — против какой из
+/// `CREATOR_BLOCKABLE_AD_CATEGORIES` (`creators/creators.types.ts`) реклама
+/// проверяется у `CreatorProfile.blockedCategories` — `null` значит
+/// «неклассифицированная» категория, никогда не блокируется этим полем.
+model NativeAdCampaign {
+  id                   String   @id @default(uuid())
+  advertiserBusinessId String
+  advertiserBusiness   Business @relation(fields: [advertiserBusinessId], references: [id], onDelete: Cascade)
+
+  name            String
+  status          NativeAdCampaignStatus @default(draft)
+  rejectionReason String?
+
+  budgetCents Int
+  spentCents  Int    @default(0)
+  currency    String
+
+  billingModel      AdBillingModel
+  bidCents          Int
+  impressionsServed Int @default(0)
+  clicksServed      Int @default(0)
+
+  paymentStatus         PaymentStatus @default(unpaid)
+  stripePaymentIntentId String?
+
+  startDate DateTime?
+  endDate   DateTime?
+
+  targetCategoryIds String[] @default([])
+  targetGeography   String[] @default([])
+  /// Одно из `CREATOR_BLOCKABLE_AD_CATEGORIES` (gambling/alcohol/political/
+  /// adult/financial) или `null` — см. комментарий модели выше.
+  adCategory        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creatives     NativeAdCreative[]
+  assignments   NativeAdAssignment[]
+  revenueEvents NativeAdRevenueEvent[]
+
+  @@index([advertiserBusinessId])
+  @@index([status])
+  @@map("native_ad_campaigns")
+}
+
+/// Тонкая модерация ПОВЕРХ модерации кампании — тот же принцип, что
+/// `AdCreativeStatus` (см. её комментарий). Четыре адаптивных стиля вместо
+/// формата/размера сайтовой рекламы (`style`, не `format`) — контент ленты
+/// один и тот же для всех стилей (заголовок/текст/картинка или видео/CTA),
+/// разница только в layout-е на frontend (`NativeAdCard`).
+model NativeAdCreative {
+  id         String           @id @default(uuid())
+  campaignId String
+  campaign   NativeAdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  style       NativeAdCreativeStyle
+  headline    String
+  bodyText    String?
+  imageUrl    String?
+  videoUrl    String?
+  ctaLabel    String?
+  targetUrl   String
+
+  status          NativeAdCreativeStatus @default(approved)
+  rejectionReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignId])
+  @@map("native_ad_creatives")
+}
+
+/// "Manual creator↔campaign assignment only — no AI yet" (корневой план фичи,
+/// Phase 2) — админ вручную решает, какие активные creator'ы получают показы
+/// конкретной кампании; `targetCategoryIds`/`targetGeography` кампании выше —
+/// подсказка админу при выборе, не автоматический критерий. Реальный
+/// AI-подбор (Phase 3) заменит/дополнит это позже без переписывания показа в
+/// ленте — движок ленты (`NativeAdFeedService`) читает только эту таблицу,
+/// ему всё равно, кто и как решил, что назначение существует.
+model NativeAdAssignment {
+  id               String                   @id @default(uuid())
+  campaignId       String
+  campaign         NativeAdCampaign         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creatorProfileId String
+  creatorProfile   CreatorProfile           @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  status           NativeAdAssignmentStatus @default(active)
+  assignedAt       DateTime                 @default(now())
+
+  revenueEvents NativeAdRevenueEvent[]
+
+  @@unique([campaignId, creatorProfileId])
+  @@index([creatorProfileId])
+  @@map("native_ad_assignments")
+}
+
+enum NativeAdRevenueEventType {
+  impression
+  click
+}
+
+/// Единственный источник истины о деньгах, реально начисленных creator'у
+/// (Creator Monetization Phase 4, AI_PLATFORM_ROADMAP.md §82) — одна строка
+/// на каждое событие показа/клика, за которое реально списался бюджет
+/// рекламодателя (см. `NativeAdCampaignsService.recordImpression/
+/// recordClick`'s комментарий про то, почему это ДЕЛЬТА расхода, а не
+/// абсолютное значение). `CreatorProfile` НЕ получает отдельное поле
+/// "баланс" — баланс всегда СЧИТАЕТСЯ агрегацией этой таблицы (`groupBy` по
+/// `creatorProfileId`/`currency`), тот же принцип, что уже применён к
+/// `AdminAdvertisingOverviewDto.totals.revenueByCurrency` (не хранить
+/// вычисляемое отдельно от источника). `grossCents` делится на три части
+/// строго по `NativeAdRevenueSettings`, действовавшим В МОМЕНТ события —
+/// поэтому проценты записаны в саму строку, а не только в текущих
+/// настройках: смена процентов в будущем не должна переписывать историю
+/// уже начисленных событий.
+model NativeAdRevenueEvent {
+  id String @id @default(uuid())
+
+  campaignId String
+  campaign   NativeAdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  assignmentId String
+  assignment   NativeAdAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  creatorProfileId String
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  type     NativeAdRevenueEventType
+  currency String
+
+  /// Реальная сумма, списанная с бюджета рекламодателя ЗА ЭТО событие (не
+  /// накопленный итог кампании) — см. `NativeAdCampaignsService`'s
+  /// комментарий про дельту.
+  grossCents         Int
+  creatorShareCents  Int
+  platformFeeCents   Int
+  processingFeeCents Int
+
+  /// `null` — событие ещё НЕ учтено ни в одной выплате, его
+  /// `creatorShareCents` входит в доступный для выплаты баланс
+  /// (`NativeAdPayoutsService`'s комментарий). Проставляется при создании
+  /// выплаты и сбрасывается обратно в `null`, если сама выплата не удалась
+  /// (`status: failed`) — тот же принцип "деньги не должны потеряться
+  /// молча", что и у остального ledger'а этого модуля.
+  payoutId String?
+  payout   NativeAdPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([creatorProfileId])
+  @@index([campaignId])
+  @@index([payoutId])
+  @@map("native_ad_revenue_events")
+}
+
+/// Синглтон (ровно одна строка, фиксированный id) — админ-конфигурируемые
+/// проценты распределения выручки (корневой план фичи, требование "creator
+/// share, platform fee, payment processing fee, minimum payout — НЕ
+/// хардкод"). Базисные пункты (сотые доли процента) — тот же приём
+/// хранения, что `Business.taxRateBps`, не `Float`, чтобы не копить
+/// погрешность округления. Валидация "сумма трёх Bps = 10000" — на уровне
+/// DTO (`UpdateNativeAdRevenueSettingsDto`), не здесь: Prisma не умеет
+/// чек-констрейнты между независимыми колонками одной таблицы переносимо
+/// между БД.
+model NativeAdRevenueSettings {
+  id String @id @default("default")
+
+  creatorRevenueShareBps  Int @default(7000)
+  platformFeeBps          Int @default(2500)
+  paymentProcessingFeeBps Int @default(500)
+  /// Ниже этого порога накопленный баланс creator'а не подлежит выплате —
+  /// поле готово для Phase 5 (реальные выплаты через Stripe Connect), уже
+  /// конфигурируемое, не хардкод, даже до появления самого механизма выплат.
+  minimumPayoutCents Int @default(2000)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("native_ad_revenue_settings")
+}
+
+enum NativeAdPayoutStatus {
+  pending
+  paid
+  failed
+}
+
+/// Реальная выплата creator'у через Stripe Connect (Phase 5,
+/// AI_PLATFORM_ROADMAP.md §83) — creator ЗАПРАШИВАЕТ выплату (`status:
+/// pending`), админ обрабатывает (`NativeAdPayoutsService.process` —
+/// реальный `stripe.transfers.create`, тот же принцип "self-service
+/// создание, admin-подтверждение реального эффекта", что уже применён к
+/// `NativeAdCampaign`'s pending_review→active). Одна выплата — одна валюта
+/// (Stripe Transfer не смешивает валюты) — creator с балансом в нескольких
+/// валютах запрашивает выплату по каждой отдельно.
+model NativeAdPayout {
+  id String @id @default(uuid())
+
+  creatorProfileId String
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id], onDelete: Cascade)
+
+  amountCents Int
+  currency    String
+  status      NativeAdPayoutStatus @default(pending)
+
+  stripeTransferId String?
+  failureReason    String?
+
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+
+  revenueEvents NativeAdRevenueEvent[]
+
+  @@index([creatorProfileId])
+  @@index([status])
+  @@map("native_ad_payouts")
 }

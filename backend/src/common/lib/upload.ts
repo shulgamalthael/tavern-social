@@ -13,7 +13,28 @@ const IMAGE_MIME_EXTENSIONS: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/png': '.png',
   'image/webp': '.webp',
+  // GIF — тот же уровень безопасности, что и у трёх форматов выше (никакой
+  // исполняемой поверхности), уже допущен для вложений чата
+  // (`CHAT_ATTACHMENT_MIME_EXTENSIONS` ниже) — нет причины запрещать его
+  // именно здесь для отдельных subdir'ов (в частности, `ads`).
+  'image/gif': '.gif',
 };
+
+/** Видео-креатив рекламы (`AdFormat.video`, `AdCreative.videoUrl`) — узкий
+ * список форматов, реально проигрываемых `<video>` без транскодирования на
+ * сервере (которого в проекте нет и не планируется, см. `MAX_VIDEO_BYTES`).
+ * Отдельная карта от `IMAGE_MIME_EXTENSIONS`, а не расширение её — видео и
+ * картинка никогда не смешиваются в одном upload-эндпоинте. */
+const VIDEO_MIME_EXTENSIONS: Record<string, string> = {
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+};
+
+/** Видео-креатив — короткий автовоспроизводимый безззвучный ролик (реклама),
+ * не полноценное видео произвольной длины; лимит выше, чем у изображений
+ * (`MAX_IMAGE_BYTES`), но всё ещё ограничен — весь проект хранит медиа на
+ * локальном диске без CDN, никакой upload не может быть безразмерным. */
+export const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
 
 /** Вложения чата — шире, чем чистые картинки (см. `createChatAttachmentMulterOptions`
  * ниже): картинки + самые частые «безопасные» типы документов. Осознанно
@@ -47,7 +68,14 @@ export type ImageUploadSubdir =
   | 'website'
   | 'products'
   | 'services'
-  | 'blog-posts';
+  | 'blog-posts'
+  | 'ads'
+  | 'stories';
+
+/** Узкий союз ровно с одним сегодняшним вызывающим (`ads`, видео-креатив
+ * рекламы) — тот же принцип, что и остальные узкие типы этого файла:
+ * расширяется, когда появляется второй реальный вызывающий, не заранее. */
+export type VideoUploadSubdir = 'ads';
 
 function ensureDir(dir: string): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -73,7 +101,7 @@ export function createImageMulterOptions(subdir: ImageUploadSubdir): MulterOptio
       filename: (_req, file, callback) => {
         const ext = IMAGE_MIME_EXTENSIONS[file.mimetype];
         if (!ext) {
-          callback(new BadRequestException('Допустимы только JPEG, PNG и WebP'), '');
+          callback(new BadRequestException('Допустимы только JPEG, PNG, WebP и GIF'), '');
           return;
         }
         callback(null, `${randomUUID()}${ext}`);
@@ -81,7 +109,7 @@ export function createImageMulterOptions(subdir: ImageUploadSubdir): MulterOptio
     }),
     fileFilter: (_req, file, callback) => {
       if (!IMAGE_MIME_EXTENSIONS[file.mimetype]) {
-        callback(new BadRequestException('Допустимы только JPEG, PNG и WebP'), false);
+        callback(new BadRequestException('Допустимы только JPEG, PNG, WebP и GIF'), false);
         return;
       }
       callback(null, true);
@@ -126,7 +154,44 @@ export function createChatAttachmentMulterOptions(): MulterOptions {
   };
 }
 
-export function uploadedFileUrl(subdir: ImageUploadSubdir, filename: string): string {
+/**
+ * Тот же принцип, что и `createImageMulterOptions` (случайное имя на диске
+ * из провалидированного MIME — единственная защита), только для видео-
+ * креатива рекламы (`VIDEO_MIME_EXTENSIONS`, `MAX_VIDEO_BYTES`). Отдельная
+ * функция, а не ветка внутри `createImageMulterOptions` — видео и картинка
+ * никогда не выбираются одним и тем же upload-полем формы.
+ */
+export function createVideoMulterOptions(subdir: VideoUploadSubdir): MulterOptions {
+  const destination = join(UPLOADS_ROOT, subdir);
+  ensureDir(destination);
+
+  return {
+    storage: diskStorage({
+      destination,
+      filename: (_req, file, callback) => {
+        const ext = VIDEO_MIME_EXTENSIONS[file.mimetype];
+        if (!ext) {
+          callback(new BadRequestException('Допустимы только MP4 и WebM'), '');
+          return;
+        }
+        callback(null, `${randomUUID()}${ext}`);
+      },
+    }),
+    fileFilter: (_req, file, callback) => {
+      if (!VIDEO_MIME_EXTENSIONS[file.mimetype]) {
+        callback(new BadRequestException('Допустимы только MP4 и WebM'), false);
+        return;
+      }
+      callback(null, true);
+    },
+    limits: { fileSize: MAX_VIDEO_BYTES },
+  };
+}
+
+export function uploadedFileUrl(
+  subdir: ImageUploadSubdir | VideoUploadSubdir,
+  filename: string,
+): string {
   return `/uploads/${subdir}/${filename}`;
 }
 

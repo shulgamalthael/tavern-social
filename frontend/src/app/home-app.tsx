@@ -1,8 +1,10 @@
 'use client';
 
-import { type ComponentType, useEffect, useRef } from 'react';
+import { type ComponentType, useCallback, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { getBusinesses } from '@/entities/business';
+import { getMyCreatorProfile } from '@/entities/creator';
+import { useFollowRequestsStore } from '@/entities/follow';
 import { useFriendStore } from '@/entities/friend';
 import {
   type NotificationType,
@@ -10,10 +12,18 @@ import {
   useToastStore,
 } from '@/entities/notification';
 import { usePostStore } from '@/entities/post';
-import { mapMessage, mapThread, type ThreadResponse, useThreadStore } from '@/entities/thread';
-import { useCurrentUser } from '@/entities/user';
+import {
+  mapMessage,
+  mapSharedPost,
+  mapThread,
+  type SharedPostResponse,
+  type ThreadResponse,
+  useThreadStore,
+} from '@/entities/thread';
+import { getUserProfile, useCurrentUser } from '@/entities/user';
 import { getSocketTicket } from '@/features/auth';
 import { type SectionId, useNavigationStore } from '@/features/section-navigation';
+import { SharePostModal } from '@/features/share-post';
 import { BACKEND_WS_URL } from '@/shared/config/realtime';
 import { cn } from '@/shared/lib/cn';
 import { getInitials } from '@/shared/lib/get-initials';
@@ -22,6 +32,7 @@ import { usePersistedScroll } from '@/shared/lib/use-persisted-scroll';
 import { AdminBar } from '@/widgets/admin';
 import { BusinessOwnerBar } from '@/widgets/business-owner-bar';
 import { CommunitiesWidget } from '@/widgets/communities';
+import { CreatorBar } from '@/widgets/creator-bar';
 import { FeedWidget } from '@/widgets/feed';
 import { FriendsWidget } from '@/widgets/friends';
 import { GroupsWidget } from '@/widgets/groups';
@@ -78,6 +89,7 @@ interface IncomingMessage {
   attachments: IncomingMessageAttachment[];
   forwardedFrom: IncomingForwardedFrom | null;
   replyTo: IncomingReplyTo | null;
+  sharedPost: SharedPostResponse | null;
 }
 
 interface IncomingMessageDeleted {
@@ -136,11 +148,45 @@ export function HomeApp() {
   // `useAsyncData`, а не отдельный Zustand-стор (тот же принцип, что и у
   // остальных данных, нужных ровно одному месту, см. AGENTS.md раздел 4).
   const ownedBusinesses = useAsyncData(getBusinesses).data ?? [];
+  // `CreatorBar` в варианте `'own'` — глобальный индикатор «я — Creator»,
+  // тот же приём, что и у `AdminBar`/`BusinessOwnerBar`: виден владельцу на
+  // любой странице сайта, а не только в разделе «профиль». Только для
+  // `status === 'active'` — пока верификация личности не пройдена
+  // (`verification_pending`) или профиль отклонён/приостановлен
+  // (`rejected`/`suspended`), аккаунт ещё не активирован, и плашка не
+  // рендерится вообще (см. `CreatorBar.tsx` — поэтому там больше нет
+  // статус-текста, статус всегда один и тот же, когда плашка видна).
+  // Вариант `'visitor'` — по-прежнему привязан к тому, ЧЬЮ страницу профиля
+  // сейчас открыл посторонний пользователь (виден только там, урезанный
+  // вид, без кнопки).
+  const viewedUserId = useNavigationStore((state) => state.viewedUserId);
+  const isViewingOtherProfile =
+    section === 'profile' && Boolean(viewedUserId) && viewedUserId !== currentUser.id;
+
+  const ownCreatorProfile = useAsyncData(getMyCreatorProfile).data ?? null;
+  const otherProfileFetcher = useCallback(() => {
+    if (!isViewingOtherProfile || !viewedUserId) return Promise.resolve(null);
+    return getUserProfile(viewedUserId);
+  }, [isViewingOtherProfile, viewedUserId]);
+  const otherProfile = useAsyncData(otherProfileFetcher).data ?? null;
+
+  const creatorBar =
+    ownCreatorProfile?.status === 'active' ? (
+      <CreatorBar variant="own" />
+    ) : isViewingOtherProfile && otherProfile?.creatorStatus === 'active' ? (
+      <CreatorBar variant="visitor" />
+    ) : null;
 
   useEffect(() => {
     loadPosts();
     loadThreads();
     loadUnreadCount();
+    // Заявки в друзья — тем же приёмом: грузим один раз здесь, а не только
+    // при заходе в `FriendsWidget` (как было раньше), иначе бейдж на пункте
+    // «Друзья» (`NavigationDock`, `selectPendingIncomingRequestsCount`)
+    // молчал бы до первого визита на саму страницу, в отличие от счётчика
+    // непрочитанных сообщений рядом, который живой с первой отрисовки.
+    void useFriendStore.getState().loadRequests();
     // Один раз при монтировании оболочки приложения — и лента, и мессенджер,
     // и счётчик непрочитанных в шапке используют один и тот же результат.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -200,6 +246,7 @@ export function HomeApp() {
         attachments: message.attachments,
         forwardedFrom: message.forwardedFrom,
         replyTo: message.replyTo,
+        sharedPost: mapSharedPost(message.sharedPost),
       });
 
       // Диалог уже открыт и виден — сообщение и так появится живым в самом
@@ -275,6 +322,36 @@ export function HomeApp() {
 
     socket.on('friend-request:removed', () => useFriendStore.getState().receiveRemoved());
     socket.on('friend:removed', () => useFriendStore.getState().receiveFriendRemoved());
+
+    socket.on('subscription-request:new', (payload: IncomingFriendEvent) => {
+      useFollowRequestsStore.getState().receiveNewRequest();
+      useNotificationStore.getState().receiveRealtimeUnread();
+      useToastStore.getState().enqueue({
+        key: `subscription-request:${payload.actor.id}`,
+        kind: 'subscription-request',
+        senderId: payload.actor.id,
+        senderName: payload.actor.name,
+        senderInitials: getInitials(payload.actor.name),
+        senderAvatarUrl: payload.actor.avatarUrl,
+      });
+    });
+
+    socket.on('subscription-request:accepted', (payload: IncomingFriendEvent) => {
+      useFollowRequestsStore.getState().receiveAccepted();
+      useNotificationStore.getState().receiveRealtimeUnread();
+      useToastStore.getState().enqueue({
+        key: `subscription-accepted:${payload.actor.id}`,
+        kind: 'subscription-accepted',
+        actorId: payload.actor.id,
+        name: payload.actor.name,
+        initials: getInitials(payload.actor.name),
+        avatarUrl: payload.actor.avatarUrl,
+      });
+    });
+
+    socket.on('subscription-request:removed', () =>
+      useFollowRequestsStore.getState().receiveRemoved(),
+    );
 
     socket.on('group-join-request:new', (payload: IncomingGroupJoinEvent) => {
       useNotificationStore.getState().receiveRealtimeUnread();
@@ -377,17 +454,20 @@ export function HomeApp() {
         styles.app,
         isAdmin && styles['app--with-admin-bar'],
         hasBusinesses && styles['app--with-business-bar'],
+        creatorBar && styles['app--with-creator-bar'],
       )}
       ref={appRef}
     >
       <div className={cn(styles['app__top'], hideHeader && styles['app__top--collapsed'])}>
         {isAdmin && <AdminBar />}
         {hasBusinesses && <BusinessOwnerBar businesses={ownedBusinesses} />}
+        {creatorBar}
         <Header containerRef={appRef} />
       </div>
       <ActiveSection />
       <NavigationDock />
       <NotificationToaster />
+      <SharePostModal />
     </div>
   );
 }

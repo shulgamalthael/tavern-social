@@ -1,3 +1,4 @@
+import type { SharedPostDto } from '@/modules/posts/posts.types';
 import type { PublicProfile } from '@/modules/users/users.types';
 
 export interface MessageAttachmentDto {
@@ -43,6 +44,11 @@ export interface MessageDto {
   attachments: MessageAttachmentDto[];
   forwardedFrom: ForwardedFromDto | null;
   replyTo: ReplyToDto | null;
+  /** «Переслать пост в чат» (§104) — `null`, если это обычное сообщение
+   * (без `sharedPostId`). Per-viewer (см. `SharedPostDto`'s комментарий) —
+   * два разных получателя одного и того же сообщения могут увидеть разный
+   * `status`, если доступ к посту у них разный. */
+  sharedPost: SharedPostDto | null;
 }
 
 export interface ThreadDto {

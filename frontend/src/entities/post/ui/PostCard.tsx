@@ -6,6 +6,7 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Card } from '@/shared/ui/Card';
 import { IdBadge, IdBadgeGroup } from '@/shared/ui/IdBadge';
 import { ImageLightbox } from '@/shared/ui/ImageLightbox';
+import { useShareModalStore } from '../model/share-modal-store';
 import type { Post } from '../model/types';
 import { CommentComposer, type CommentComposerHandle } from './CommentComposer';
 import { CommentList } from './CommentList';
@@ -15,6 +16,15 @@ import styles from './PostCard.module.scss';
 export interface ReplyTarget {
   commentId: string;
   author: string;
+}
+
+/** Целые дни до `promotedUntil` — `Math.ceil`, не `Math.floor`: остаток
+ * меньше суток («продвигается ещё несколько часов») читателю честнее
+ * округлить вверх до «1 день», чем показать «0 дней» для активного
+ * продвижения. */
+function daysRemaining(untilIso: string): number {
+  const diffMs = new Date(untilIso).getTime() - Date.now();
+  return Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)));
 }
 
 interface LightboxTarget {
@@ -52,6 +62,12 @@ export interface PostCardProps {
    * импортировать `features/*` (направление зависимостей FSD), поэтому
    * вызывающий widget сам решает, что открыть по этому колбэку. */
   onEdit?: () => void;
+  /** Продвижение (Instagram-style boost, AI_PLATFORM_ROADMAP.md §73) — тот
+   * же принцип видимости, что и у `onDelete`/`onEdit`: вызывающий widget
+   * решает, показывать ли пункт (своя запись, ещё не продвигается сейчас —
+   * см. `entities/post/lib/can-boost-post.ts`). Модалка оплаты — тоже
+   * widget-уровня, тем же принципом, что и у `onEdit`. */
+  onBoost?: () => void;
 }
 
 export function PostCard({
@@ -66,9 +82,15 @@ export function PostCard({
   onGroupClick,
   onDelete,
   onEdit,
+  onBoost,
 }: PostCardProps) {
   const { currentUser } = useCurrentUser();
   const isAdmin = currentUser.role === 'admin';
+  const openShareModal = useShareModalStore((state) => state.openShareModal);
+  // Тот же таргетинг, что и у лайка/дизлайка/репоста (см. `onToggleRepost`
+  // у вызывающего widget) — делиться нужно оригиналом, а не пустой
+  // репост-обёрткой (`post.text === ''`, см. `PostsService.repost` на backend).
+  const shareTargetId = post.repostOf?.id ?? post.id;
   const [isCommentsOpen, setCommentsOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [lightbox, setLightbox] = useState<LightboxTarget | null>(null);
@@ -138,6 +160,11 @@ export function PostCard({
               <IdBadge id={post.id} label="Запись" />
             </IdBadgeGroup>
           )}
+          {post.isPromoted && post.promotedUntil && (
+            <span className={styles['post__promoted-badge']}>
+              Продвигается · ещё {daysRemaining(post.promotedUntil)} дн.
+            </span>
+          )}
           <span className={styles.post__meta}>
             {post.meta}
             {groupId && (
@@ -160,7 +187,7 @@ export function PostCard({
             )}
           </span>
         </div>
-        {(onEdit || onDelete) && (
+        {(onEdit || onDelete || onBoost) && (
           <div className={styles['post__menu']} ref={menuRef}>
             <button
               type="button"
@@ -183,6 +210,18 @@ export function PostCard({
                     }}
                   >
                     Редактировать
+                  </button>
+                )}
+                {onBoost && (
+                  <button
+                    type="button"
+                    className={styles['post__menu-item']}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onBoost();
+                    }}
+                  >
+                    Продвигать
                   </button>
                 )}
                 {onDelete && (
@@ -314,6 +353,18 @@ export function PostCard({
             {isReposted ? 'Передано дальше' : 'Передать дальше'} · {post.reposts}
           </button>
         )}
+        {/* В отличие от репоста/удаления/редактирования — рендерится всегда,
+            без колбэка-пропа сверху: ограничений видимости у пересылки нет
+            (не нужна проверка «не свой ли это пост», в отличие от репоста),
+            а сама модалка выбора получателя (`features/share-post`) читает
+            `sharingPostId` из того же стора, что и эта кнопка пишет. */}
+        <button
+          type="button"
+          className={styles.post__reaction}
+          onClick={() => openShareModal(shareTargetId)}
+        >
+          Переслать
+        </button>
       </footer>
 
       {showComments && (

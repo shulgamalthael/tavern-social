@@ -143,6 +143,179 @@ export const STYLE_FIELD_KEYS: StyleFieldKey[] = [
 ];
 
 /**
+ * "Продвинутый CSS" (AI_PLATFORM_ROADMAP.md §78) — ограниченная, явно
+ * перечисленная "форточка" для дизайнов, которые не укладываются в закрытые
+ * токены выше (наклон/поворот, произвольная форма, размытие/glass-эффект,
+ * свободная тень/скругление). НЕ произвольный CSS: только эти 12 свойств,
+ * каждое — отдельное значение через объект `style` React
+ * (`computeBlockWrapperStyle`), никогда как текст в `<style>`/
+ * `dangerouslySetInnerHTML` — структурно невозможно вставить новый
+ * селектор/правило этим путём, что бы ни было в значении. `position`/`top`/
+ * `right`/`bottom`/`left`/`zIndex` (риск для stacking/оверлея), `background`/
+ * `backgroundImage` (уже свой токенный `background`/градиент выше — свободное
+ * значение здесь было бы ровно тем способом, которым внешний
+ * tracking-pixel/SSRF-подобный URL мог бы просочиться) и `content` (не
+ * применимо вне псевдо-элементов, которых этот механизм не касается) —
+ * НИКОГДА не допускаются, независимо от значения.
+ */
+export type AdvancedCssProperty =
+  | 'transform'
+  | 'clipPath'
+  | 'filter'
+  | 'backdropFilter'
+  | 'mixBlendMode'
+  | 'opacity'
+  | 'borderRadius'
+  | 'boxShadow'
+  | 'letterSpacing'
+  | 'textTransform'
+  | 'fontStyle'
+  | 'fontWeight';
+
+export const ADVANCED_CSS_PROPERTIES: readonly AdvancedCssProperty[] = [
+  'transform',
+  'clipPath',
+  'filter',
+  'backdropFilter',
+  'mixBlendMode',
+  'opacity',
+  'borderRadius',
+  'boxShadow',
+  'letterSpacing',
+  'textTransform',
+  'fontStyle',
+  'fontWeight',
+];
+
+const ADVANCED_ENUM_VALUES: Partial<Record<AdvancedCssProperty, readonly string[]>> = {
+  mixBlendMode: [
+    'normal',
+    'multiply',
+    'screen',
+    'overlay',
+    'darken',
+    'lighten',
+    'color-dodge',
+    'color-burn',
+    'hard-light',
+    'soft-light',
+    'difference',
+    'exclusion',
+    'hue',
+    'saturation',
+    'color',
+    'luminosity',
+  ],
+  textTransform: ['none', 'uppercase', 'lowercase', 'capitalize'],
+  fontStyle: ['normal', 'italic', 'oblique'],
+};
+
+const MAX_ADVANCED_VALUE_LENGTH = 200;
+
+/** Токенов из этого списка не бывает ни в одном ЛЕГИТИМНОМ значении этих 12
+ * свойств — их присутствие означает только попытку инъекции внешнего
+ * ресурса/разметки/новой CSS-конструкции, не случайный валидный ввод. */
+const FORBIDDEN_VALUE_PATTERN = /url\(|expression\(|javascript:|@import|[;<>{}\\]/i;
+
+/** "Свободные" (не enum/число) значения — `rotate(8deg)`, `polygon(0 0,
+ * 100% 0, 100% 85%, 0 100%)`, `blur(4px) saturate(1.4)`, `0 12px 40px
+ * rgba(0,0,0,.25)`, `2rem 0.5rem` и т. п. Набор символов покрывает реальную
+ * грамматику этих свойств и структурно недостаточен, чтобы собрать новый
+ * селектор/правило или внешний адрес. */
+const SAFE_VALUE_CHARS_RE = /^[a-zA-Z0-9\s.,%+\-#()'/]*$/;
+
+function sanitizeAdvancedCssValue(property: AdvancedCssProperty, rawValue: unknown): string {
+  if (typeof rawValue !== 'string' || rawValue.length === 0) {
+    throw new Error(
+      `Поле "advanced.${property}" должно быть непустой строкой (или null, чтобы убрать)`,
+    );
+  }
+  if (rawValue.length > MAX_ADVANCED_VALUE_LENGTH) {
+    throw new Error(
+      `Поле "advanced.${property}" не может быть длиннее ${MAX_ADVANCED_VALUE_LENGTH} символов`,
+    );
+  }
+  if (FORBIDDEN_VALUE_PATTERN.test(rawValue)) {
+    throw new Error(
+      `Поле "advanced.${property}" содержит недопустимую конструкцию (url()/expression()/@import/спецсимволы) — только само значение CSS-свойства, без ссылок и вложенных правил`,
+    );
+  }
+
+  const enumValues = ADVANCED_ENUM_VALUES[property];
+  if (enumValues) {
+    if (!enumValues.includes(rawValue)) {
+      throw new Error(`Поле "advanced.${property}" должно быть одним из: ${enumValues.join(', ')}`);
+    }
+    return rawValue;
+  }
+
+  if (property === 'opacity') {
+    const num = Number(rawValue);
+    if (!Number.isFinite(num) || num < 0 || num > 1) {
+      throw new Error(
+        'Поле "advanced.opacity" должно быть числом от 0 до 1 строкой (например "0.8")',
+      );
+    }
+    return rawValue;
+  }
+
+  if (property === 'fontWeight') {
+    const num = Number(rawValue);
+    const validNumeric = Number.isInteger(num) && num >= 100 && num <= 900 && num % 100 === 0;
+    if (!validNumeric && rawValue !== 'normal' && rawValue !== 'bold') {
+      throw new Error(
+        'Поле "advanced.fontWeight" должно быть числом от 100 до 900 (шагом 100) или "normal"/"bold"',
+      );
+    }
+    return rawValue;
+  }
+
+  if (!SAFE_VALUE_CHARS_RE.test(rawValue)) {
+    throw new Error(
+      `Поле "advanced.${property}" содержит недопустимые символы — разрешены только буквы/цифры/пробелы/. , % + - # ( ) ' /`,
+    );
+  }
+  return rawValue;
+}
+
+/**
+ * `advanced` — партиальный мёрж, как и весь остальной `buildValidatedStyle`
+ * (`null` у конкретного CSS-свойства убирает именно его). Вызывается только
+ * из `buildValidatedStyle` ниже, не экспортируется отдельно — тот же
+ * "один вход" принцип, что и у остальных веток валидатора.
+ */
+function buildValidatedAdvancedStyle(
+  existing: Record<string, unknown> | undefined,
+  raw: unknown,
+): Record<string, unknown> {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error('Поле "advanced" должно быть объектом');
+  }
+  const input = raw as Record<string, unknown>;
+
+  const unknownKeys = Object.keys(input).filter(
+    (key) => !ADVANCED_CSS_PROPERTIES.includes(key as AdvancedCssProperty),
+  );
+  if (unknownKeys.length > 0) {
+    throw new Error(
+      `Неизвестные поля advanced: ${unknownKeys.join(', ')}. Допустимые: ${ADVANCED_CSS_PROPERTIES.join(', ')}`,
+    );
+  }
+
+  const result: Record<string, unknown> = { ...existing };
+  for (const property of ADVANCED_CSS_PROPERTIES) {
+    if (!(property in input)) continue;
+    const value = input[property];
+    if (value === null) {
+      delete result[property];
+      continue;
+    }
+    result[property] = sanitizeAdvancedCssValue(property, value);
+  }
+  return result;
+}
+
+/**
  * Мёржит валидированные изменения поверх текущего `style` блока (partial —
  * незатронутые поля не трогаются, тот же принцип, что у `buildValidatedProps`
  * в `add-block-schemas.ts`). `null` у конкретного поля значит «убрать это
@@ -162,15 +335,29 @@ export function buildValidatedStyle(
   const input = rawStyle as Record<string, unknown>;
 
   const unknownKeys = Object.keys(input).filter(
-    (key) => !STYLE_FIELD_KEYS.includes(key as StyleFieldKey),
+    (key) => key !== 'advanced' && !STYLE_FIELD_KEYS.includes(key as StyleFieldKey),
   );
   if (unknownKeys.length > 0) {
     throw new Error(
-      `Неизвестные поля стиля: ${unknownKeys.join(', ')}. Допустимые поля: ${STYLE_FIELD_KEYS.join(', ')}`,
+      `Неизвестные поля стиля: ${unknownKeys.join(', ')}. Допустимые поля: ${STYLE_FIELD_KEYS.join(', ')}, advanced`,
     );
   }
 
   const result: Record<string, unknown> = { ...existingStyle };
+
+  // `advanced` — отдельная ветка ДО основного цикла: это не плоский
+  // enum/число/hex-ключ, а вложенный объект своих собственных полей (см.
+  // `buildValidatedAdvancedStyle`), не входящий в `STYLE_FIELD_KEYS`.
+  if ('advanced' in input) {
+    if (input.advanced === null) {
+      delete result.advanced;
+    } else {
+      result.advanced = buildValidatedAdvancedStyle(
+        existingStyle?.advanced as Record<string, unknown> | undefined,
+        input.advanced,
+      );
+    }
+  }
 
   for (const key of STYLE_FIELD_KEYS) {
     if (!(key in input)) continue;

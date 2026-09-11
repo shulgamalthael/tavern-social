@@ -1,0 +1,148 @@
+// Строка бейджей внутри `ProfileBadgesCard` (своя карточка боковой колонки,
+// выше «О себе», рядом с `ProfileFollowStatsCard`) — НЕ внутри
+// `.profile__card` (карточка шапки профиля): та сама `overflow: hidden`
+// (скругление углов обложки, см. `ProfileWidget.module.scss`), и
+// выпадающий список сайтов бейджа «владелец бизнеса» обрезался бы этим
+// родителем, даже стоя выше по z-index — `overflow: hidden` обрезает
+// содержимое независимо от stacking context (реальный баг, пойманный
+// вживую пользователем). У обычного `Card` (`shared/ui/Card`) такого
+// `overflow` нет — свой отступ здесь не нужен, его уже даёт паддинг `Card`.
+.profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-badges__pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.profile-badges__icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+// «Админ» — тот же почти-чёрный тон, что и у `AdminBar` (`--tavern-ink`),
+// здесь просто как акцент, а не сплошной фон.
+.profile-badges__pill--admin {
+  border-color: color-mix(in srgb, var(--tavern-ink) 22%, transparent);
+  background: color-mix(in srgb, var(--tavern-ink) 8%, transparent);
+  color: var(--tavern-ink);
+}
+
+// «Владелец бизнеса» — та же палитра, что у самой `BusinessOwnerBar`, один
+// в один (не тинт, как у двух других ниже) — по явному запросу: цвет
+// бейджа берётся из одноимённого хедера, а не приглушается под карточку.
+// Фон `#7a2a1c` + текст `#fbe9e1` — те же переменные, что и `.business-bar`/
+// `.business-bar__brand` (`widgets/business-owner-bar/ui/BusinessOwnerBar.module.scss`),
+// иконка — тот же `#f2b48c`, что и `.business-bar__brand-icon` там же (не
+// `currentColor` от текста — в самом хедере эти два цвета тоже разные).
+.profile-badges__pill--business {
+  padding: 0;
+  border-color: transparent;
+  background: #7a2a1c;
+  color: #fbe9e1;
+}
+
+.profile-badges__icon--business {
+  color: #f2b48c;
+}
+
+// «Creator» — тёплый золотистый акцент `CreatorBar` (`#d4af6a`), текст —
+// затемнённый оттенок того же тона для читаемости на светлой карточке
+// (сырой `#d4af6a` слишком светлый для текста на белом).
+.profile-badges__pill--creator {
+  border-color: color-mix(in srgb, #d4af6a 40%, transparent);
+  background: color-mix(in srgb, #d4af6a 16%, transparent);
+  color: #8a6323;
+}
+
+// «Приватный профиль» — нейтральный приглушённый тон (не завязан на чей-то
+// хедер, в отличие от business/creator выше — эта метка не про роль
+// пользователя, а про настройку приватности, `--tavern-muted`).
+.profile-badges__pill--private {
+  border-color: color-mix(in srgb, var(--tavern-muted) 30%, transparent);
+  background: color-mix(in srgb, var(--tavern-muted) 10%, transparent);
+  color: var(--tavern-muted);
+}
+
+.profile-badges__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.profile-badges__chevron,
+.profile-badges__chevron--open {
+  width: 11px;
+  height: 11px;
+  transition: transform 0.15s ease;
+}
+
+.profile-badges__chevron--open {
+  transform: rotate(180deg);
+}
+
+.profile-badges__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  // Тот же попап-уровень, что у остальных дропдаунов сайта
+  // (`BusinessOwnerBar`/`SearchDropdown`/`NotificationsDropdown` — все
+  // `z-index: 40`).
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: min(260px, 80vw);
+  padding: 6px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  box-shadow: var(--tavern-shadow-card);
+}
+
+.profile-badges__panel-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--tavern-sunk);
+  }
+}
+
+.profile-badges__panel-item-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: var(--tavern-muted);
+}
+
+.profile-badges__panel-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

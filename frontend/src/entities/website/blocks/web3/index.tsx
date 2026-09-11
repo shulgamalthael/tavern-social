@@ -33,7 +33,13 @@ function shortenAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-function Web3WalletRenderer({ props, business }: BlockRendererProps<Web3WalletProps>) {
+function Web3WalletRenderer({
+  props,
+  business,
+  isEditing,
+  onEditProp,
+}: BlockRendererProps<Web3WalletProps>) {
+  const editable = Boolean(isEditing && onEditProp);
   const fetcher = useCallback(
     () => getPublicWalletInfo(business.businessId),
     [business.businessId],
@@ -98,6 +104,10 @@ function Web3WalletRenderer({ props, business }: BlockRendererProps<Web3WalletPr
         eyebrow={props.eyebrow}
         heading={props.heading}
         description={props.description}
+        editable={editable}
+        onEditEyebrow={(value) => onEditProp?.('eyebrow', value)}
+        onEditHeading={(value) => onEditProp?.('heading', value)}
+        onEditDescription={(value) => onEditProp?.('description', value)}
       />
 
       <div className={styles.address}>

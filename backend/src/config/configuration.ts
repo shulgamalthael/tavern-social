@@ -24,6 +24,19 @@ export interface AppConfig {
    * `undefined`-по-умолчанию тем же приёмом: платные тарифы просто
    * недоступны без него, backend не падает при старте. */
   stripeSubscriptionsWebhookSecret: string | undefined;
+  /** Секрет ТРЕТЬЕГО Stripe-вебхука (Creator Monetization Phase 1,
+   * `modules/creators`, `StripeIdentityWebhookController`) — тот же принцип,
+   * что у `stripeSubscriptionsWebhookSecret`: свой signing secret на свой
+   * endpoint. `undefined`-по-умолчанию — верификация личности просто
+   * недоступна без него (`CreatorIdentityService.isConfigured()`), backend
+   * не падает при старте. */
+  stripeIdentityWebhookSecret: string | undefined;
+  /** Порог подписчиков для Creator-eligibility (корневой план фичи §10
+   * второго follow-up сообщения владельца — "не привязывать всю систему к
+   * конкретному числу", отсюда env-переопределяемость без правки кода).
+   * По подписчикам (`Subscription`), не друзьям — см. §85. См.
+   * `CreatorsService.getEligibility`. */
+  creatorMinSubscribers: number;
   /** `undefined`, если Gemini не настроен — см. `GeminiAdapter.isConfigured()`,
    * тот же приём, что у `stripeSecretKey`. */
   geminiApiKey: string | undefined;
@@ -139,6 +152,21 @@ export interface AppConfig {
   /** Как часто гонять сам обход `uploads/messages/` на брошенные файлы —
    * фоновая уборка, не времячувствительная операция, реже, чем AI-агрегация. */
   uploadOrphanSweepIntervalMs: number;
+
+  /** Сколько дней расшаренный виджет (`CustomWidget.isShared`,
+   * AI_PLATFORM_ROADMAP.md §74) держится в общем каталоге ДО того, как его
+   * можно снять за неиспользование — см. `CustomWidgetCatalogGcService`.
+   * 14 дней — достаточно, чтобы виджет реально попался на глаза владельцам
+   * других бизнесов хотя бы раз, не настолько долго, чтобы каталог копил
+   * явный мусор месяцами. */
+  widgetCatalogGraceDays: number;
+  /** Минимум вставок ДРУГИМИ бизнесами, чтобы пережить sweep после grace-
+   * периода — 1 достаточно: это не рейтинг качества, а просто "кому-то
+   * ЕЩЁ, кроме автора, это пригодилось хотя бы раз". */
+  widgetCatalogMinInserts: number;
+  /** Как часто гонять сам обход каталога — тот же принцип, что у
+   * `uploadOrphanSweepIntervalMs`, фоновая уборка не времячувствительна. */
+  widgetCatalogGcSweepIntervalMs: number;
 }
 
 export default (): { app: AppConfig } => {
@@ -158,6 +186,8 @@ export default (): { app: AppConfig } => {
       stripeSecretKey: process.env.STRIPE_SECRET_KEY,
       stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
       stripeSubscriptionsWebhookSecret: process.env.STRIPE_SUBSCRIPTIONS_WEBHOOK_SECRET,
+      stripeIdentityWebhookSecret: process.env.STRIPE_IDENTITY_WEBHOOK_SECRET,
+      creatorMinSubscribers: Number(process.env.CREATOR_MIN_SUBSCRIBERS ?? 2000),
       geminiApiKey: process.env.GEMINI_API_KEY,
       googleOAuthClientId: process.env.GOOGLE_CLIENT_ID,
       googleOAuthClientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -206,6 +236,12 @@ export default (): { app: AppConfig } => {
       uploadOrphanTtlHours: Number(process.env.UPLOAD_ORPHAN_TTL_HOURS ?? 24),
       uploadOrphanSweepIntervalMs: Number(
         process.env.UPLOAD_ORPHAN_SWEEP_INTERVAL_MS ?? 6 * 60 * 60_000,
+      ),
+
+      widgetCatalogGraceDays: Number(process.env.WIDGET_CATALOG_GRACE_DAYS ?? 14),
+      widgetCatalogMinInserts: Number(process.env.WIDGET_CATALOG_MIN_INSERTS ?? 1),
+      widgetCatalogGcSweepIntervalMs: Number(
+        process.env.WIDGET_CATALOG_GC_SWEEP_INTERVAL_MS ?? 24 * 60 * 60_000,
       ),
     },
   };

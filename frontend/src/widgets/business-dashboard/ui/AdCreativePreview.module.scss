@@ -1,0 +1,89 @@
+// `height: 0` + процентный `padding-bottom` (заданный инлайн из `width`/
+// `height` формата, см. `AdCreativePreview.tsx`) — классический приём для
+// пропорции блока, а не `aspect-ratio`: тот надёжно схлопывался до нулевой
+// высоты именно на этом узле (живой баг, найденный и подтверждённый через
+// `getComputedStyle` во время проверки — ширина резолвилась верно, высота
+// нет), судя по всему из-за того, что узел лежит в flex-колонке `ScrollArea`
+// (`shared/ui/ScrollArea`). Процентный `padding` всегда считается от
+// ширины, даже для top/bottom, поэтому не зависит от того, как родитель
+// управляет высотой flex-детей.
+.preview {
+  position: relative;
+  width: 100%;
+  height: 0;
+  margin: 0 auto;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-soft);
+  overflow: hidden;
+}
+
+.preview__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview__placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    var(--tavern-soft),
+    color-mix(in srgb, var(--tavern-accent) 8%, var(--tavern-soft))
+  );
+}
+
+.preview__body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  width: 100%;
+  background: linear-gradient(to top, rgb(0 0 0 / 55%), transparent);
+}
+
+.preview__headline {
+  margin: 0;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+}
+
+.preview__description {
+  margin: 0;
+  color: rgb(255 255 255 / 85%);
+  font-size: 11px;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 40%);
+}
+
+.preview__cta {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--tavern-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.preview__sponsored {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 45%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+}

@@ -33,9 +33,32 @@
   }
 }
 
+.advertiseLink {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 0 14px;
+  height: 38px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+
+  &:hover {
+    background: var(--tavern-soft);
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
 .create {
   flex: 0 0 auto;
-  margin-left: auto;
 
   svg {
     width: 16px;

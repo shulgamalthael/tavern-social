@@ -1,0 +1,115 @@
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pipeline__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+  color: var(--tavern-ink);
+  font-size: 14px;
+}
+
+.pipeline__index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.categories__label {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.categories__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.categories__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--tavern-sunk);
+  }
+
+  &:disabled {
+    color: var(--tavern-muted);
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  &[aria-pressed='true'] {
+    background: var(--tavern-soft);
+    color: var(--tavern-accent);
+    font-weight: 600;
+  }
+}
+
+.locked {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.locked__progress {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.error {
+  margin: 0;
+  color: var(--tavern-danger);
+  font-size: 13px;
+}

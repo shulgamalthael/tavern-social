@@ -1,0 +1,124 @@
+// `--slot-width`/`--slot-height` — заданы инлайн из `AD_PLACEMENT_CONFIG`
+// (см. `AdSlotRenderer`) под конкретный `placement` этого блока. Фиксированная
+// (не диапазон min/max) зарезервированная высота — сознательный выбор ради
+// CLS (Core Web Vitals, план фичи §«Layout Shift/CLS»): контейнер занимает
+// РОВНО одну и ту же высоту в состояниях loading/creative/empty, сайту не
+// нужно знать реальные пиксели креатива заранее.
+.slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: var(--slot-width);
+  height: var(--slot-height);
+  margin-inline: auto;
+  overflow: hidden;
+  border-radius: var(--site-radius);
+}
+
+.slot--builder {
+  flex-direction: column;
+  gap: 6px;
+  border: 1.5px dashed var(--site-border);
+  color: var(--site-muted);
+  text-align: center;
+  padding: 12px;
+
+  svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.slot__label {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.slot__placement {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.slot--empty {
+  border: 1px dashed var(--site-border);
+  background: var(--site-surface);
+}
+
+.creative {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.creative__link {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+}
+
+.creative__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.creative__body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 10px 14px;
+  background: var(--site-surface);
+}
+
+.creative__headline {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--site-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creative__description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--site-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.creative__cta {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--site-primary);
+  color: var(--site-bg);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.creative__sponsored {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+  opacity: 0.7;
+}

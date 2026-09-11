@@ -32,6 +32,7 @@
   "include": [
     "src/**/*.ts",
     "prisma/seed.ts",
+    "prisma/seed-creator-categories.ts",
     "prisma/promote-admin.ts",
     "prisma/promote-super-admin.ts",
     "prisma/migrate-pages-to-table.ts",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getMySettings, type PrivacySettings } from '@/entities/user';
+import { getMySettings, useCurrentUser, type PrivacySettings } from '@/entities/user';
 import { endSession, updateSettings } from '@/features/auth';
 import { useNavigationStore } from '@/features/section-navigation';
 import { cn } from '@/shared/lib/cn';
@@ -18,6 +18,7 @@ import styles from './SettingsWidget.module.scss';
 
 export function SettingsWidget() {
   const goToSection = useNavigationStore((state) => state.goToSection);
+  const { applySettingsUpdate } = useCurrentUser();
   const { status, data: settings, error, refetch } = useAsyncData(getMySettings);
   // Локальные правки поверх загруженных настроек — так переключение тумблера
   // не требует setState внутри эффекта синхронизации с `settings`.
@@ -28,6 +29,10 @@ export function SettingsWidget() {
     if (!toggles) return;
     const next = { ...toggles, [id]: !toggles[id] };
     setOverrides((prev) => ({ ...prev, [id]: next[id] }));
+    // `isPrivate` дублируется в `CurrentUser` (§103, бейдж «Приватный
+    // профиль» на своей странице) — патчим сразу, без похода на сервер за
+    // свежим профилем (см. `applySettingsUpdate`'s комментарий).
+    if (id === 'isPrivate') applySettingsUpdate({ isPrivate: next.isPrivate });
     void updateSettings(next);
   };
 

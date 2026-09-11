@@ -54,6 +54,8 @@ export interface PostResponse {
   isLikedByMe: boolean;
   isDislikedByMe: boolean;
   isRepostedByMe: boolean;
+  isPromoted: boolean;
+  promotedUntil: string | null;
   createdAt: string;
   repostOf: PostSummaryResponse | null;
 }
@@ -99,6 +101,8 @@ export function mapPost(post: PostResponse): Post {
     dislikes: target.dislikesCount,
     comments: target.commentsCount,
     reposts: target.repostsCount,
+    isPromoted: post.isPromoted,
+    promotedUntil: post.promotedUntil,
     repostOf: post.repostOf
       ? {
           id: post.repostOf.id,

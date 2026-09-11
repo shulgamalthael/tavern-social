@@ -23,6 +23,7 @@ export interface CustomEntity {
   businessId: string;
   name: string;
   fields: CustomEntityField[];
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,4 +36,16 @@ export interface CustomEntityRecord {
   data: Record<string, CustomEntityRecordValue>;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Форма анонимного `GET /sites/:businessId/custom-entities/:name/records`
+ * (см. backend `PublicCustomEntityDto`, `modules/custom-entities`) —
+ * единственный публичный потребитель сегодня — виджет поиска
+ * (`entitysearch`, `entities/website/blocks/navigation`). Уже, чем owner-
+ * only `CustomEntity`+`CustomEntityRecord[]`: без `id`/`businessId` самой
+ * сущности, они анонимному посетителю не нужны. */
+export interface PublicCustomEntity {
+  entityName: string;
+  fields: CustomEntityField[];
+  records: { id: string; data: Record<string, CustomEntityRecordValue> }[];
 }

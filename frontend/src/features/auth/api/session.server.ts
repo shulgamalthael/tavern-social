@@ -17,6 +17,10 @@ interface MeProfileResponse {
   coverUrl: string | null;
   role: 'user' | 'admin';
   isSuperAdmin: boolean;
+  followersCount: number;
+  followingCount: number;
+  friendsCount: number;
+  settings: { isPrivate: boolean };
 }
 
 function toCurrentUser(profile: MeProfileResponse): CurrentUser {
@@ -33,6 +37,10 @@ function toCurrentUser(profile: MeProfileResponse): CurrentUser {
     coverUrl: profile.coverUrl,
     role: profile.role,
     isSuperAdmin: profile.isSuperAdmin,
+    followersCount: profile.followersCount,
+    followingCount: profile.followingCount,
+    friendsCount: profile.friendsCount,
+    isPrivate: profile.settings.isPrivate,
   };
 }
 

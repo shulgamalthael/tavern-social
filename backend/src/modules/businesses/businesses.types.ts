@@ -62,6 +62,12 @@ export interface BusinessDto {
    * AI_PLATFORM_ROADMAP.md §19.2). Сам ключ (`Business.web3AlchemyApiKey`)
    * никогда не отдаётся клиенту — только этот boolean-флаг. */
   hasOwnWeb3ApiKey: boolean;
+  /** Внешний рекламодатель без сайта на платформе — см. `Business.
+   * isAdvertiserOnly`'s комментарий в schema.prisma. Единственный
+   * потребитель — `BusinessDashboardWidget` (рендерит `AdvertiserDashboard
+   * Widget` вместо полного дашборда), никакая backend-логика этот флаг не
+   * проверяет. */
+  isAdvertiserOnly: boolean;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

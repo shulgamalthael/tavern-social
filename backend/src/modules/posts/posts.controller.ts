@@ -23,8 +23,10 @@ import type { PaginatedDto } from '@/common/types/paginated';
 import { RealtimeGateway } from '@/infrastructure/websocket/realtime.gateway';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { CreatePostBoostDto } from './dto/create-post-boost.dto';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { PostBoostsService } from './post-boosts.service';
 import type { CommentDto, PostDto } from './posts.types';
 import { PostsService, type RepostToggleDto } from './posts.service';
 
@@ -39,6 +41,7 @@ export class PostsController {
     private readonly postsService: PostsService,
     private readonly notificationsService: NotificationsService,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly postBoostsService: PostBoostsService,
   ) {}
 
   @Get()
@@ -75,6 +78,17 @@ export class PostsController {
     @UploadedFiles() images: Express.Multer.File[] | undefined,
   ): Promise<PostDto> {
     return this.postsService.create(currentUser.id, dto, images ?? []);
+  }
+
+  /** Instagram-style продвижение (AI_PLATFORM_ROADMAP.md §73) — см.
+   * `PostBoostsService.create`'s комментарий. */
+  @HttpPost(':id/boost')
+  async boost(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('id') postId: string,
+    @Body() dto: CreatePostBoostDto,
+  ): Promise<{ clientSecret: string }> {
+    return this.postBoostsService.create(postId, currentUser.id, dto);
   }
 
   @Patch(':id')

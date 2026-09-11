@@ -37,6 +37,114 @@ describe('isAllowedBlockType', () => {
     expect(isAllowedBlockType('hero')).toBe(true);
     expect(isAllowedBlockType('section')).toBe(true);
   });
+
+  it('accepts the ten types added by the competitor-widget-library batch', () => {
+    expect(isAllowedBlockType('timeline')).toBe(true);
+    expect(isAllowedBlockType('timelinesimple')).toBe(true);
+    expect(isAllowedBlockType('tabs')).toBe(true);
+    expect(isAllowedBlockType('tabsvertical')).toBe(true);
+    expect(isAllowedBlockType('countdown')).toBe(true);
+    expect(isAllowedBlockType('countdownbar')).toBe(true);
+    expect(isAllowedBlockType('logocloud')).toBe(true);
+    expect(isAllowedBlockType('logocloudmarquee')).toBe(true);
+    expect(isAllowedBlockType('comparison')).toBe(true);
+    expect(isAllowedBlockType('comparisonsplit')).toBe(true);
+  });
+
+  it('accepts entitysearch (the AI-widget-creation-track batch)', () => {
+    expect(isAllowedBlockType('entitysearch')).toBe(true);
+  });
+
+  it('accepts the ten types added by the competitor-widget-library batch 2', () => {
+    expect(isAllowedBlockType('imagecarousel')).toBe(true);
+    expect(isAllowedBlockType('imagecarouselthumbs')).toBe(true);
+    expect(isAllowedBlockType('beforeafter')).toBe(true);
+    expect(isAllowedBlockType('beforeaftertabs')).toBe(true);
+    expect(isAllowedBlockType('progressbars')).toBe(true);
+    expect(isAllowedBlockType('progresscircles')).toBe(true);
+    expect(isAllowedBlockType('stickybar')).toBe(true);
+    expect(isAllowedBlockType('popupoffer')).toBe(true);
+    expect(isAllowedBlockType('testimonialsslider')).toBe(true);
+    expect(isAllowedBlockType('quotespotlight')).toBe(true);
+  });
+
+  it('accepts the ten types added by the competitor-widget-library batch 3', () => {
+    expect(isAllowedBlockType('contactbubble')).toBe(true);
+    expect(isAllowedBlockType('contactbubblemulti')).toBe(true);
+    expect(isAllowedBlockType('statscounter')).toBe(true);
+    expect(isAllowedBlockType('statscountericons')).toBe(true);
+    expect(isAllowedBlockType('portfoliogrid')).toBe(true);
+    expect(isAllowedBlockType('portfoliomasonry')).toBe(true);
+    expect(isAllowedBlockType('gallerylightbox')).toBe(true);
+    expect(isAllowedBlockType('gallerylightboxmasonry')).toBe(true);
+    expect(isAllowedBlockType('cookiebar')).toBe(true);
+    expect(isAllowedBlockType('cookiebarminimal')).toBe(true);
+  });
+
+  it('accepts the ten types added by the competitor-widget-library batch 4', () => {
+    expect(isAllowedBlockType('steps')).toBe(true);
+    expect(isAllowedBlockType('stepsicons')).toBe(true);
+    expect(isAllowedBlockType('iconlist')).toBe(true);
+    expect(isAllowedBlockType('iconlistinline')).toBe(true);
+    expect(isAllowedBlockType('announcementbar')).toBe(true);
+    expect(isAllowedBlockType('announcementbarmarquee')).toBe(true);
+    expect(isAllowedBlockType('testimonialwall')).toBe(true);
+    expect(isAllowedBlockType('pricingtoggle')).toBe(true);
+    expect(isAllowedBlockType('socialproofbar')).toBe(true);
+    expect(isAllowedBlockType('herovideo')).toBe(true);
+  });
+
+  it('accepts the ten types added by the competitor-widget-library batch 5', () => {
+    expect(isAllowedBlockType('dividerlabel')).toBe(true);
+    expect(isAllowedBlockType('dividericon')).toBe(true);
+    expect(isAllowedBlockType('newsletterpopup')).toBe(true);
+    expect(isAllowedBlockType('imagehotspot')).toBe(true);
+    expect(isAllowedBlockType('pricingsingle')).toBe(true);
+    expect(isAllowedBlockType('videotestimonial')).toBe(true);
+    expect(isAllowedBlockType('ratingsummary')).toBe(true);
+    expect(isAllowedBlockType('faqtabs')).toBe(true);
+    expect(isAllowedBlockType('socialshare')).toBe(true);
+    expect(isAllowedBlockType('herosplitform')).toBe(true);
+  });
+
+  it('accepts the ten types added by the competitor-widget-library batch 6', () => {
+    expect(isAllowedBlockType('timelinemedia')).toBe(true);
+    expect(isAllowedBlockType('scarcitybar')).toBe(true);
+    expect(isAllowedBlockType('eventcountdown')).toBe(true);
+    expect(isAllowedBlockType('proscons')).toBe(true);
+    expect(isAllowedBlockType('teamsocial')).toBe(true);
+    expect(isAllowedBlockType('pricingcalculator')).toBe(true);
+    expect(isAllowedBlockType('accordionlist')).toBe(true);
+    expect(isAllowedBlockType('locationslist')).toBe(true);
+    expect(isAllowedBlockType('scrollprogress')).toBe(true);
+    expect(isAllowedBlockType('backtotop')).toBe(true);
+  });
+
+  it('accepts the ten types added by the competitor-widget-library batch 7', () => {
+    expect(isAllowedBlockType('businesshours')).toBe(true);
+    expect(isAllowedBlockType('getdirections')).toBe(true);
+    expect(isAllowedBlockType('dualcta')).toBe(true);
+    expect(isAllowedBlockType('videotestimonialslider')).toBe(true);
+    expect(isAllowedBlockType('couponcode')).toBe(true);
+    expect(isAllowedBlockType('stickycountdownbar')).toBe(true);
+    expect(isAllowedBlockType('calloutbox')).toBe(true);
+    expect(isAllowedBlockType('videogallery')).toBe(true);
+    expect(isAllowedBlockType('anchornav')).toBe(true);
+    expect(isAllowedBlockType('exitintentpopup')).toBe(true);
+  });
+
+  it('accepts the ten types added by the competitor-widget-library batch 8', () => {
+    expect(isAllowedBlockType('datatable')).toBe(true);
+    expect(isAllowedBlockType('quizsingle')).toBe(true);
+    expect(isAllowedBlockType('statshero')).toBe(true);
+    expect(isAllowedBlockType('audioembed')).toBe(true);
+    expect(isAllowedBlockType('imagecaption')).toBe(true);
+    expect(isAllowedBlockType('platformratings')).toBe(true);
+    expect(isAllowedBlockType('faqsearch')).toBe(true);
+    expect(isAllowedBlockType('nativesharebutton')).toBe(true);
+    expect(isAllowedBlockType('teamslider')).toBe(true);
+    expect(isAllowedBlockType('scrollcue')).toBe(true);
+  });
 });
 
 describe('buildValidatedProps', () => {
@@ -354,8 +462,8 @@ describe('buildValidatedProps', () => {
   });
 
   describe('every registered schema (full registry coverage)', () => {
-    it('has exactly the same block count as the frontend registry (48)', () => {
-      expect(ALLOWED_BLOCK_TYPES.length).toBe(48);
+    it('has exactly the same block count as the frontend registry (131 — 48 original + 10 from competitor-widget-library batch 1 + entitysearch + 10 from batch 2 + 10 from batch 3 + 10 from batch 4 + 10 from batch 5 + 10 from batch 6 + 10 from batch 7 + 10 from batch 8 + adslot + shapedivider)', () => {
+      expect(ALLOWED_BLOCK_TYPES.length).toBe(131);
     });
 
     it.each(ALLOWED_BLOCK_TYPES)(
@@ -396,6 +504,78 @@ describe('buildValidatedProps', () => {
         'gallery',
         'stats',
         'contactform',
+        'timeline',
+        'timelinesimple',
+        'tabs',
+        'tabsvertical',
+        'countdown',
+        'countdownbar',
+        'logocloud',
+        'logocloudmarquee',
+        'entitysearch',
+        'imagecarousel',
+        'imagecarouselthumbs',
+        'beforeafter',
+        'beforeaftertabs',
+        'progressbars',
+        'progresscircles',
+        'stickybar',
+        'popupoffer',
+        'testimonialsslider',
+        'quotespotlight',
+        'comparison',
+        'comparisonsplit',
+        'entitysearch',
+        'contactbubble',
+        'contactbubblemulti',
+        'statscounter',
+        'statscountericons',
+        'portfoliogrid',
+        'portfoliomasonry',
+        'gallerylightbox',
+        'gallerylightboxmasonry',
+        'cookiebar',
+        'cookiebarminimal',
+        'steps',
+        'stepsicons',
+        'iconlist',
+        'iconlistinline',
+        'announcementbar',
+        'announcementbarmarquee',
+        'testimonialwall',
+        'pricingtoggle',
+        'socialproofbar',
+        'herovideo',
+        'dividerlabel',
+        'dividericon',
+        'newsletterpopup',
+        'imagehotspot',
+        'pricingsingle',
+        'videotestimonial',
+        'ratingsummary',
+        'faqtabs',
+        'socialshare',
+        'herosplitform',
+        'timelinemedia',
+        'scarcitybar',
+        'eventcountdown',
+        'proscons',
+        'teamsocial',
+        'pricingcalculator',
+        'accordionlist',
+        'locationslist',
+        'scrollprogress',
+        'backtotop',
+        'businesshours',
+        'getdirections',
+        'dualcta',
+        'videotestimonialslider',
+        'couponcode',
+        'stickycountdownbar',
+        'calloutbox',
+        'videogallery',
+        'anchornav',
+        'exitintentpopup',
       ];
       for (const type of sample) {
         const schema = BLOCK_SCHEMAS[type];
@@ -421,6 +601,157 @@ describe('buildValidatedProps', () => {
       expect(schemaNeedsRefs(BLOCK_SCHEMAS.stats)).toBe(false);
       expect(schemaNeedsRefs(BLOCK_SCHEMAS.section)).toBe(false);
       expect(schemaNeedsRefs(BLOCK_SCHEMAS.productgrid)).toBe(false);
+    });
+
+    it('is correct for the competitor-widget-library batch (mixed presence)', () => {
+      // timeline/tabs/comparison — plain text + booleans only.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.timeline)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.tabs)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.comparison)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.comparisonsplit)).toBe(false);
+      // countdownbar — top-level `buttonUrl: linkTarget`.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.countdownbar)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.countdown)).toBe(false);
+      // logocloud(marquee) — nested mediaAsset/linkTarget inside `items`.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.logocloud)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.logocloudmarquee)).toBe(true);
+    });
+
+    it('is false for entitysearch (sources reference entities by plain name/enum, not linkTarget/mediaAsset)', () => {
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.entitysearch)).toBe(false);
+    });
+
+    it('is correct for the competitor-widget-library batch 2 (mixed presence)', () => {
+      // imagecarousel(thumbs)/beforeafter(tabs) — nested/top-level mediaAsset.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.imagecarousel)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.imagecarouselthumbs)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.beforeafter)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.beforeaftertabs)).toBe(true);
+      // testimonialsslider — nested mediaAsset inside items.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.testimonialsslider)).toBe(true);
+      // stickybar/popupoffer — top-level linkTarget (buttonUrl).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.stickybar)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.popupoffer)).toBe(true);
+      // progressbars/progresscircles/quotespotlight — plain text/numbers only.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.progressbars)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.progresscircles)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.quotespotlight)).toBe(false);
+    });
+
+    it('is correct for the competitor-widget-library batch 3 (mixed presence)', () => {
+      // gallerylightbox(masonry)/portfoliogrid/portfoliomasonry — nested mediaAsset/linkTarget.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.gallerylightbox)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.gallerylightboxmasonry)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.portfoliogrid)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.portfoliomasonry)).toBe(true);
+      // contactbubble(multi)/statscounter(icons)/cookiebar(minimal) — plain
+      // enum/string/number fields only, no linkTarget/mediaAsset anywhere.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.contactbubble)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.contactbubblemulti)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.statscounter)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.statscountericons)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.cookiebar)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.cookiebarminimal)).toBe(false);
+    });
+
+    it('is correct for the competitor-widget-library batch 4 (mixed presence)', () => {
+      // steps(icons)/iconlist(inline) — enum icon choice + plain strings only.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.steps)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.stepsicons)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.iconlist)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.iconlistinline)).toBe(false);
+      // announcementbar — top-level linkTarget (linkUrl); the marquee variant
+      // has no link field at all, only a list of plain-string messages.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.announcementbar)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.announcementbarmarquee)).toBe(false);
+      // testimonialwall/socialproofbar — nested mediaAsset (photo) inside a list.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.testimonialwall)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.socialproofbar)).toBe(true);
+      // pricingtoggle/herovideo — nested/top-level linkTarget + mediaAsset.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.pricingtoggle)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.herovideo)).toBe(true);
+    });
+
+    it('is correct for the competitor-widget-library batch 5 (mixed presence)', () => {
+      // dividerlabel/dividericon — plain string/enum only.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.dividerlabel)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.dividericon)).toBe(false);
+      // newsletterpopup — same FORM_FIELDS_SCHEMA shape as contactform/
+      // newsletterform/simpleform (no linkTarget/mediaAsset field anywhere).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.newsletterpopup)).toBe(false);
+      // imagehotspot — top-level mediaAsset (image).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.imagehotspot)).toBe(true);
+      // pricingsingle — top-level linkTarget (buttonUrl).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.pricingsingle)).toBe(true);
+      // videotestimonial — embedUrl is a plain string (like `video.embedUrl`),
+      // not a linkTarget/mediaAsset field.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.videotestimonial)).toBe(false);
+      // ratingsummary/faqtabs/socialshare — plain strings/numbers/booleans only.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.ratingsummary)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.faqtabs)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.socialshare)).toBe(false);
+      // herosplitform — same form-fields shape as newsletterpopup, no
+      // linkTarget/mediaAsset field anywhere either.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.herosplitform)).toBe(false);
+    });
+
+    it('is correct for the competitor-widget-library batch 6 (mixed presence)', () => {
+      // timelinemedia/teamsocial — nested mediaAsset (image/photo) inside a list.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.timelinemedia)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.teamsocial)).toBe(true);
+      // pricingcalculator — top-level linkTarget (buttonUrl).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.pricingcalculator)).toBe(true);
+      // scarcitybar/eventcountdown/proscons/accordionlist/locationslist —
+      // plain strings/numbers only, no linkTarget/mediaAsset anywhere.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.scarcitybar)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.eventcountdown)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.proscons)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.accordionlist)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.locationslist)).toBe(false);
+      // scrollprogress/backtotop — enum/number only.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.scrollprogress)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.backtotop)).toBe(false);
+    });
+
+    it('is correct for the competitor-widget-library batch 7 (mixed presence)', () => {
+      // businesshours/getdirections/couponcode/calloutbox/videogallery —
+      // plain strings/enums/numbers only, no linkTarget/mediaAsset anywhere
+      // (real business data like address/workingHours is read from
+      // `business` context on the client, not stored in these props).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.businesshours)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.getdirections)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.couponcode)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.calloutbox)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.videogallery)).toBe(false);
+      // videotestimonialslider — embedUrl is a plain string (like
+      // `videotestimonial.embedUrl`), not a linkTarget/mediaAsset field.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.videotestimonialslider)).toBe(false);
+      // dualcta/anchornav — nested linkTarget inside a list.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.dualcta)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.anchornav)).toBe(true);
+      // stickycountdownbar/exitintentpopup — top-level linkTarget (buttonUrl).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.stickycountdownbar)).toBe(true);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.exitintentpopup)).toBe(true);
+    });
+
+    it('is correct for the competitor-widget-library batch 8 (mixed presence)', () => {
+      // datatable/quizsingle/statshero — plain strings/numbers, even
+      // datatable's nested rows[].cells[] list has no linkTarget/mediaAsset.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.datatable)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.quizsingle)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.statshero)).toBe(false);
+      // audioembed — embedUrl is a plain string, not a linkTarget/mediaAsset.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.audioembed)).toBe(false);
+      // imagecaption — top-level mediaAsset (image).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.imagecaption)).toBe(true);
+      // platformratings/faqsearch/nativesharebutton — plain strings/numbers only.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.platformratings)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.faqsearch)).toBe(false);
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.nativesharebutton)).toBe(false);
+      // teamslider — nested mediaAsset (photo) inside a list.
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.teamslider)).toBe(true);
+      // scrollcue — top-level linkTarget (url).
+      expect(schemaNeedsRefs(BLOCK_SCHEMAS.scrollcue)).toBe(true);
     });
   });
 

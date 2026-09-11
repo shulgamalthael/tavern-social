@@ -1,5 +1,5 @@
 import { BusinessCategory } from '@prisma/client';
-import { IsEnum, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { SUPPORTED_CURRENCY_CODES } from '@/modules/currencies/currencies';
 
 export class CreateBusinessDto {
@@ -33,4 +33,13 @@ export class CreateBusinessDto {
   @IsOptional()
   @IsIn(SUPPORTED_CURRENCY_CODES, { message: 'Неподдерживаемая валюта' })
   currency?: string;
+
+  /** Только облегчённый кабинет рекламодателя (`POST /businesses` из
+   * `/advertise/new`) шлёт `true` — см. `Business.isAdvertiserOnly`'s
+   * комментарий в schema.prisma. Обычная форма «Создать бизнес» это поле
+   * никогда не отправляет, поэтому `undefined` (не хранится в БД как
+   * `false` вручную — сам Prisma `@default(false)` уже это делает). */
+  @IsOptional()
+  @IsBoolean()
+  isAdvertiserOnly?: boolean;
 }

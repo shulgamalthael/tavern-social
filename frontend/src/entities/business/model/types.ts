@@ -66,6 +66,12 @@ export interface Business {
    * предоставляет). Сам ключ никогда не приходит с backend — только этот
    * флаг. */
   hasOwnWeb3ApiKey: boolean;
+  /** Внешний рекламодатель без сайта на платформе (AI_PLATFORM_ROADMAP.md
+   * §71) — создан через облегчённый кабинет `/advertise/new`, не через
+   * обычную форму «Создать бизнес». `BusinessDashboardWidget` рендерит для
+   * такого бизнеса урезанный `AdvertiserDashboardWidget` вместо полного
+   * дашборда. */
+  isAdvertiserOnly: boolean;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

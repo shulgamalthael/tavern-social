@@ -1,0 +1,41 @@
+.promo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.promo__status {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.promo__hint {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.promo__locked {
+  margin: 0;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.promo__progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  overflow: hidden;
+}
+
+.promo__progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--tavern-accent);
+  transition: width 0.3s ease;
+}

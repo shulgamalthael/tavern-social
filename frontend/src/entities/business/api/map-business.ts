@@ -29,6 +29,7 @@ export interface BusinessResponse {
   workingHours: WorkingHours | null;
   web3WalletAddress: string | null;
   hasOwnWeb3ApiKey: boolean;
+  isAdvertiserOnly: boolean;
   status: BusinessStatus;
   createdAt: string;
   updatedAt: string;

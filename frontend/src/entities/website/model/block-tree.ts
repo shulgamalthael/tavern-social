@@ -152,8 +152,16 @@ export function insertBlock(
  * родитель — потомок самого перемещаемого блока, `removeBlock` вырежет его
  * вместе с этим потомком, и последующая вставка молча не найдёт цель —
  * не «ничего не делает», а безвозвратно теряет весь перемещаемый блок (см.
- * следующий комментарий). */
-function isBlockOrDescendant(block: WebsiteBlock, candidateId: string): boolean {
+ * следующий комментарий). Экспортирована — `BuilderDndProvider.tsx` тем же
+ * способом подавляет линию-индикатор «сюда встанет блок», когда наведение
+ * идёт на собственного потомка: перетаскиваемый блок остаётся смонтированным
+ * (просто с `opacity: 0.5`) и его дети остаются валидными `useSortable`-целями
+ * для `closestCenter`, так что без этой проверки индикатор реально загорался
+ * бы над недопустимой целью — живым Playwright-перетаскиванием подтверждено,
+ * что настоящий пользователь-человек мог получить этот ложный сигнал, не
+ * только гипотетический сценарий из скриптового вызова (см. `AI_PLATFORM_
+ * ROADMAP.md`, находка про §42.3). */
+export function isBlockOrDescendant(block: WebsiteBlock, candidateId: string): boolean {
   if (block.id === candidateId) return true;
   return (block.children ?? []).some((child) => isBlockOrDescendant(child, candidateId));
 }

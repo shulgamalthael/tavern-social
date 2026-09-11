@@ -1,0 +1,98 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.card__amount {
+  color: var(--tavern-ink);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.card__label {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.card__meta {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--tavern-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.error {
+  margin: 0;
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.connectStatus {
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.available {
+  margin-top: 4px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.payoutList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.payoutRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.payoutStatus--pending {
+  color: var(--tavern-muted);
+  font-weight: 600;
+}
+
+.payoutStatus--paid {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.payoutStatus--failed {
+  color: var(--tavern-danger);
+  font-weight: 600;
+}

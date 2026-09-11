@@ -17,6 +17,7 @@ const PLACEHOLDER_BUSINESS: BlockBusinessContext = {
   phone: null,
   address: null,
   socialLinks: [],
+  workingHours: null,
 };
 
 export interface LayoutPatternThumbnailProps {

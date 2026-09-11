@@ -1,0 +1,253 @@
+// Статусы кампании (`AdCampaignStatus`) — свои цвета, локальные к этой
+// панели (тот же приём, что и warning/critical/emergency в
+// `AdminAiInfrastructurePanel.module.scss`, нет глобальных semantic-токенов
+// под это).
+$status-draft: #64748b;
+$status-pending: #b45309;
+$status-active: #16a34a;
+$status-paused: #64748b;
+$status-rejected: #dc2626;
+$status-completed: #2563eb;
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tile__value {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--tavern-ink);
+}
+
+.tile__label {
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tavern-ink);
+}
+
+.campaign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.campaign-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.campaign-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.campaign-card__name {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tavern-ink);
+}
+
+.campaign-card__meta {
+  display: block;
+  font-size: 12px;
+  color: var(--tavern-muted);
+}
+
+.campaign-card__hint {
+  font-size: 12.5px;
+  color: var(--tavern-muted);
+}
+
+.campaign-card__error {
+  font-size: 12.5px;
+  color: var(--tavern-danger);
+}
+
+.status-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.status-badge--draft {
+  background: $status-draft;
+}
+
+.status-badge--pending_review {
+  background: $status-pending;
+}
+
+.status-badge--active {
+  background: $status-active;
+}
+
+.status-badge--paused {
+  background: $status-paused;
+}
+
+.status-badge--rejected {
+  background: $status-rejected;
+}
+
+.status-badge--completed {
+  background: $status-completed;
+}
+
+.creative-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.creative-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+  font-size: 13px;
+  color: var(--tavern-ink);
+}
+
+.creative-item__format {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--tavern-surface);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--tavern-muted);
+}
+
+.creative-item__headline {
+  font-weight: 600;
+}
+
+.creative-item__description {
+  font-size: 12px;
+  color: var(--tavern-muted);
+}
+
+.creative-item__link {
+  font-size: 12px;
+  color: var(--tavern-accent);
+  word-break: break-all;
+}
+
+.creative-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.creative-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.creative-status--approved {
+  background: $status-active;
+}
+
+.creative-status--rejected {
+  background: $status-rejected;
+}
+
+.campaign-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.reject-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.reject-form__input {
+  flex: 1;
+  min-width: 200px;
+  padding: 8px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+  font-size: 13px;
+  color: var(--tavern-ink);
+}
+
+.inventory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inventory-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tavern-ink);
+}
+
+.inventory-item__name {
+  font-weight: 600;
+}
+
+.inventory-item__tier {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--tavern-sunk);
+  font-size: 11.5px;
+  color: var(--tavern-muted);
+  text-transform: uppercase;
+}
+
+.inventory-item__slots {
+  color: var(--tavern-muted);
+}

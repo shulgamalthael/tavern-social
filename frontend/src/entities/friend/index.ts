@@ -1,10 +1,11 @@
 export { acceptFriendRequest } from './api/accept-friend-request';
+export { getFriends } from './api/get-friends';
 export { getUserFriends } from './api/get-user-friends';
 export { removeFriend } from './api/remove-friend';
 export { respondToFriendRequest } from './api/respond-to-friend-request';
 export { sendFriendRequest } from './api/send-friend-request';
 export type { FriendshipStatus } from './api/send-friend-request';
-export { useFriendStore } from './model/friend-store';
+export { selectPendingIncomingRequestsCount, useFriendStore } from './model/friend-store';
 export type { FriendStore } from './model/friend-store';
 export type { Friend, FriendRequestPreview } from './model/types';
 export { FriendCard } from './ui/FriendCard';

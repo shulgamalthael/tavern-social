@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getAdInventory } from '@/entities/advertising';
 import { getBusiness, type Business } from '@/entities/business';
 import {
   getWebsiteDraft,
@@ -80,6 +81,7 @@ function toBusinessContext(business: Business): BlockBusinessContext {
     phone: business.phone,
     address: business.address,
     socialLinks: business.socialLinks,
+    workingHours: business.workingHours,
   };
 }
 
@@ -97,9 +99,11 @@ function toBusinessContext(business: Business): BlockBusinessContext {
 export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) {
   const fetcher = useCallback(
     () =>
-      Promise.all([getBusiness(businessId), getWebsiteDraft(businessId)]).then(
-        ([business, draft]) => ({ business, draft }),
-      ),
+      Promise.all([
+        getBusiness(businessId),
+        getWebsiteDraft(businessId),
+        getAdInventory(businessId),
+      ]).then(([business, draft, adInventory]) => ({ business, draft, adInventory })),
     [businessId],
   );
   const { status, data, error, refetch } = useAsyncData(fetcher);
@@ -392,6 +396,7 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
                   className={styles.panel}
                   businessId={businessId}
                   capabilities={data.business.capabilities}
+                  adSlotsAvailable={data.adInventory.available}
                 />
               )}
               {activePane === 'inspector' && (
@@ -447,7 +452,11 @@ export function WebsiteBuilderWidget({ businessId }: WebsiteBuilderWidgetProps) 
         />
       )}
 
-      <AddBlockModal businessId={businessId} capabilities={data.business.capabilities} />
+      <AddBlockModal
+        businessId={businessId}
+        capabilities={data.business.capabilities}
+        adSlotsAvailable={data.adInventory.available}
+      />
 
       {/* Плавающее мини-окно AI, не вкладка панели — холст должен оставаться
        * полностью видимым, пока идёт диалог с AI (тот же принцип «холст

@@ -20,8 +20,10 @@ import {
   readResponsiveProp,
   useWebsiteBuilderStore,
   writeResponsiveProp,
+  type AdvancedCssProperty,
   type BlockStyle,
   type FieldSchema,
+  type LayoutDisplay,
   type SelectOption,
   type SpacingValue,
 } from '@/entities/website';
@@ -184,6 +186,7 @@ const LAYOUT_DISPLAY_FIELD: FieldSchema = {
   key: 'display',
   label: 'Как располагать детей',
   control: 'segmented',
+  responsive: true,
   options: LAYOUT_DISPLAY_SEGMENTED_OPTIONS,
 };
 const LAYOUT_DIRECTION_FIELD: FieldSchema = {
@@ -256,6 +259,24 @@ const POSITION_STICKY_OFFSET_FIELD: FieldSchema = {
   max: 400,
   suffix: 'px',
 };
+const POSITION_GRID_COLUMN_SPAN_FIELD: FieldSchema = {
+  key: 'gridColumnSpan',
+  label: 'Ширина в колонках (сетка родителя)',
+  control: 'number',
+  responsive: true,
+  min: 1,
+  max: 6,
+  hint: 'Работает, только если родитель — «Сеткой» (bento/асимметричная раскладка).',
+};
+const POSITION_GRID_ROW_SPAN_FIELD: FieldSchema = {
+  key: 'gridRowSpan',
+  label: 'Высота в строках (сетка родителя)',
+  control: 'number',
+  responsive: true,
+  min: 1,
+  max: 6,
+  hint: 'Работает, только если родитель — «Сеткой».',
+};
 const ENTRANCE_ANIMATION_FIELD: FieldSchema = {
   key: 'entranceAnimation',
   label: 'Появление при прокрутке',
@@ -271,6 +292,188 @@ const ENTRANCE_DELAY_FIELD: FieldSchema = {
   step: 50,
   suffix: 'мс',
 };
+
+/** "Продвинутый CSS" (AI_PLATFORM_ROADMAP.md §78) — ограниченная "форточка"
+ * для дизайнов, которые не укладываются в закрытые поля выше (наклон/
+ * поворот, произвольная форма, размытие/glass-эффект, свободная тень/
+ * скругление). Значения — просто строки, backend (`buildValidatedStyle`,
+ * `advanced`-ветка) перепроверяет каждую независимо от того, что показано
+ * здесь — это не единственный рубеж защиты, см. `BlockStyle.advanced`'s
+ * комментарий в `types.ts`. */
+const ADVANCED_CSS_FIELD_DEFS: Array<{
+  key: AdvancedCssProperty;
+  field: FieldSchema;
+}> = [
+  {
+    key: 'transform',
+    field: {
+      key: 'transform',
+      label: 'Трансформация (поворот/наклон/масштаб)',
+      control: 'text',
+      placeholder: 'rotate(-4deg)',
+      hint: 'Например: rotate(-4deg), skewX(6deg), scale(1.05)',
+    },
+  },
+  {
+    key: 'clipPath',
+    field: {
+      key: 'clipPath',
+      label: 'Обрезка формы (clip-path)',
+      control: 'text',
+      placeholder: 'polygon(0 0, 100% 0, 100% 85%, 0 100%)',
+      hint: 'Например: polygon(...), circle(60%), inset(10% 0)',
+    },
+  },
+  {
+    key: 'filter',
+    field: {
+      key: 'filter',
+      label: 'Фильтр (размытие/яркость и т. п.)',
+      control: 'text',
+      placeholder: 'blur(6px) saturate(1.3)',
+    },
+  },
+  {
+    key: 'backdropFilter',
+    field: {
+      key: 'backdropFilter',
+      label: 'Фильтр фона за блоком (стекло)',
+      control: 'text',
+      placeholder: 'blur(12px)',
+    },
+  },
+  {
+    key: 'mixBlendMode',
+    field: {
+      key: 'mixBlendMode',
+      label: 'Смешивание с фоном',
+      control: 'select',
+      options: [
+        { value: 'normal', label: 'Обычное' },
+        { value: 'multiply', label: 'Умножение' },
+        { value: 'screen', label: 'Экран' },
+        { value: 'overlay', label: 'Наложение' },
+        { value: 'darken', label: 'Затемнение' },
+        { value: 'lighten', label: 'Осветление' },
+        { value: 'color-dodge', label: 'Color dodge' },
+        { value: 'color-burn', label: 'Color burn' },
+        { value: 'hard-light', label: 'Hard light' },
+        { value: 'soft-light', label: 'Soft light' },
+        { value: 'difference', label: 'Разница' },
+        { value: 'exclusion', label: 'Исключение' },
+        { value: 'hue', label: 'Оттенок' },
+        { value: 'saturation', label: 'Насыщенность' },
+        { value: 'color', label: 'Цвет' },
+        { value: 'luminosity', label: 'Светлота' },
+      ],
+    },
+  },
+  {
+    key: 'opacity',
+    field: {
+      key: 'opacity',
+      label: 'Прозрачность (0–1)',
+      control: 'text',
+      placeholder: '0.8',
+    },
+  },
+  {
+    key: 'borderRadius',
+    field: {
+      key: 'borderRadius',
+      label: 'Скругление (свободное)',
+      control: 'text',
+      placeholder: '40% 60% 60% 40%',
+      hint: 'Для органичных/«блоб»-форм — иначе используйте обычную рамку выше.',
+    },
+  },
+  {
+    key: 'boxShadow',
+    field: {
+      key: 'boxShadow',
+      label: 'Тень (свободная)',
+      control: 'text',
+      placeholder: '0 20px 60px rgba(0,0,0,.35)',
+    },
+  },
+  {
+    key: 'letterSpacing',
+    field: {
+      key: 'letterSpacing',
+      label: 'Межбуквенный интервал',
+      control: 'text',
+      placeholder: '0.05em',
+    },
+  },
+  {
+    key: 'textTransform',
+    field: {
+      key: 'textTransform',
+      label: 'Регистр текста',
+      control: 'select',
+      options: [
+        { value: 'none', label: 'Обычный' },
+        { value: 'uppercase', label: 'ВСЕ ЗАГЛАВНЫЕ' },
+        { value: 'lowercase', label: 'все строчные' },
+        { value: 'capitalize', label: 'Каждое Слово С Заглавной' },
+      ],
+    },
+  },
+  {
+    key: 'fontStyle',
+    field: {
+      key: 'fontStyle',
+      label: 'Начертание',
+      control: 'select',
+      options: [
+        { value: 'normal', label: 'Обычное' },
+        { value: 'italic', label: 'Курсив' },
+        { value: 'oblique', label: 'Наклонное' },
+      ],
+    },
+  },
+  {
+    key: 'fontWeight',
+    field: {
+      key: 'fontWeight',
+      label: 'Насыщенность шрифта',
+      control: 'text',
+      placeholder: '700',
+      hint: '100–900 (шагом 100) или normal/bold',
+    },
+  },
+];
+
+/** Enum-поля (`mixBlendMode`/`textTransform`/`fontStyle`) рендерятся через
+ * `control: 'select'` — сам `<select>` структурно не может выдать
+ * недопустимое значение, проверка нужна только "свободным" текстовым полям. */
+const ADVANCED_ENUM_KEYS: ReadonlySet<AdvancedCssProperty> = new Set([
+  'mixBlendMode',
+  'textTransform',
+  'fontStyle',
+]);
+
+const ADVANCED_FORBIDDEN_PATTERN = /url\(|expression\(|javascript:|@import|[;<>{}\\]/i;
+const ADVANCED_SAFE_CHARS_RE = /^[a-zA-Z0-9\s.,%+\-#()'/]*$/;
+const MAX_ADVANCED_VALUE_LENGTH = 200;
+
+/** Клиентское зеркало backend's `sanitizeAdvancedCssValue` (`block-style-
+ * schema.ts`) — та же проверка, ради мгновенной обратной связи в инспекторе,
+ * не единственный рубеж: backend перепроверяет заново независимо от того,
+ * что прошло здесь (см. `BlockStyle.advanced`'s комментарий в `types.ts`). */
+function validateAdvancedCssValue(key: AdvancedCssProperty, value: string): string | null {
+  if (value.length === 0) return null;
+  if (value.length > MAX_ADVANCED_VALUE_LENGTH) {
+    return `Слишком длинное значение (максимум ${MAX_ADVANCED_VALUE_LENGTH} символов)`;
+  }
+  if (ADVANCED_FORBIDDEN_PATTERN.test(value)) {
+    return 'Недопустимая конструкция (url()/expression()/@import/спецсимволы) — только само значение CSS-свойства';
+  }
+  if (!ADVANCED_ENUM_KEYS.has(key) && !ADVANCED_SAFE_CHARS_RE.test(value)) {
+    return "Недопустимые символы — разрешены буквы/цифры/пробелы/. , % + - # ( ) ' /";
+  }
+  return null;
+}
 
 export interface LayoutSectionProps {
   style: BlockStyle | undefined;
@@ -302,6 +505,18 @@ export interface LayoutSectionProps {
 export function LayoutSection({ style, onChange, businessId, isContainer }: LayoutSectionProps) {
   const viewport = useWebsiteBuilderStore((state) => state.viewport);
   const [tab, setTab] = useState<'basic' | 'layout' | 'advanced'>('basic');
+  // "Продвинутый CSS" — черновик набранного текста + ошибка на поле, ПОКА
+  // значение не прошло проверку (см. `validateAdvancedCssValue` ниже): та же
+  // проверка, что и на backend (`buildValidatedStyle`'s `advanced`-ветка),
+  // здесь клиентская копия ради мгновенной обратной связи — невалидное
+  // значение НИКОГДА не уходит в `onChange`/canvas, только в это локальное
+  // состояние, иначе поле "откатывалось" бы на каждую невалидную клавишу.
+  const [advancedDrafts, setAdvancedDrafts] = useState<
+    Partial<Record<AdvancedCssProperty, string>>
+  >({});
+  const [advancedErrors, setAdvancedErrors] = useState<
+    Partial<Record<AdvancedCssProperty, string>>
+  >({});
 
   const basicItems: FieldGroupItem[] = BASIC_FIELDS.map((field) => {
     const rawValue = (style as Record<string, unknown> | undefined)?.[field.key];
@@ -446,12 +661,20 @@ export function LayoutSection({ style, onChange, businessId, isContainer }: Layo
   // своей условной вставкой: `direction`/`wrap` осмысленны только при
   // `display:'flex'`, `gridColumns` — только при `'grid'`, `justify`/`align`
   // не нужны вовсе при `'block'` (обычный вертикальный стек, менять нечего).
-  const displayValue = style?.display ?? 'block';
+  const displayValue = readResponsiveProp<LayoutDisplay>(style?.display, viewport, 'block');
   const layoutItems: FieldGroupItem[] = [
     {
       field: LAYOUT_DISPLAY_FIELD,
       value: displayValue,
-      onChange: (next: unknown) => onChange({ display: next as BlockStyle['display'] }),
+      onChange: (next: unknown) =>
+        onChange({
+          display: writeResponsiveProp(
+            style?.display,
+            viewport,
+            next,
+            'block',
+          ) as BlockStyle['display'],
+        }),
     },
   ];
   if (displayValue !== 'block') {
@@ -535,6 +758,34 @@ export function LayoutSection({ style, onChange, businessId, isContainer }: Layo
       onChange: (next: unknown) => onChange({ fixedWidth: next as number }),
     });
   }
+  positionItems.push(
+    {
+      field: POSITION_GRID_COLUMN_SPAN_FIELD,
+      value: readResponsiveProp(style?.gridColumnSpan, viewport, 1),
+      onChange: (next: unknown) =>
+        onChange({
+          gridColumnSpan: writeResponsiveProp(
+            style?.gridColumnSpan,
+            viewport,
+            Number(next),
+            1,
+          ) as BlockStyle['gridColumnSpan'],
+        }),
+    },
+    {
+      field: POSITION_GRID_ROW_SPAN_FIELD,
+      value: readResponsiveProp(style?.gridRowSpan, viewport, 1),
+      onChange: (next: unknown) =>
+        onChange({
+          gridRowSpan: writeResponsiveProp(
+            style?.gridRowSpan,
+            viewport,
+            Number(next),
+            1,
+          ) as BlockStyle['gridRowSpan'],
+        }),
+    },
+  );
   positionItems.push({
     field: POSITION_STICKY_FIELD,
     value: Boolean(style?.sticky),
@@ -561,6 +812,42 @@ export function LayoutSection({ style, onChange, businessId, isContainer }: Layo
       onChange: (next: unknown) => onChange({ entranceDelay: next as number }),
     });
   }
+
+  // "Продвинутый CSS" (AI_PLATFORM_ROADMAP.md §78) — `advanced` мёржится на
+  // уровне `WebsiteBuilderStore.updateBlockStyle` ШИРОКО (`{ ...block.style,
+  // ...patch }`), не рекурсивно — значит патч с одним изменённым ключом
+  // `advanced` заменил бы ВЕСЬ существующий объект `advanced`, стерев другие
+  // уже заданные свойства. Каждый onChange здесь поэтому сам расширяет
+  // текущий `style?.advanced`, прежде чем передать `onChange`. Невалидное
+  // значение остаётся только в `advancedDrafts`/`advancedErrors` (см. их
+  // комментарий выше) — никогда не доходит до `onChange`/canvas.
+  const advancedCssItems: FieldGroupItem[] = ADVANCED_CSS_FIELD_DEFS.map(({ key, field }) => {
+    const committedValue = style?.advanced?.[key] ?? '';
+    const displayValue = key in advancedDrafts ? (advancedDrafts[key] ?? '') : committedValue;
+
+    return {
+      field,
+      value: displayValue,
+      onChange: (next: unknown) => {
+        const raw = typeof next === 'string' ? next : '';
+        const error = ADVANCED_ENUM_KEYS.has(key) ? null : validateAdvancedCssValue(key, raw);
+        setAdvancedDrafts((prev) => ({ ...prev, [key]: raw }));
+        setAdvancedErrors((prev) => ({ ...prev, [key]: error ?? undefined }));
+        if (error) return;
+
+        const nextAdvanced = { ...style?.advanced };
+        if (raw.trim().length > 0) {
+          nextAdvanced[key] = raw;
+        } else {
+          delete nextAdvanced[key as keyof typeof nextAdvanced];
+        }
+        onChange({ advanced: nextAdvanced as BlockStyle['advanced'] });
+      },
+    };
+  });
+  const advancedCssErrorMessages = ADVANCED_CSS_FIELD_DEFS.map(({ key, field }) =>
+    advancedErrors[key] ? `${field.label}: ${advancedErrors[key]}` : null,
+  ).filter((message): message is string => Boolean(message));
 
   return (
     <div className={styles.section}>
@@ -638,6 +925,18 @@ export function LayoutSection({ style, onChange, businessId, isContainer }: Layo
             (flex)» или «Сеткой» (вкладка «Раскладка» родителя).
           </p>
           <FieldGroup businessId={businessId} items={positionItems} />
+
+          <p className={styles.advanced__hint}>
+            Продвинутый CSS — для дизайна, который не укладывается в поля выше (наклон, необычная
+            форма, размытие, свободная тень/скругление). Используйте редко, только когда обычных
+            полей действительно не хватает.
+          </p>
+          <FieldGroup businessId={businessId} items={advancedCssItems} />
+          {advancedCssErrorMessages.map((message) => (
+            <p key={message} className={styles.advanced__error} role="alert">
+              {message}
+            </p>
+          ))}
         </div>
       )}
     </div>

@@ -30,7 +30,8 @@ export class GalleryController {
     private readonly usersService: UsersService,
   ) {}
 
-  // Просмотр галереи — любой залогиненный пользователь, как и GET /users/:id.
+  // Просмотр галереи — любой залогиненный пользователь, как и GET /users/:id,
+  // если профиль не приватный или у зрителя есть к нему доступ (§103).
   // currentUser нужен для isLikedByMe/isDislikedByMe — это может быть не тот
   // же человек, чья это галерея.
   @Get(':id/gallery')
@@ -39,7 +40,8 @@ export class GalleryController {
     @Param('id') userId: string,
     @Query() query: PaginationQueryDto,
   ): Promise<PaginatedDto<GalleryImageDto>> {
-    await this.usersService.findByIdOrThrow(userId);
+    const user = await this.usersService.findByIdOrThrow(userId);
+    await this.usersService.assertCanViewRestrictedContent(user, currentUser.id);
     return this.galleryService.list(userId, currentUser.id, query.cursor, query.limit);
   }
 

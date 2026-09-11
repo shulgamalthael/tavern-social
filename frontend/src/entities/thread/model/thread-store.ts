@@ -87,6 +87,7 @@ interface ThreadActions {
     text: string,
     files?: File[],
     replyToId?: string,
+    sharedPostId?: string,
   ) => Promise<void>;
   setActiveThread: (threadId: string | null) => void;
   /** Открывает диалог с пользователем — существующий делает активным сразу,
@@ -144,256 +145,293 @@ interface ThreadActions {
     threadId: string,
     participant: { id: string; name: string; avatarUrl: string | null },
   ) => void;
+  /** Дописывает диалог в список, если его там ещё нет — нужно ровно одному
+   * месту: `features/share-post`, когда пересылаешь пост другу, с которым
+   * ещё нет треда (`getOrCreateDirectThread` создаёт его на backend, но
+   * локальный стор о нём ещё не знает). В отличие от `openDirectThreadWith`/
+   * `sendMessage`'s драфт-ветки НЕ трогает `activeThreadId` — пересылка не
+   * должна перекидывать в мессенджер, тот же принцип, что и у
+   * `forwardMessage` (пересылка сообщения тоже не навигирует). */
+  ensureThread: (thread: Thread) => void;
 }
 
 export type ThreadStore = ThreadState & ThreadActions;
 
 /** Список диалогов нужен и Header (счётчик непрочитанных), и мессенджеру. */
-export const useThreadStore = create<ThreadStore>((set, get) => ({
-  threads: [],
-  status: 'idle',
-  error: null,
-  activeThreadId: null,
-  draftTarget: null,
-  editingMessage: null,
-  replyingTo: null,
-  loadThreads: async () => {
-    set({ status: 'loading', error: null });
+export const useThreadStore = create<ThreadStore>((set, get) => {
+  /** Фоновая перечитка списка тредов «догнать catch-up» — используется, когда
+   * live-событие сокета указывает на тред, которого ещё нет в сторе (см.
+   * `receiveMessage`/`receiveParticipantAdded` ниже). В отличие от `loadThreads`
+   * НЕ трогает `status`/`error`: `loadThreads` ставит `status: 'loading'`, а
+   * `MessengerWidget` по этому статусу целиком подменяет разметку мессенджера
+   * скелетоном списка — если это происходит посреди уже открытого диалога
+   * (например, третий человек только что впервые написал вам, пока вы
+   * переписываетесь с кем-то другим), открытый чат на миг размонтируется и
+   * теряет прокрутку и незаконченный черновик в композере. Ошибку намеренно
+   * проглатываем — это лучшая попытка досинхронизироваться в фоне, а не
+   * действие пользователя, показывать `ErrorState` не на чем. */
+  const refreshThreadsQuietly = async (): Promise<void> => {
     try {
       const threads = await getThreads();
-      set({ threads, status: 'success' });
-    } catch (error) {
-      set({
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Не удалось загрузить сообщения',
-      });
+      set({ threads });
+    } catch {
+      // см. комментарий выше — фоновая досинхронизация, тихий отказ.
     }
-  },
-  sendMessage: async (threadId, text, files = [], replyToId) => {
-    const trimmed = text.trim();
-    if (!trimmed && files.length === 0) return;
+  };
 
-    if (threadId) {
-      const message = await sendMessageAction(threadId, trimmed, files, replyToId);
+  return {
+    threads: [],
+    status: 'idle',
+    error: null,
+    activeThreadId: null,
+    draftTarget: null,
+    editingMessage: null,
+    replyingTo: null,
+    loadThreads: async () => {
+      set({ status: 'loading', error: null });
+      try {
+        const threads = await getThreads();
+        set({ threads, status: 'success' });
+      } catch (error) {
+        set({
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Не удалось загрузить сообщения',
+        });
+      }
+    },
+    sendMessage: async (threadId, text, files = [], replyToId, sharedPostId) => {
+      const trimmed = text.trim();
+      if (!trimmed && files.length === 0 && !sharedPostId) return;
+
+      if (threadId) {
+        const message = await sendMessageAction(threadId, trimmed, files, replyToId, sharedPostId);
+        set((state) => ({
+          threads: state.threads.map((thread) =>
+            thread.id === threadId
+              ? { ...thread, messages: [...thread.messages, message], unread: undefined }
+              : thread,
+          ),
+          replyingTo: null,
+        }));
+        return;
+      }
+
+      // Черновик (см. `draftTarget`) — диалога ещё нет нигде, кроме UI этой
+      // вкладки. Заводим его именно сейчас, вместе с первым сообщением, а не
+      // раньше — до этого момента у собеседника не должно появиться ни одной
+      // записи о переписке.
+      const target = get().draftTarget;
+      if (!target) return;
+      const thread = await getOrCreateDirectThread(target.id);
+      const message = await sendMessageAction(thread.id, trimmed, files);
+      set((state) => ({
+        threads: [{ ...thread, messages: [...thread.messages, message] }, ...state.threads],
+        activeThreadId: thread.id,
+        draftTarget: null,
+      }));
+    },
+    setActiveThread: (threadId) => {
+      // Явный выбор активного диалога (в т.ч. `null` — закрытие чата) всегда
+      // выигрывает у незавершённого черновика и незаконченного редактирования/ответа.
+      set({
+        activeThreadId: threadId,
+        draftTarget: null,
+        editingMessage: null,
+        replyingTo: null,
+      });
+      if (threadId) void get().markRead(threadId);
+    },
+    openDirectThreadWith: (target) => {
+      // Только строго 1:1-диалог с этим человеком — групповой диалог, в
+      // котором он тоже состоит, не подходит: «Написать» с карточки друга
+      // должно открывать личную переписку, а не первую попавшуюся группу.
+      const existing = get().threads.find(
+        (thread) => !thread.isGroup && thread.participants[0]?.id === target.id,
+      );
+      if (existing) {
+        get().setActiveThread(existing.id);
+        return;
+      }
+
+      // Ни запроса к backend, ни записи в БД — только локальный черновик,
+      // пока не отправлено первое сообщение (см. `sendMessage`).
+      set({ activeThreadId: null, draftTarget: target });
+    },
+    markRead: async (threadId) => {
       set((state) => ({
         threads: state.threads.map((thread) =>
-          thread.id === threadId
+          thread.id === threadId ? { ...thread, unread: undefined } : thread,
+        ),
+      }));
+      await markThreadRead(threadId).catch(() => undefined);
+    },
+    addParticipant: async (threadId, userId) => {
+      // Возвращённый диалог — не обязательно тот же `threadId`: если исходный
+      // диалог был 1:1, backend не мутирует личную переписку, а создаёт новый
+      // групповой Thread (см. `ThreadsService.addParticipant`) — тогда его
+      // здесь ещё нет, дописываем в начало списка, а не ищем по старому id.
+      const thread = await addParticipantAction(threadId, userId);
+      set((state) => {
+        const exists = state.threads.some((existing) => existing.id === thread.id);
+        return {
+          threads: exists
+            ? state.threads.map((existing) => (existing.id === thread.id ? thread : existing))
+            : [thread, ...state.threads],
+        };
+      });
+      get().setActiveThread(thread.id);
+    },
+    startEditingMessage: (threadId, messageId, text) => {
+      set({ editingMessage: { threadId, messageId, text }, replyingTo: null });
+    },
+    cancelEditingMessage: () => {
+      set({ editingMessage: null });
+    },
+    editMessage: async (threadId, messageId, text) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const message = await editMessageAction(threadId, messageId, trimmed);
+      set((state) => ({
+        threads: state.threads.map((thread) =>
+          thread.id === threadId ? replaceMessage(thread, message) : thread,
+        ),
+        editingMessage: null,
+      }));
+    },
+    deleteMessage: async (threadId, messageId) => {
+      await deleteMessageAction(threadId, messageId);
+      set((state) => ({
+        threads: state.threads.map((thread) =>
+          thread.id === threadId ? removeMessage(thread, messageId) : thread,
+        ),
+      }));
+    },
+    startReplyingToMessage: (threadId, messageId, senderName, text, hasAttachment) => {
+      set({
+        replyingTo: { threadId, messageId, senderName, text, hasAttachment },
+        editingMessage: null,
+      });
+    },
+    cancelReplyingToMessage: () => {
+      set({ replyingTo: null });
+    },
+    forwardMessage: async (sourceThreadId, messageId, targetThreadId) => {
+      const message = await forwardMessageAction(sourceThreadId, messageId, targetThreadId);
+      set((state) => ({
+        threads: state.threads.map((thread) =>
+          thread.id === targetThreadId
             ? { ...thread, messages: [...thread.messages, message], unread: undefined }
             : thread,
         ),
-        replyingTo: null,
       }));
-      return;
-    }
-
-    // Черновик (см. `draftTarget`) — диалога ещё нет нигде, кроме UI этой
-    // вкладки. Заводим его именно сейчас, вместе с первым сообщением, а не
-    // раньше — до этого момента у собеседника не должно появиться ни одной
-    // записи о переписке.
-    const target = get().draftTarget;
-    if (!target) return;
-    const thread = await getOrCreateDirectThread(target.id);
-    const message = await sendMessageAction(thread.id, trimmed, files);
-    set((state) => ({
-      threads: [{ ...thread, messages: [...thread.messages, message] }, ...state.threads],
-      activeThreadId: thread.id,
-      draftTarget: null,
-    }));
-  },
-  setActiveThread: (threadId) => {
-    // Явный выбор активного диалога (в т.ч. `null` — закрытие чата) всегда
-    // выигрывает у незавершённого черновика и незаконченного редактирования/ответа.
-    set({
-      activeThreadId: threadId,
-      draftTarget: null,
-      editingMessage: null,
-      replyingTo: null,
-    });
-    if (threadId) void get().markRead(threadId);
-  },
-  openDirectThreadWith: (target) => {
-    // Только строго 1:1-диалог с этим человеком — групповой диалог, в
-    // котором он тоже состоит, не подходит: «Написать» с карточки друга
-    // должно открывать личную переписку, а не первую попавшуюся группу.
-    const existing = get().threads.find(
-      (thread) => !thread.isGroup && thread.participants[0]?.id === target.id,
-    );
-    if (existing) {
-      get().setActiveThread(existing.id);
-      return;
-    }
-
-    // Ни запроса к backend, ни записи в БД — только локальный черновик,
-    // пока не отправлено первое сообщение (см. `sendMessage`).
-    set({ activeThreadId: null, draftTarget: target });
-  },
-  markRead: async (threadId) => {
-    set((state) => ({
-      threads: state.threads.map((thread) =>
-        thread.id === threadId ? { ...thread, unread: undefined } : thread,
-      ),
-    }));
-    await markThreadRead(threadId).catch(() => undefined);
-  },
-  addParticipant: async (threadId, userId) => {
-    // Возвращённый диалог — не обязательно тот же `threadId`: если исходный
-    // диалог был 1:1, backend не мутирует личную переписку, а создаёт новый
-    // групповой Thread (см. `ThreadsService.addParticipant`) — тогда его
-    // здесь ещё нет, дописываем в начало списка, а не ищем по старому id.
-    const thread = await addParticipantAction(threadId, userId);
-    set((state) => {
-      const exists = state.threads.some((existing) => existing.id === thread.id);
-      return {
-        threads: exists
-          ? state.threads.map((existing) => (existing.id === thread.id ? thread : existing))
-          : [thread, ...state.threads],
-      };
-    });
-    get().setActiveThread(thread.id);
-  },
-  startEditingMessage: (threadId, messageId, text) => {
-    set({ editingMessage: { threadId, messageId, text }, replyingTo: null });
-  },
-  cancelEditingMessage: () => {
-    set({ editingMessage: null });
-  },
-  editMessage: async (threadId, messageId, text) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    const message = await editMessageAction(threadId, messageId, trimmed);
-    set((state) => ({
-      threads: state.threads.map((thread) =>
-        thread.id === threadId ? replaceMessage(thread, message) : thread,
-      ),
-      editingMessage: null,
-    }));
-  },
-  deleteMessage: async (threadId, messageId) => {
-    await deleteMessageAction(threadId, messageId);
-    set((state) => ({
-      threads: state.threads.map((thread) =>
-        thread.id === threadId ? removeMessage(thread, messageId) : thread,
-      ),
-    }));
-  },
-  startReplyingToMessage: (threadId, messageId, senderName, text, hasAttachment) => {
-    set({
-      replyingTo: { threadId, messageId, senderName, text, hasAttachment },
-      editingMessage: null,
-    });
-  },
-  cancelReplyingToMessage: () => {
-    set({ replyingTo: null });
-  },
-  forwardMessage: async (sourceThreadId, messageId, targetThreadId) => {
-    const message = await forwardMessageAction(sourceThreadId, messageId, targetThreadId);
-    set((state) => ({
-      threads: state.threads.map((thread) =>
-        thread.id === targetThreadId
-          ? { ...thread, messages: [...thread.messages, message], unread: undefined }
-          : thread,
-      ),
-    }));
-  },
-  pinMessage: async (threadId, messageId) => {
-    const thread = await pinMessageAction(threadId, messageId);
-    set((state) => ({
-      threads: state.threads.map((existing) => (existing.id === threadId ? thread : existing)),
-    }));
-  },
-  unpinMessage: async (threadId, messageId) => {
-    const thread = await unpinMessageAction(threadId, messageId);
-    set((state) => ({
-      threads: state.threads.map((existing) => (existing.id === threadId ? thread : existing)),
-    }));
-  },
-  receiveParticipantAdded: (threadId, participant) => {
-    const hasThread = get().threads.some((thread) => thread.id === threadId);
-    if (!hasThread) {
-      // Диалога ещё нет локально — значит, добавили меня самого, и у меня
-      // нет базового объекта диалога, чтобы просто дописать участника.
-      void get().loadThreads();
-      return;
-    }
-    set((state) => ({
-      threads: state.threads.map((thread) => {
-        if (thread.id !== threadId) return thread;
-        if (thread.participants.some((existing) => existing.id === participant.id)) return thread;
-        const participants = [
-          ...thread.participants,
-          {
-            id: participant.id,
-            name: participant.name,
-            initials: getInitials(participant.name),
-            avatarUrl: participant.avatarUrl,
-          },
-        ];
-        const name = displayNameFor(participants);
-        return {
-          ...thread,
-          participants,
-          isGroup: true,
-          name,
-          initials: getInitials(name),
-          // Стало групповым (2+ участника) — единого аватара больше нет.
-          avatarUrl: null,
-        };
-      }),
-    }));
-  },
-  receiveMessage: (threadId, message) => {
-    if (!get().threads.some((thread) => thread.id === threadId)) {
-      // Первое сообщение от того, с кем раньше не переписывались (диалог
-      // создан только что, на стороне отправителя — см. `sendMessage`
-      // выше) — у меня в сторе его ещё нет. Тот же приём, что и в
-      // `receiveParticipantAdded`: честно перечитываем список через REST,
-      // а не пытаемся собрать `Thread` из одного сигнала (в payload нет
-      // даже имени/аватара собеседника — только текст сообщения).
-      void get().loadThreads();
-      return;
-    }
-    set((state) => {
-      const isOpen = state.activeThreadId === threadId;
-      return {
+    },
+    pinMessage: async (threadId, messageId) => {
+      const thread = await pinMessageAction(threadId, messageId);
+      set((state) => ({
+        threads: state.threads.map((existing) => (existing.id === threadId ? thread : existing)),
+      }));
+    },
+    unpinMessage: async (threadId, messageId) => {
+      const thread = await unpinMessageAction(threadId, messageId);
+      set((state) => ({
+        threads: state.threads.map((existing) => (existing.id === threadId ? thread : existing)),
+      }));
+    },
+    receiveParticipantAdded: (threadId, participant) => {
+      const hasThread = get().threads.some((thread) => thread.id === threadId);
+      if (!hasThread) {
+        // Диалога ещё нет локально — значит, добавили меня самого, и у меня
+        // нет базового объекта диалога, чтобы просто дописать участника.
+        void refreshThreadsQuietly();
+        return;
+      }
+      set((state) => ({
         threads: state.threads.map((thread) => {
           if (thread.id !== threadId) return thread;
-          // Reconnect-catchup (`loadThreads()` на `connect`) и live-событие
-          // могут доставить одно и то же сообщение дважды — id спасает.
-          if (thread.messages.some((existing) => existing.id === message.id)) return thread;
+          if (thread.participants.some((existing) => existing.id === participant.id)) return thread;
+          const participants = [
+            ...thread.participants,
+            {
+              id: participant.id,
+              name: participant.name,
+              initials: getInitials(participant.name),
+              avatarUrl: participant.avatarUrl,
+            },
+          ];
+          const name = displayNameFor(participants);
           return {
             ...thread,
-            messages: [...thread.messages, message],
-            unread: isOpen ? undefined : (thread.unread ?? 0) + 1,
+            participants,
+            isGroup: true,
+            name,
+            initials: getInitials(name),
+            // Стало групповым (2+ участника) — единого аватара больше нет.
+            avatarUrl: null,
           };
         }),
-      };
-    });
-    if (get().activeThreadId === threadId) {
-      void markThreadRead(threadId).catch(() => undefined);
-    }
-  },
-  receiveMessageEdit: (threadId, message) => {
-    set((state) => ({
-      threads: state.threads.map((thread) =>
-        thread.id === threadId ? replaceMessage(thread, message) : thread,
-      ),
-    }));
-  },
-  receiveMessageDeleted: (threadId, messageId) => {
-    set((state) => ({
-      threads: state.threads.map((thread) =>
-        thread.id === threadId ? removeMessage(thread, messageId) : thread,
-      ),
-    }));
-  },
-  receiveThreadUpdate: (thread) => {
-    const hasThread = get().threads.some((existing) => existing.id === thread.id);
-    if (!hasThread) return;
-    set((state) => ({
-      threads: state.threads.map((existing) => (existing.id === thread.id ? thread : existing)),
-    }));
-  },
-}));
+      }));
+    },
+    receiveMessage: (threadId, message) => {
+      if (!get().threads.some((thread) => thread.id === threadId)) {
+        // Первое сообщение от того, с кем раньше не переписывались (диалог
+        // создан только что, на стороне отправителя — см. `sendMessage`
+        // выше) — у меня в сторе его ещё нет. Тот же приём, что и в
+        // `receiveParticipantAdded`: честно перечитываем список через REST,
+        // а не пытаемся собрать `Thread` из одного сигнала (в payload нет
+        // даже имени/аватара собеседника — только текст сообщения).
+        void refreshThreadsQuietly();
+        return;
+      }
+      set((state) => {
+        const isOpen = state.activeThreadId === threadId;
+        return {
+          threads: state.threads.map((thread) => {
+            if (thread.id !== threadId) return thread;
+            // Reconnect-catchup (`loadThreads()` на `connect`) и live-событие
+            // могут доставить одно и то же сообщение дважды — id спасает.
+            if (thread.messages.some((existing) => existing.id === message.id)) return thread;
+            return {
+              ...thread,
+              messages: [...thread.messages, message],
+              unread: isOpen ? undefined : (thread.unread ?? 0) + 1,
+            };
+          }),
+        };
+      });
+      if (get().activeThreadId === threadId) {
+        void markThreadRead(threadId).catch(() => undefined);
+      }
+    },
+    receiveMessageEdit: (threadId, message) => {
+      set((state) => ({
+        threads: state.threads.map((thread) =>
+          thread.id === threadId ? replaceMessage(thread, message) : thread,
+        ),
+      }));
+    },
+    receiveMessageDeleted: (threadId, messageId) => {
+      set((state) => ({
+        threads: state.threads.map((thread) =>
+          thread.id === threadId ? removeMessage(thread, messageId) : thread,
+        ),
+      }));
+    },
+    receiveThreadUpdate: (thread) => {
+      const hasThread = get().threads.some((existing) => existing.id === thread.id);
+      if (!hasThread) return;
+      set((state) => ({
+        threads: state.threads.map((existing) => (existing.id === thread.id ? thread : existing)),
+      }));
+    },
+    ensureThread: (thread) => {
+      set((state) =>
+        state.threads.some((existing) => existing.id === thread.id)
+          ? state
+          : { threads: [thread, ...state.threads] },
+      );
+    },
+  };
+});
 
 export function selectUnreadThreadCount(state: ThreadStore): number {
   return state.threads.reduce((total, thread) => total + (thread.unread ?? 0), 0);

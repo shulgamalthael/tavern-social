@@ -50,6 +50,22 @@ function describe(item: ToastItem): {
         title: item.name,
         body: 'принял(а) вашу заявку в друзья',
       };
+    case 'subscription-request':
+      return {
+        authorId: item.senderId,
+        initials: item.senderInitials,
+        avatarUrl: item.senderAvatarUrl,
+        title: item.senderName,
+        body: 'хочет подписаться на вашу страницу',
+      };
+    case 'subscription-accepted':
+      return {
+        authorId: item.actorId,
+        initials: item.initials,
+        avatarUrl: item.avatarUrl,
+        title: item.name,
+        body: 'одобрил(а) вашу заявку на подписку',
+      };
     case 'post-like': {
       const target = item.hasImage ? 'вашу фотографию' : 'вашу запись';
       return {
@@ -158,7 +174,7 @@ export function NotificationToast({
         </span>
       </div>
 
-      {item.kind === 'friend-request' && (
+      {(item.kind === 'friend-request' || item.kind === 'subscription-request') && (
         <div className={styles['toast__actions']}>
           <Button
             variant="primary"

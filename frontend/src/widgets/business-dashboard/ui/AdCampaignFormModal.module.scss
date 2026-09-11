@@ -1,0 +1,32 @@
+.checkboxGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkboxOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  color: var(--tavern-ink);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:has(input:checked) {
+    border-color: var(--tavern-accent);
+    background: color-mix(in srgb, var(--tavern-accent) 10%, transparent);
+  }
+}
+
+.row {
+  display: flex;
+  gap: 14px;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}

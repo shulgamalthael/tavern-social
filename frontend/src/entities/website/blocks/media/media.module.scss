@@ -116,3 +116,563 @@
   font-weight: 700;
   color: var(--site-text);
 }
+
+// --- Image carousel ------------------------------------------------------
+
+.carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.carousel__stage {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+}
+
+.carousel__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.carousel__caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 16px 14px;
+  background: linear-gradient(to top, rgb(0 0 0 / 55%), transparent);
+  color: #fff;
+  font-size: 13.5px;
+}
+
+.carousel__arrow {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 85%);
+  color: #111;
+  cursor: pointer;
+  transform: translateY(-50%);
+
+  &:hover {
+    background: #fff;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.carousel__arrow--prev {
+  right: auto;
+  left: 12px;
+
+  svg {
+    transform: rotate(180deg);
+  }
+}
+
+.carousel__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.carousel__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--site-border);
+  cursor: pointer;
+}
+
+.carousel__dot--active {
+  background: var(--site-primary);
+}
+
+.carousel__thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.carousel__thumb {
+  flex-shrink: 0;
+  overflow: hidden;
+  width: 64px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: calc(var(--site-radius) * 0.6);
+  background: none;
+  cursor: pointer;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.carousel__thumb--active {
+  border-color: var(--site-primary);
+}
+
+// --- Before / after --------------------------------------------------------
+
+.beforeafter {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--site-radius);
+  cursor: ew-resize;
+  // `pan-y`, не `none` — разделитель тянут только по горизонтали, вертикальный
+  // скролл страницы пальцем, начатый прямо на фото, должен работать как
+  // обычно (`none` заблокировал бы прокрутку всей страницы в этом месте).
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.beforeafter__image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.beforeafter__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #fff;
+  transform: translateX(-50%);
+
+  &:focus-visible {
+    outline: 2px solid var(--site-primary);
+    outline-offset: 2px;
+  }
+}
+
+.beforeafter__handle-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 25%);
+  transform: translate(-50%, -50%);
+
+  &::before {
+    content: '◂▸';
+    margin: auto;
+    color: #111;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+}
+
+.beforeafter__label--before,
+.beforeafter__label--after {
+  position: absolute;
+  top: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 55%);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.beforeafter__label--before {
+  left: 12px;
+}
+
+.beforeafter__label--after {
+  right: 12px;
+}
+
+.beforeafter-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.beforeafter-tabs__image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--site-radius);
+  object-fit: cover;
+}
+
+.beforeafter-tabs__switch {
+  display: flex;
+  align-self: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--site-surface);
+  border: 1px solid var(--site-border);
+}
+
+.beforeafter-tabs__button {
+  padding: 7px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--site-muted);
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.beforeafter-tabs__button--active {
+  background: var(--site-primary);
+  color: var(--site-bg);
+}
+
+// --- Gallery with lightbox -------------------------------------------------
+
+.lightbox-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 3), minmax(0, 1fr));
+  gap: 12px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lightbox-masonry {
+  columns: var(--grid-columns, 3);
+  column-gap: 12px;
+
+  @media (max-width: 640px) {
+    columns: 2;
+  }
+}
+
+.lightbox-thumb {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+  cursor: zoom-in;
+
+  &:focus-visible {
+    outline: 2px solid var(--site-primary);
+    outline-offset: 2px;
+  }
+}
+
+.lightbox-thumb--masonry {
+  break-inside: avoid;
+  margin-bottom: 12px;
+}
+
+.lightbox-thumb__image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.lightbox-thumb__image--natural {
+  aspect-ratio: auto;
+  height: auto;
+}
+
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 88%);
+}
+
+.lightbox-full {
+  display: block;
+  max-width: min(90vw, 900px);
+  max-height: 80vh;
+  border-radius: 4px;
+  object-fit: contain;
+  cursor: default;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  cursor: pointer;
+
+  &:hover {
+    background: rgb(255 255 255 / 22%);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  cursor: pointer;
+  transform: translateY(-50%);
+
+  &:hover {
+    background: rgb(255 255 255 / 22%);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.lightbox-nav--prev {
+  right: auto;
+  left: 20px;
+
+  svg {
+    transform: rotate(180deg);
+  }
+}
+
+.lightbox-caption {
+  position: absolute;
+  bottom: 24px;
+  left: 0;
+  right: 0;
+  color: rgb(255 255 255 / 85%);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+// --- Image hotspot -------------------------------------------------------
+
+// `aspect-ratio` фиксирован ЗАРАНЕЕ (не `height: auto` у самой картинки) —
+// иначе до полной загрузки фото контейнер схлопывается в 0 высоты, а метки
+// (позиционированные в процентах ОТ РАЗМЕРА КОНТЕЙНЕРА) на миг оказываются
+// не там, где нарисовано фото, а поверх следующего по порядку блока
+// страницы — воспроизводимо поймано реальным Playwright-кликом:
+// клик по метке попадал в совершенно другой блок ниже, пока фото ещё
+// грузилось (см. AI_PLATFORM_ROADMAP.md, партия виджетов №5).
+.hotspot {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--site-radius);
+}
+
+.hotspot__image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hotspot__marker-wrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.hotspot__marker {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--site-primary);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 35%);
+  animation: hotspot-pulse 2.2s ease-in-out infinite;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+.hotspot__marker--open {
+  transform: rotate(45deg);
+  animation: none;
+}
+
+@keyframes hotspot-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 2px 10px rgb(0 0 0 / 35%),
+      0 0 0 0 rgb(255 255 255 / 45%);
+  }
+  50% {
+    box-shadow:
+      0 2px 10px rgb(0 0 0 / 35%),
+      0 0 0 8px rgb(255 255 255 / 0%);
+  }
+}
+
+.hotspot__panel {
+  padding: 16px;
+}
+
+.hotspot__content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hotspot__label {
+  font-family: var(--site-font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--site-text);
+}
+
+.hotspot__description {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+// --- Video gallery -------------------------------------------------------
+
+.video-gallery {
+  display: grid;
+  grid-template-columns: repeat(var(--video-gallery-columns, 2), minmax(0, 1fr));
+  gap: 20px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// --- Audio embed ---------------------------------------------------------
+
+.audio-embed {
+  margin: 0;
+
+  iframe {
+    width: 100%;
+    border: 0;
+    border-radius: var(--site-radius);
+  }
+}
+
+// --- Image with caption overlay -------------------------------------------
+
+.image-caption {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--site-radius);
+}
+
+.image-caption__image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-caption__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 28px;
+  background: linear-gradient(to top, rgb(0 0 0 / 65%), transparent 60%);
+  color: #fff;
+  text-align: left;
+}
+
+.image-caption__overlay--center {
+  align-items: center;
+  text-align: center;
+}
+
+.image-caption__overlay--right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.image-caption__eyebrow {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.image-caption__text {
+  margin: 0;
+  max-width: 480px;
+  font-family: var(--site-font-heading);
+  font-size: clamp(18px, 3vw, 26px);
+  font-weight: 700;
+  line-height: 1.3;
+}

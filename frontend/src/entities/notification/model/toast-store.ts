@@ -39,6 +39,24 @@ export type ToastItem =
   | {
       id: string;
       key: string;
+      kind: 'subscription-request';
+      senderId: string;
+      senderName: string;
+      senderInitials: string;
+      senderAvatarUrl: string | null;
+    }
+  | {
+      id: string;
+      key: string;
+      kind: 'subscription-accepted';
+      actorId: string;
+      name: string;
+      initials: string;
+      avatarUrl: string | null;
+    }
+  | {
+      id: string;
+      key: string;
       kind: 'post-like' | 'post-repost';
       notificationId: string;
       actorId: string;

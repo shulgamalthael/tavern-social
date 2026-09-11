@@ -205,7 +205,7 @@ function layoutStyle(blockStyle: BlockStyle, viewport: Viewport): CSSProperties 
  * grid-item'ом родителя). Безопасный no-op на любом родителе, который сам
  * не flex/grid — браузер просто игнорирует `flex`/`align-self` вне
  * flex/grid-контекста. */
-function childLayoutStyle(blockStyle: BlockStyle): CSSProperties {
+function childLayoutStyle(blockStyle: BlockStyle, viewport: Viewport): CSSProperties {
   const sizing: CSSProperties =
     blockStyle.grow === 'fixed' && blockStyle.fixedWidth !== undefined
       ? { flex: `0 0 ${blockStyle.fixedWidth}px` }
@@ -217,7 +217,24 @@ function childLayoutStyle(blockStyle: BlockStyle): CSSProperties {
     ? { position: 'sticky', top: `${blockStyle.stickyOffset ?? 0}px`, alignSelf: 'flex-start' }
     : {};
 
-  return { ...sizing, ...stickyStyle };
+  // Bento/asymmetric-сетка — безопасный no-op вне grid-родителя (браузер
+  // просто игнорирует `grid-column`/`grid-row` вне grid-контекста).
+  const columnSpan = readResponsiveProp<number | undefined>(
+    blockStyle.gridColumnSpan,
+    viewport,
+    undefined,
+  );
+  const rowSpan = readResponsiveProp<number | undefined>(
+    blockStyle.gridRowSpan,
+    viewport,
+    undefined,
+  );
+  const gridSpanStyle: CSSProperties = {
+    ...(columnSpan && columnSpan > 1 ? { gridColumn: `span ${columnSpan}` } : {}),
+    ...(rowSpan && rowSpan > 1 ? { gridRow: `span ${rowSpan}` } : {}),
+  };
+
+  return { ...sizing, ...stickyStyle, ...gridSpanStyle };
 }
 
 /** Сторона отступа в режиме «Дополнительно» (`blockStyle.customPadding`,
@@ -295,7 +312,7 @@ export function computeBlockWrapperStyle(
   const left = resolveSide(blockStyle.paddingLeft, viewport, blockStyle.customPadding, paddingX);
 
   const outer: CSSProperties = {
-    ...childLayoutStyle(blockStyle),
+    ...childLayoutStyle(blockStyle, viewport),
     background: backgroundValue(blockStyle),
     // Переобъявляем `color` тем же `--site-text`, что уже наследовался бы и
     // без этой строки НА САМОМ ДЕЛЕ ЖЕ ЗНАЧЕНИИ — но `color: inherit` внутри
@@ -314,6 +331,15 @@ export function computeBlockWrapperStyle(
     marginBottom: spacingToPx(marginBottom),
     ...borderAndShadowStyle(blockStyle),
     ...contrastOverrides(blockStyle),
+    // "Продвинутый CSS" (AI_PLATFORM_ROADMAP.md §78) — последним, так что
+    // явное продвинутое значение (например, свой borderRadius для "блоб"-
+    // формы) осознанно побеждает над пресетами выше, если оба заданы.
+    // Уже провалидированные значения (backend `buildValidatedStyle`) — здесь
+    // просто передаются в объект `style` React, никогда не собираются в
+    // строку CSS/`<style>` — см. `BlockStyle.advanced`'s комментарий в
+    // `types.ts` про то, почему это структурно безопасно даже без повторной
+    // проверки на этой стороне.
+    ...(blockStyle.advanced as CSSProperties | undefined),
   };
 
   const inner: CSSProperties = {

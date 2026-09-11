@@ -6,6 +6,8 @@ export const ANALYTICS_EVENT_TYPES = [
   'order_created',
   'appointment_created',
   'form_submission',
+  'ad_impression',
+  'ad_click',
 ] as const;
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
 

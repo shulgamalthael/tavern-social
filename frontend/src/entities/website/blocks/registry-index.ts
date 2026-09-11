@@ -23,3 +23,4 @@ import './blog';
 import './forms';
 import './utility';
 import './web3';
+import './advertising';

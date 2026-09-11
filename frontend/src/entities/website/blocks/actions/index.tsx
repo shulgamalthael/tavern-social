@@ -10,7 +10,9 @@ import { ButtonClickIcon, ExternalLinkIcon } from '@/shared/ui/icons';
 import { registerBlock, type BlockRendererProps, type FieldSchema } from '../../model/registry';
 import { EMPTY_LINK_TARGET, resolveLinkHref } from '../../model/resolve-link';
 import type { LinkTarget, WebsitePage } from '../../model/types';
+import { EditableText } from '../../ui/EditableText';
 import { resolveIconChoice } from '../shared/icon-choices';
+import { patchListItem } from '../shared/patch-list-item';
 import { SectionHeading } from '../shared/SectionHeading';
 import styles from './actions.module.scss';
 
@@ -43,6 +45,10 @@ interface SiteButtonRenderProps extends SiteButtonProps {
    * реально сработать (положить в корзину/открыть форму записи), тот же
    * принцип, что уже применён к `ProductCard`/`ServiceCard`. */
   isEditing?: boolean;
+  /** Инлайн-редактирование текста кнопки на холсте (§67) — безопасно даже
+   * для варианта, рендерящегося как `<a href>` (см. `CanvasBlock.tsx`'s
+   * `onClickCapture`, подавляющий настоящую навигацию внутри билдера). */
+  onEditLabel?: (value: string) => void;
 }
 
 /** Кнопка «В корзину» для конкретного, выбранного в инспекторе товара — не
@@ -54,7 +60,12 @@ interface SiteButtonRenderProps extends SiteButtonProps {
  * стоило: каталоги малы (см. ROADMAP.md §8 Phase 14 — измерено, не
  * предположено), а не полноценная витрина, где N+1-подобная загрузка была
  * бы реальной проблемой. */
-function AddToCartButton({
+/** Экспортирована (в отличие от большинства остальных внутренних
+ * компонентов этого файла) — переиспользуется `entitysearch`'s движком
+ * (`blocks/navigation/index.tsx`) для действия «В корзину» прямо на
+ * карточке результата поиска, тот же компонент, что и у обычной кнопки с
+ * `url.type === 'addToCart'`, не копия его логики. */
+export function AddToCartButton({
   productId,
   label,
   variant,
@@ -62,6 +73,7 @@ function AddToCartButton({
   icon,
   businessId,
   isEditing,
+  onEditLabel,
 }: {
   productId: string;
   label: string;
@@ -70,6 +82,7 @@ function AddToCartButton({
   icon?: string;
   businessId: string;
   isEditing?: boolean;
+  onEditLabel?: (value: string) => void;
 }) {
   const fetcher = useCallback(() => getPublicProducts(businessId), [businessId]);
   const { data } = useAsyncData(fetcher);
@@ -90,7 +103,7 @@ function AddToCartButton({
     });
   }
 
-  if (!label) return null;
+  if (!label && !isEditing) return null;
 
   return (
     <button
@@ -103,11 +116,19 @@ function AddToCartButton({
     >
       {/* eslint-disable-next-line react-hooks/static-components -- см. SiteButton ниже, тот же приём */}
       {Icon && <Icon className={styles.button__icon} />}
-      {!isEditing && data && !product
-        ? 'Товар удалён'
-        : !isEditing && isOutOfStock
-          ? 'Нет в наличии'
-          : label}
+      {!isEditing && data && !product ? (
+        'Товар удалён'
+      ) : !isEditing && isOutOfStock ? (
+        'Нет в наличии'
+      ) : (
+        <EditableText
+          as="span"
+          value={label}
+          editable={Boolean(isEditing && onEditLabel)}
+          onCommit={onEditLabel}
+          placeholder="Текст кнопки"
+        />
+      )}
     </button>
   );
 }
@@ -116,7 +137,9 @@ function AddToCartButton({
  * же принцип, что и `AddToCartButton` выше, только открывает `BookingModal`
  * вместо похода в корзину (у записи корзины нет, см. `ServiceCard` в
  * `blocks/booking/index.tsx`, откуда этот приём взят один в один). */
-function BookAppointmentButton({
+/** Экспортирована — см. `AddToCartButton`'s комментарий выше, тот же приём
+ * для действия «Записаться». */
+export function BookAppointmentButton({
   serviceId,
   label,
   variant,
@@ -124,6 +147,7 @@ function BookAppointmentButton({
   icon,
   businessId,
   isEditing,
+  onEditLabel,
 }: {
   serviceId: string;
   label: string;
@@ -132,6 +156,7 @@ function BookAppointmentButton({
   icon?: string;
   businessId: string;
   isEditing?: boolean;
+  onEditLabel?: (value: string) => void;
 }) {
   const fetcher = useCallback(() => getPublicServices(businessId), [businessId]);
   const { data } = useAsyncData(fetcher);
@@ -140,7 +165,7 @@ function BookAppointmentButton({
 
   const service: PublicService | undefined = data?.find((item) => item.id === serviceId);
 
-  if (!label) return null;
+  if (!label && !isEditing) return null;
 
   return (
     <>
@@ -156,7 +181,17 @@ function BookAppointmentButton({
       >
         {/* eslint-disable-next-line react-hooks/static-components -- см. SiteButton ниже, тот же приём */}
         {Icon && <Icon className={styles.button__icon} />}
-        {!isEditing && data && !service ? 'Услуга удалена' : label}
+        {!isEditing && data && !service ? (
+          'Услуга удалена'
+        ) : (
+          <EditableText
+            as="span"
+            value={label}
+            editable={Boolean(isEditing && onEditLabel)}
+            onCommit={onEditLabel}
+            placeholder="Текст кнопки"
+          />
+        )}
       </button>
 
       {isBooking && service && (
@@ -187,6 +222,7 @@ function SiteButton({
   pages,
   businessId,
   isEditing,
+  onEditLabel,
 }: SiteButtonRenderProps) {
   const Icon = icon ? resolveIconChoice(icon) : null;
 
@@ -200,6 +236,7 @@ function SiteButton({
         icon={icon}
         businessId={businessId}
         isEditing={isEditing}
+        onEditLabel={onEditLabel}
       />
     );
   }
@@ -214,11 +251,13 @@ function SiteButton({
         icon={icon}
         businessId={businessId}
         isEditing={isEditing}
+        onEditLabel={onEditLabel}
       />
     );
   }
 
-  if (!label) return null;
+  const editable = Boolean(isEditing && onEditLabel);
+  if (!label && !editable) return null;
 
   return (
     <a
@@ -231,7 +270,13 @@ function SiteButton({
     >
       {/* eslint-disable-next-line react-hooks/static-components -- resolveIconChoice читает стабильную ссылку из статической карты (см. icon-choices.ts), не создаёт новый компонент на каждый рендер */}
       {Icon && <Icon className={styles.button__icon} />}
-      {label}
+      <EditableText
+        as="span"
+        value={label}
+        editable={editable}
+        onCommit={onEditLabel}
+        placeholder="Текст кнопки"
+      />
     </a>
   );
 }
@@ -277,9 +322,16 @@ function ButtonRenderer({
   pages,
   business,
   isEditing,
+  onEditProp,
 }: BlockRendererProps<SiteButtonProps>) {
   return (
-    <SiteButton {...props} pages={pages} businessId={business.businessId} isEditing={isEditing} />
+    <SiteButton
+      {...props}
+      pages={pages}
+      businessId={business.businessId}
+      isEditing={isEditing}
+      onEditLabel={(value) => onEditProp?.('label', value)}
+    />
   );
 }
 
@@ -317,6 +369,7 @@ function ButtonGroupRenderer({
   pages,
   business,
   isEditing,
+  onEditProp,
 }: BlockRendererProps<ButtonGroupProps>) {
   return (
     <div className={styles['button-group']}>
@@ -329,6 +382,9 @@ function ButtonGroupRenderer({
           pages={pages}
           businessId={business.businessId}
           isEditing={isEditing}
+          onEditLabel={(value) =>
+            onEditProp?.('buttons', patchListItem(props.buttons, index, 'label', value))
+          }
         />
       ))}
     </div>
@@ -383,8 +439,9 @@ interface LinkProps {
   target: '_self' | '_blank';
 }
 
-function LinkRenderer({ props, pages }: BlockRendererProps<LinkProps>) {
-  if (!props.label) return null;
+function LinkRenderer({ props, pages, isEditing, onEditProp }: BlockRendererProps<LinkProps>) {
+  const editable = Boolean(isEditing && onEditProp);
+  if (!props.label && !editable) return null;
   return (
     <a
       href={resolveLinkHref(props.url, pages)}
@@ -392,7 +449,13 @@ function LinkRenderer({ props, pages }: BlockRendererProps<LinkProps>) {
       rel={props.target === '_blank' ? 'noopener noreferrer' : undefined}
       className={styles.link}
     >
-      {props.label}
+      <EditableText
+        as="span"
+        value={props.label}
+        editable={editable}
+        onCommit={(value) => onEditProp?.('label', value)}
+        placeholder="Текст ссылки"
+      />
     </a>
   );
 }
@@ -437,13 +500,19 @@ function CtaRenderer({
   pages,
   business,
   isEditing,
+  onEditProp,
 }: BlockRendererProps<CtaProps>): ReactNode {
+  const editable = Boolean(isEditing && onEditProp);
   return (
     <div className={styles.cta}>
       <SectionHeading
         eyebrow={props.eyebrow}
         heading={props.heading}
         description={props.description}
+        editable={editable}
+        onEditEyebrow={(value) => onEditProp?.('eyebrow', value)}
+        onEditHeading={(value) => onEditProp?.('heading', value)}
+        onEditDescription={(value) => onEditProp?.('description', value)}
       />
       <SiteButton
         label={props.buttonLabel}
@@ -454,6 +523,7 @@ function CtaRenderer({
         pages={pages}
         businessId={business.businessId}
         isEditing={isEditing}
+        onEditLabel={(value) => onEditProp?.('buttonLabel', value)}
       />
     </div>
   );

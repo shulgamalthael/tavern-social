@@ -85,6 +85,7 @@ export interface UpdateSettingsInput {
   showPresence: boolean;
   allowStrangerInvites: boolean;
   morningDigest: boolean;
+  isPrivate: boolean;
 }
 
 /** Сохраняет тумблеры приватности из «Настроек» — see widgets/settings. */

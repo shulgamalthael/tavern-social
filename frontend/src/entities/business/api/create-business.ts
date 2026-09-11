@@ -14,6 +14,9 @@ export interface CreateBusinessInput {
    * CURRENCY`, если не передана) — но `CreateBusinessForm.tsx` всегда шлёт
    * выбранное значение (Currency System, ROADMAP.md §8). */
   currency?: string;
+  /** Только `AdvertiserSignupForm.tsx` (`/advertise/new`) шлёт `true` — см.
+   * `Business.isAdvertiserOnly`'s комментарий в schema.prisma. */
+  isAdvertiserOnly?: boolean;
 }
 
 /** Создаёт бизнес и — на backend, одной транзакцией — пустой сайт вместе с

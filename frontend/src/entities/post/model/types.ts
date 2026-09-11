@@ -65,5 +65,13 @@ export interface Post {
   dislikes: number;
   comments: number;
   reposts: number;
+  /** Продвижение (Instagram-style boost, AI_PLATFORM_ROADMAP.md §73) —
+   * `true`, пока у поста есть оплаченное продвижение с `promotedUntil` в
+   * будущем. Это единственная причина, по которой пост может оказаться в
+   * ленте у того, кто не друг автору и не состоит в его сообществе (см.
+   * backend `PostsService.listFeed`). */
+  isPromoted: boolean;
+  /** `null`, если `isPromoted: false`. */
+  promotedUntil: string | null;
   repostOf?: RepostSummary;
 }

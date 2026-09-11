@@ -31,6 +31,41 @@ export interface ReplyTo {
   hasAttachment: boolean;
 }
 
+/** Автор шаренного поста — верхний блок профиля (аватар/имя), публичен
+ * всегда (§103), показывается даже когда сам контент недоступен (см.
+ * `SharedPost`'s `restricted`-ветку). */
+export interface SharedPostAuthor {
+  id: string;
+  name: string;
+  initials: string;
+  avatarUrl: string | null;
+}
+
+/** Превью шаренного поста — та же форма, что `RepostSummary`
+ * (`entities/post`), но независимая копия: боковой импорт между `entities`
+ * запрещён FSD (см. AGENTS.md). */
+export interface SharedPostPreview {
+  id: string;
+  author: SharedPostAuthor;
+  wallOwnerId: string | null;
+  text: string;
+  images: string[];
+}
+
+/** «Переслать пост в чат» — per-viewer (см. backend `SharedPostDto`'s
+ * комментарий): у двух разных получателей одного и того же сообщения может
+ * быть разный `status`, если доступ к посту у них разный (приватный
+ * профиль автора стены, §103). `restricted` — пост существует, но этому
+ * зрителю сейчас недоступен: `author` показываем (верхний блок публичен
+ * всегда), `text`/`images` — нет. `not_found` — защитный случай, почти
+ * недостижим (см. `Message.sharedPostId`'s `onDelete: SetNull` в backend
+ * — удалённый пост просто обнуляет ссылку, `sharedPost` целиком станет
+ * `null` на сообщении, а не примет этот статус). */
+export type SharedPost =
+  | { status: 'visible'; post: SharedPostPreview }
+  | { status: 'restricted'; author: SharedPostAuthor }
+  | { status: 'not_found' };
+
 export interface ChatMessage {
   /** Стабильный id — React-ключ и защита от дублей при live-доставке
    * поверх reconnect-catchup (см. `thread-store.ts`, `receiveMessage`). */
@@ -51,6 +86,7 @@ export interface ChatMessage {
   attachments: MessageAttachment[];
   forwardedFrom: ForwardedFrom | null;
   replyTo: ReplyTo | null;
+  sharedPost: SharedPost | null;
 }
 
 export interface ThreadParticipant {

@@ -1,0 +1,25 @@
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.breakdown__title {
+  margin-bottom: 2px;
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--tavern-ink);
+  font-size: 12.5px;
+}

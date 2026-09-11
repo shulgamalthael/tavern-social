@@ -22,6 +22,23 @@ export interface CurrentUser {
   tags: string[];
   avatarUrl: string | null;
   coverUrl: string | null;
+  /** Реальная аудитория (`entities/follow`), не друзья — считается на
+   * каждый запрос `/users/me`, не кэшируется на клиенте между обновлениями
+   * профиля. */
+  followersCount: number;
+  followingCount: number;
+  /** Общее число друзей — не то же самое, что длина списка друзей на
+   * странице профиля (тот обрезан, см. `ProfileFriendsCard`). */
+  friendsCount: number;
+  /** Тот же тумблер, что `PrivacySettings.isPrivate` (§103) — отдельное
+   * поле здесь, а не поход в `getMySettings()` при каждом рендере шапки/
+   * бейджей: обновляется через `applySettingsUpdate`
+   * (`current-user-context.tsx`) сразу после переключения на «Настройках»,
+   * без похода на сервер за свежим `CurrentUser` и без сокетов — это
+   * локальное состояние текущей вкладки, никому другому мгновенно видеть
+   * его не нужно (см. AGENTS.md, раздел про real-time: обычный CRUD, видимый
+   * только себе). */
+  isPrivate: boolean;
 }
 
 /** Поля профиля, которые пользователь может редактировать на странице
@@ -40,4 +57,5 @@ export interface PrivacySettings {
   showPresence: boolean;
   allowStrangerInvites: boolean;
   morningDigest: boolean;
+  isPrivate: boolean;
 }

@@ -1,0 +1,56 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 560px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.metricLabel {
+  color: var(--tavern-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metricValue {
+  color: var(--tavern-ink);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.categoryRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tavern-ink);
+  font-size: 13px;
+}
+
+.categoryBadge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.categoryBadgeSoft {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tavern-sunk);
+  color: var(--tavern-muted);
+  font-size: 11px;
+  font-weight: 700;
+}

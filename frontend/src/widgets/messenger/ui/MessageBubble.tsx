@@ -10,6 +10,7 @@ import { linkifyText } from '@/shared/lib/linkify-text';
 import { ImageLightbox } from '@/shared/ui/ImageLightbox';
 import { CloseIcon, EditIcon, FileIcon, ForwardIcon, PinIcon, ReplyIcon } from '@/shared/ui/icons';
 import type { ChatMessage } from '@/entities/thread';
+import { SharedPostCard } from './SharedPostCard';
 import styles from './MessageBubble.module.scss';
 
 /** Долгое нажатие на мобильном открывает то же меню, что и «···»/правый
@@ -90,7 +91,10 @@ export function MessageBubble({
   // (см. `is-emoji-only-text.ts`) — рендерится крупно, без пузыря, как в
   // Telegram/WhatsApp; готового набора картинок для настоящих стикеров нет.
   const isSticker =
-    message.attachments.length === 0 && !message.forwardedFrom && isEmojiOnlyText(message.text);
+    message.attachments.length === 0 &&
+    !message.forwardedFrom &&
+    !message.sharedPost &&
+    isEmojiOnlyText(message.text);
   const isSingleImage = imageAttachments.length === 1;
 
   const hasMenu = Boolean(
@@ -270,6 +274,10 @@ export function MessageBubble({
               <ForwardIcon />
               Переслано от {message.forwardedFrom.senderName}
             </button>
+          )}
+
+          {message.sharedPost && (
+            <SharedPostCard sharedPost={message.sharedPost} onAuthorClick={onAuthorClick} />
           )}
 
           {imageAttachments.length > 0 && (

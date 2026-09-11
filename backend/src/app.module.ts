@@ -10,11 +10,13 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { UploadsRetentionModule } from './infrastructure/uploads/uploads-retention.module';
 import { RealtimeModule } from './infrastructure/websocket/realtime.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AdvertisingModule } from './modules/advertising/advertising.module';
 import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { BusinessesModule } from './modules/businesses/businesses.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
+import { CreatorsModule } from './modules/creators/creators.module';
 import { DomainsModule } from './modules/domains/domains.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { GalleryModule } from './modules/gallery/gallery.module';
@@ -28,6 +30,7 @@ import { CustomWidgetsModule } from './modules/custom-widgets/custom-widgets.mod
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { FormSubmissionsModule } from './modules/form-submissions/form-submissions.module';
 import { MediaAssetsModule } from './modules/media-assets/media-assets.module';
+import { NativeAdsModule } from './modules/native-ads/native-ads.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ProductsModule } from './modules/products/products.module';
@@ -36,6 +39,8 @@ import { RulesModule } from './modules/rules/rules.module';
 import { ServicesModule } from './modules/services/services.module';
 import { Web3Module } from './modules/web3/web3.module';
 import { SearchModule } from './modules/search/search.module';
+import { StoriesModule } from './modules/stories/stories.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { ThreadsModule } from './modules/threads/threads.module';
 import { UsersModule } from './modules/users/users.module';
 import { WebsitesModule } from './modules/websites/websites.module';
@@ -60,9 +65,11 @@ import { WebsitesModule } from './modules/websites/websites.module';
     PostsModule,
     ThreadsModule,
     FriendsModule,
+    SubscriptionsModule,
     CommunitiesModule,
     GroupsModule,
     GalleryModule,
+    StoriesModule,
     SearchModule,
     AdminModule,
     BusinessesModule,
@@ -84,6 +91,9 @@ import { WebsitesModule } from './modules/websites/websites.module';
     CustomEntitiesModule,
     Web3Module,
     AiModule,
+    AdvertisingModule,
+    CreatorsModule,
+    NativeAdsModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

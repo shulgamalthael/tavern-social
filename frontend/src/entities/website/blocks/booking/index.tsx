@@ -101,7 +101,13 @@ function ServiceCard({ service, businessId, isEditing }: ServiceCardProps) {
   );
 }
 
-function ServiceGridRenderer({ props, business, isEditing }: BlockRendererProps<ServiceGridProps>) {
+function ServiceGridRenderer({
+  props,
+  business,
+  isEditing,
+  onEditProp,
+}: BlockRendererProps<ServiceGridProps>) {
+  const editable = Boolean(isEditing && onEditProp);
   const fetcher = useCallback(() => getPublicServices(business.businessId), [business.businessId]);
   const { status, data, error } = useAsyncData(fetcher);
 
@@ -149,6 +155,10 @@ function ServiceGridRenderer({ props, business, isEditing }: BlockRendererProps<
         eyebrow={props.eyebrow}
         heading={props.heading}
         description={props.description}
+        editable={editable}
+        onEditEyebrow={(value) => onEditProp?.('eyebrow', value)}
+        onEditHeading={(value) => onEditProp?.('heading', value)}
+        onEditDescription={(value) => onEditProp?.('description', value)}
       />
       <div
         className={primitives['simple-grid']}

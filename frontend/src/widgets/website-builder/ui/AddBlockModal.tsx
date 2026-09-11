@@ -27,9 +27,12 @@ export interface AddBlockModalProps {
   businessId: string;
   /** Прокидывается напрямую в `ComponentLibraryPanel` — см. её комментарий. */
   capabilities?: string[];
+  /** Прокидывается напрямую в `ComponentLibraryPanel` — см. её комментарий
+   * про `adSlotsAvailable`. */
+  adSlotsAvailable?: number;
 }
 
-export function AddBlockModal({ businessId, capabilities }: AddBlockModalProps) {
+export function AddBlockModal({ businessId, capabilities, adSlotsAvailable }: AddBlockModalProps) {
   const insertionTarget = useWebsiteBuilderStore((state) => state.insertionTarget);
   const document = useWebsiteBuilderStore((state) => state.document);
   const activePageId = useWebsiteBuilderStore((state) => state.activePageId);
@@ -95,6 +98,7 @@ export function AddBlockModal({ businessId, capabilities }: AddBlockModalProps) 
         onAddWidget={handleAddWidget}
         onAddPattern={handleAddPattern}
         capabilities={capabilities}
+        adSlotsAvailable={adSlotsAvailable}
       />
     </Modal>
   );

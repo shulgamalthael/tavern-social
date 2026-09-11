@@ -3,7 +3,15 @@ import type { NextRequest } from 'next/server';
 import { isAppHostname } from '@/shared/config/site-hosting';
 import { SESSION_COOKIE_NAME } from '@/shared/config/session';
 
-const PUBLIC_PATHS = ['/auth', '/site'];
+// `/advertise` (не `/advertise/new`, см. isPublicPath'а префиксное
+// сопоставление ниже) — публичная посадочная страница для внешних
+// рекламодателей (AI_PLATFORM_ROADMAP.md §71). `/advertise/new` (реальная
+// форма создания кабинета) технически ТОЖЕ попадёт под этот префикс здесь —
+// это нормально: эта проверка лишь оптимистичная edge-предпроверка (см. её
+// комментарий ниже), авторитетный рубеж для `/advertise/new`, который
+// реально требует сессию, — `(protected)/layout.tsx` (он же защищает
+// `/businesses`/`/business/[id]`), а не эта функция.
+const PUBLIC_PATHS = ['/auth', '/site', '/advertise'];
 /** Страница входа — при наличии cookie редиректим только отсюда, не из всех /auth/*. */
 const AUTH_ENTRY_PATH = '/auth';
 

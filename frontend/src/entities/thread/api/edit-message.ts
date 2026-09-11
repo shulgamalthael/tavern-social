@@ -3,7 +3,7 @@
 import { backendFetch } from '@/shared/lib/backend-client';
 import { getSessionToken } from '@/shared/lib/session-token.server';
 import type { ChatMessage } from '../model/types';
-import type { MessageResponse } from './map-thread';
+import { mapSharedPost, type MessageResponse } from './map-thread';
 
 /** Редактировать можно только своё сообщение (backend это и проверяет) —
  * поэтому `mine: true` всегда верно здесь, без отдельного похода за
@@ -33,5 +33,6 @@ export async function editMessage(
     attachments: message.attachments,
     forwardedFrom: message.forwardedFrom,
     replyTo: message.replyTo,
+    sharedPost: mapSharedPost(message.sharedPost),
   };
 }

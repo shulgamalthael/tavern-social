@@ -22,7 +22,14 @@ export function toPublicProfile(user: User): PublicProfile {
   };
 }
 
-export function toMeProfile(user: User): MeProfile {
+/** `followersCount`/`followingCount` НЕ отдаются здесь — та же причина, что
+ * `friendship`/`subscription` не входят в `toPublicProfile`: это чистая
+ * функция без обращения к БД (см. комментарий класса), а счётчики требуют
+ * запроса к `Subscription`. Контроллер (`UsersController.me`) домешивает их
+ * так же, как `getById` домешивает `friendship`/`subscription`. */
+export function toMeProfile(
+  user: User,
+): Omit<MeProfile, 'followersCount' | 'followingCount' | 'friendsCount'> {
   return {
     ...toPublicProfile(user),
     email: user.email,
@@ -33,6 +40,7 @@ export function toMeProfile(user: User): MeProfile {
       showPresence: user.showPresence,
       allowStrangerInvites: user.allowStrangerInvites,
       morningDigest: user.morningDigest,
+      isPrivate: user.isPrivate,
     },
   };
 }

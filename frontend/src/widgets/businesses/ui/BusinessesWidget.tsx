@@ -15,7 +15,7 @@ import { useAsyncData } from '@/shared/lib/use-async-data';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { BackIcon, PlusIcon } from '@/shared/ui/icons';
+import { BackIcon, MegaphoneIcon, PlusIcon } from '@/shared/ui/icons';
 import { Modal } from '@/shared/ui/Modal';
 import { PageHead } from '@/shared/ui/PageHead';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
@@ -43,6 +43,17 @@ export function BusinessesWidget() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const list = businesses ?? data ?? [];
+
+  /** У внешнего рекламодателя (`Business.isAdvertiserOnly`, AI_PLATFORM_
+   * ROADMAP.md §71) нет социального профиля бизнеса, который открывает
+   * `/business/[id]` для обычных бизнесов — сразу в его собственный урезанный
+   * дашборд (`AdvertiserDashboardWidget`). */
+  function openBusiness(businessId: string) {
+    const business = list.find((item) => item.id === businessId);
+    router.push(
+      business?.isAdvertiserOnly ? `/business/${businessId}/dashboard` : `/business/${businessId}`,
+    );
+  }
 
   async function handleDuplicate(businessId: string) {
     setPendingAction({ id: businessId, kind: 'duplicate' });
@@ -83,6 +94,10 @@ export function BusinessesWidget() {
           <BackIcon />
         </Link>
         <PageHead title="Бизнесы" description="Сайты для ваших дел — по одному на каждый бизнес" />
+        <Link href="/advertise" className={styles.advertiseLink}>
+          <MegaphoneIcon />
+          Разместить рекламу
+        </Link>
         <Button className={styles.create} onClick={() => router.push('/businesses/new')}>
           <PlusIcon />
           Новый бизнес
@@ -124,7 +139,7 @@ export function BusinessesWidget() {
             <BusinessCard
               key={business.id}
               business={business}
-              onOpen={(businessId) => router.push(`/business/${businessId}`)}
+              onOpen={openBusiness}
               onDuplicate={handleDuplicate}
               onDelete={() => setDeleteTarget(business)}
               isDuplicating={

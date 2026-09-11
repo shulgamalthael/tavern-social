@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { deleteAdminCommunity, getAdminCommunities, type AdminCommunity } from '@/entities/admin';
 import type { AsyncStatus } from '@/shared/lib/async-status';
+import { pluralizeRu } from '@/shared/lib/pluralize-ru';
 import { useDebouncedValue } from '@/shared/lib/use-debounced-value';
 import { useInfiniteScroll } from '@/shared/lib/use-infinite-scroll';
 import { Avatar } from '@/shared/ui/Avatar';
@@ -145,7 +146,10 @@ export function AdminCommunitiesPanel() {
                     {community.about.slice(0, ABOUT_PREVIEW_LENGTH) || '(без описания)'}
                   </span>
                   <span className={styles['admin-table__meta']}>
-                    {community.membersCount} участников · {community.postsCount} записей
+                    {community.membersCount}{' '}
+                    {pluralizeRu(community.membersCount, ['участник', 'участника', 'участников'])} ·{' '}
+                    {community.postsCount}{' '}
+                    {pluralizeRu(community.postsCount, ['запись', 'записи', 'записей'])}
                   </span>
                 </div>
                 <div className={styles['admin-table__actions']}>

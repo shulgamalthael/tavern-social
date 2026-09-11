@@ -16,6 +16,7 @@ import { deleteUploadedFile, uploadedFileUrl } from '@/common/lib/upload';
 import { pluralizeRu } from '@/common/lib/pluralize-ru';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
 import { PresenceService } from '@/infrastructure/redis/presence.service';
+import { PostsService } from '@/modules/posts/posts.service';
 import type { PublicProfile } from '@/modules/users/users.types';
 import { UsersService } from '@/modules/users/users.service';
 import type { EditMessageDto } from './dto/edit-message.dto';
@@ -79,6 +80,7 @@ export class ThreadsService {
     private readonly prisma: PrismaService,
     private readonly presenceService: PresenceService,
     private readonly usersService: UsersService,
+    private readonly postsService: PostsService,
   ) {}
 
   async listForUser(userId: string): Promise<ThreadDto[]> {
@@ -219,13 +221,22 @@ export class ThreadsService {
   ): Promise<SentMessage> {
     const participants = await this.assertParticipant(threadId, senderId);
     const text = dto.text?.trim() ?? '';
-    if (!text && files.length === 0) {
-      throw new BadRequestException('Сообщение должно содержать текст или вложение');
+    if (!text && files.length === 0 && !dto.sharedPostId) {
+      throw new BadRequestException('Сообщение должно содержать текст, вложение или запись');
     }
     // Отвечать можно только на сообщение из этого же треда — иначе цитата
     // вела бы на чужой, недоступный этому диалогу текст.
     if (dto.replyToId) {
       await this.assertMessageInThread(threadId, dto.replyToId);
+    }
+    // Поделиться постом можно только тем, что сам сейчас видишь — та же
+    // логика, что доступ к посту напрямую (§103/§104), просто без throw
+    // внутри `getShareSummary`: здесь решаем сами, чем это оборачивается.
+    if (dto.sharedPostId) {
+      const shareSummary = await this.postsService.getShareSummary(dto.sharedPostId, senderId);
+      if (shareSummary.status !== 'visible') {
+        throw new NotFoundException('Запись не найдена');
+      }
     }
 
     const message = await this.prisma.$transaction(async (tx) => {
@@ -235,6 +246,7 @@ export class ThreadsService {
           senderId,
           text,
           replyToId: dto.replyToId,
+          sharedPostId: dto.sharedPostId,
           attachments: {
             create: files.map((file, index) => ({
               url: uploadedFileUrl('messages', file.filename),
@@ -256,7 +268,7 @@ export class ThreadsService {
     });
 
     return {
-      message: this.toMessageDto(message),
+      message: await this.toMessageDto(message, senderId),
       participantUserIds: participants.map((participant) => participant.userId),
     };
   }
@@ -276,14 +288,24 @@ export class ThreadsService {
       throw new ForbiddenException('Можно редактировать только своё сообщение');
     }
 
+    // `@Length(1, 2000)` в `EditMessageDto` пропускает строку из одних
+    // пробелов — тримим и перепроверяем здесь же, тем же правилом, что и
+    // `sendMessage`, иначе сообщение можно отредактировать в фактически
+    // пустое в обход общего «текст или вложение» (вложения при редактировании
+    // не меняются, так что пустой текст оставил бы сообщение без содержимого).
+    const text = dto.text.trim();
+    if (!text) {
+      throw new BadRequestException('Текст сообщения не может быть пустым');
+    }
+
     const message = await this.prisma.message.update({
       where: { id: messageId },
-      data: { text: dto.text, editedAt: new Date() },
+      data: { text, editedAt: new Date() },
       include: MESSAGE_INCLUDE,
     });
 
     return {
-      message: this.toMessageDto(message),
+      message: await this.toMessageDto(message, userId),
       participantUserIds: participants.map((participant) => participant.userId),
     };
   }
@@ -353,6 +375,12 @@ export class ThreadsService {
           senderId: userId,
           text: original.text,
           forwardedFromId: original.id,
+          // Если пересылаемое сообщение само несёт шаренный пост — уносим
+          // ссылку дальше (иначе форвард «съедал» бы вложенную запись).
+          // Отдельной проверки доступа здесь не нужно: видимость
+          // пересчитывается per-viewer на каждом чтении (`getShareSummary`),
+          // независимо от того, как sharedPostId попал в это сообщение.
+          sharedPostId: original.sharedPostId,
         },
         include: MESSAGE_INCLUDE,
       });
@@ -365,7 +393,7 @@ export class ThreadsService {
     });
 
     return {
-      message: this.toMessageDto(message),
+      message: await this.toMessageDto(message, userId),
       participantUserIds: targetParticipants.map((participant) => participant.userId),
     };
   }
@@ -412,7 +440,7 @@ export class ThreadsService {
       orderBy: { createdAt: 'desc' },
       include: MESSAGE_INCLUDE,
     });
-    return messages.map((message) => this.toMessageDto(message));
+    return Promise.all(messages.map((message) => this.toMessageDto(message, userId)));
   }
 
   /** Поиск по всем тредам пользователя разом — сгруппировано по треду,
@@ -431,7 +459,7 @@ export class ThreadsService {
     const byThread = new Map<string, MessageDto[]>();
     for (const message of messages) {
       const bucket = byThread.get(message.threadId) ?? [];
-      bucket.push(this.toMessageDto(message));
+      bucket.push(await this.toMessageDto(message, userId));
       byThread.set(message.threadId, bucket);
     }
 
@@ -497,7 +525,9 @@ export class ThreadsService {
       (message) => message.senderId !== userId && message.createdAt > me.lastReadAt,
     ).length;
 
-    const messages = thread.messages.map((message) => this.toMessageDto(message));
+    const messages = await Promise.all(
+      thread.messages.map((message) => this.toMessageDto(message, userId)),
+    );
 
     return {
       id: thread.id,
@@ -514,7 +544,14 @@ export class ThreadsService {
     };
   }
 
-  private toMessageDto(message: MessageWithRelations): MessageDto {
+  /** `viewerId` — тот, для кого собирается DTO: в отличие от
+   * `forwardedFrom`/`replyTo` (одинаковы для всех, кто вообще видит
+   * сообщение — тред уже сам по себе ограничивает видимость участниками),
+   * `sharedPost` — per-viewer (§104, `SharedPostDto`'s комментарий), поэтому
+   * этот метод больше нельзя вызывать один раз и рассылать результат всем
+   * участникам не глядя — см. `ThreadsController`'s рассылку `message:new`/
+   * `message:edited`. */
+  private async toMessageDto(message: MessageWithRelations, viewerId: string): Promise<MessageDto> {
     const forwardedFrom: ForwardedFromDto | null = message.forwardedFrom
       ? {
           id: message.forwardedFrom.id,
@@ -531,6 +568,10 @@ export class ThreadsService {
           text: message.replyTo.text,
           hasAttachment: message.replyTo.attachments.length > 0,
         }
+      : null;
+
+    const sharedPost = message.sharedPostId
+      ? await this.postsService.getShareSummary(message.sharedPostId, viewerId)
       : null;
 
     return {
@@ -550,6 +591,33 @@ export class ThreadsService {
       })),
       forwardedFrom,
       replyTo,
+      sharedPost,
     };
+  }
+
+  /** Публичный, единственная точка для `ThreadsController` — пересчитать
+   * `MessageDto` уже отправленного/отредактированного сообщения для
+   * КОНКРЕТНОГО получателя при realtime-рассылке (`message:new`/
+   * `message:edited`), а не разослать всем один и тот же объект — см.
+   * `toMessageDto`'s комментарий про `sharedPost`. */
+  async getMessageDtoForViewer(messageId: string, viewerId: string): Promise<MessageDto> {
+    const message = await this.prisma.message.findUniqueOrThrow({
+      where: { id: messageId },
+      include: MESSAGE_INCLUDE,
+    });
+    return this.toMessageDto(message, viewerId);
+  }
+
+  /** То же самое, но для целого треда (закреп/откреп сообщения — см.
+   * `ThreadsController.broadcastThread`'s комментарий). */
+  async getThreadDtoForViewer(threadId: string, viewerId: string): Promise<ThreadDto> {
+    const thread = await this.prisma.thread.findUniqueOrThrow({
+      where: { id: threadId },
+      include: {
+        participants: { include: { user: true } },
+        messages: { orderBy: { createdAt: 'asc' }, include: MESSAGE_INCLUDE },
+      },
+    });
+    return this.toDto(thread, viewerId);
   }
 }

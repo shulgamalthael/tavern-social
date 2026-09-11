@@ -34,7 +34,13 @@ function sortPosts(posts: PublicBlogPost[]): PublicBlogPost[] {
   return posts;
 }
 
-function BlogGridRenderer({ props, business, pages }: BlockRendererProps<BlogGridProps>) {
+function BlogGridRenderer({
+  props,
+  business,
+  pages,
+  isEditing,
+  onEditProp,
+}: BlockRendererProps<BlogGridProps>) {
   const fetcher = useCallback(() => getPublicBlogPosts(business.businessId), [business.businessId]);
   const { status, data, error } = useAsyncData(fetcher);
 
@@ -90,6 +96,10 @@ function BlogGridRenderer({ props, business, pages }: BlockRendererProps<BlogGri
       items={items}
       columns={props.columns}
       pages={pages}
+      editable={Boolean(isEditing && onEditProp)}
+      onEditEyebrow={(value) => onEditProp?.('eyebrow', value)}
+      onEditHeading={(value) => onEditProp?.('heading', value)}
+      onEditDescription={(value) => onEditProp?.('description', value)}
     />
   );
 }

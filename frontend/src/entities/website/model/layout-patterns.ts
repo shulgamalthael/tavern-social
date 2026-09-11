@@ -1,23 +1,52 @@
 import type { ComponentType } from 'react';
 import type { IconProps } from '@/shared/ui/icons';
-import { PreviewColumnsIcon, PreviewContainerIcon, PreviewFullWidthIcon } from '@/shared/ui/icons';
+import {
+  PreviewColumnsIcon,
+  PreviewContainerIcon,
+  PreviewFullWidthIcon,
+  PreviewSplitHeroIcon,
+} from '@/shared/ui/icons';
 import { createBlockId } from './block-tree';
+import { EMPTY_LINK_TARGET } from './resolve-link';
 import type { BlockStyle, WebsiteBlock } from './types';
 
 function column(style: BlockStyle, children: WebsiteBlock[]): WebsiteBlock {
   return { id: createBlockId(), type: 'column', props: {}, style, children };
 }
 
-function heading(text: string): WebsiteBlock {
+function heading(text: string, level: 'h2' | 'h3' = 'h3'): WebsiteBlock {
   return {
     id: createBlockId(),
     type: 'heading',
-    props: { text, level: 'h3', size: { desktop: 'md' }, color: 'default' },
+    props: { text, level, size: { desktop: level === 'h2' ? 'lg' : 'md' }, color: 'default' },
   };
 }
 
 function paragraph(text: string): WebsiteBlock {
   return { id: createBlockId(), type: 'text', props: { text: `<p>${text}</p>`, color: 'default' } };
+}
+
+function button(label: string): WebsiteBlock {
+  return {
+    id: createBlockId(),
+    type: 'button',
+    props: { label, url: EMPTY_LINK_TARGET, variant: 'solid', size: 'md', target: '_self' },
+  };
+}
+
+function image(): WebsiteBlock {
+  return {
+    id: createBlockId(),
+    type: 'image',
+    props: {
+      src: null,
+      alt: '',
+      objectFit: 'cover',
+      radius: 'md',
+      link: EMPTY_LINK_TARGET,
+      width: 'full',
+    },
+  };
 }
 
 export interface LayoutPattern {
@@ -145,6 +174,40 @@ export const LAYOUT_PATTERNS: LayoutPattern[] = [
                 heading('Третье'),
                 paragraph('Короткое описание третьего пункта.'),
               ]),
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'split-hero',
+    label: 'Промо (текст + фото)',
+    description: 'Заголовок, текст и кнопка слева, фото справа — классический промо-экран',
+    icon: PreviewSplitHeroIcon,
+    build: () => [
+      {
+        id: createBlockId(),
+        type: 'section',
+        props: {},
+        children: [
+          {
+            id: createBlockId(),
+            type: 'columns',
+            props: {},
+            style: {
+              display: 'flex',
+              direction: { desktop: 'row', mobile: 'column' },
+              gap: 'lg',
+              align: 'center',
+            },
+            children: [
+              column({ grow: 'grow' }, [
+                heading('Заголовок промо-экрана', 'h2'),
+                paragraph('Короткое, убедительное описание предложения — пара предложений.'),
+                button('Узнать больше'),
+              ]),
+              column({ grow: 'grow' }, [image()]),
             ],
           },
         ],

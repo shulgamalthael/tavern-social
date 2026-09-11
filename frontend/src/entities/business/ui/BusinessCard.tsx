@@ -6,7 +6,14 @@ import { formatRelativeTime } from '@/shared/lib/format-relative-time';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
-import { DuplicateIcon, ExternalLinkIcon, GlobeIcon, MoreIcon, TrashIcon } from '@/shared/ui/icons';
+import {
+  DuplicateIcon,
+  ExternalLinkIcon,
+  GlobeIcon,
+  MegaphoneIcon,
+  MoreIcon,
+  TrashIcon,
+} from '@/shared/ui/icons';
 import { getBusinessCategoryConfig } from '../config/categories';
 import type { Business } from '../model/types';
 import styles from './BusinessCard.module.scss';
@@ -26,6 +33,11 @@ export interface BusinessCardProps {
  * правили, и меню быстрых действий. Сама карточка целиком кликабельна
  * (`onOpen`) — «⋯»-меню намеренно останавливает всплытие клика, чтобы клик
  * по «Удалить» не открывал заодно и сам бизнес.
+ *
+ * `business.isAdvertiserOnly` (внешний рекламодатель, AI_PLATFORM_ROADMAP.md
+ * §71) заменяет статус сайта (публикация ему не нужна вообще) на бейдж
+ * «Рекламодатель» и CTA на «Управлять рекламой» — сам компонент не решает,
+ * куда ведёт `onOpen` (это делает вызывающий `BusinessesWidget`).
  */
 export function BusinessCard({
   business,
@@ -133,15 +145,22 @@ export function BusinessCard({
       {business.description && <p className={styles.card__description}>{business.description}</p>}
 
       <div className={styles.card__meta}>
-        <span
-          className={cn(
-            styles['card__status'],
-            business.status === 'published' && styles['card__status--published'],
-          )}
-        >
-          {business.status === 'published' ? <GlobeIcon /> : <ExternalLinkIcon />}
-          {business.status === 'published' ? 'Опубликован' : 'Черновик'}
-        </span>
+        {business.isAdvertiserOnly ? (
+          <span className={cn(styles['card__status'], styles['card__status--published'])}>
+            <MegaphoneIcon />
+            Рекламодатель
+          </span>
+        ) : (
+          <span
+            className={cn(
+              styles['card__status'],
+              business.status === 'published' && styles['card__status--published'],
+            )}
+          >
+            {business.status === 'published' ? <GlobeIcon /> : <ExternalLinkIcon />}
+            {business.status === 'published' ? 'Опубликован' : 'Черновик'}
+          </span>
+        )}
         <span className={styles['card__updated']}>
           Правили {formatRelativeTime(business.updatedAt)}
         </span>
@@ -156,7 +175,11 @@ export function BusinessCard({
           onOpen(business.id);
         }}
       >
-        {business.status === 'published' ? 'Открыть сайт' : 'Продолжить редактирование'}
+        {business.isAdvertiserOnly
+          ? 'Управлять рекламой'
+          : business.status === 'published'
+            ? 'Открыть сайт'
+            : 'Продолжить редактирование'}
       </Button>
     </Card>
   );

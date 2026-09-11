@@ -3,7 +3,7 @@
 import { backendFetch } from '@/shared/lib/backend-client';
 import { getSessionToken } from '@/shared/lib/session-token.server';
 import type { ChatMessage } from '../model/types';
-import type { MessageResponse } from './map-thread';
+import { mapSharedPost, type MessageResponse } from './map-thread';
 
 /** Пересылающий всегда становится отправителем новой записи в целевом
  * треде (см. backend `ThreadsService.forwardMessage`) — `mine: true` без
@@ -32,5 +32,6 @@ export async function forwardMessage(
     attachments: message.attachments,
     forwardedFrom: message.forwardedFrom,
     replyTo: message.replyTo,
+    sharedPost: mapSharedPost(message.sharedPost),
   };
 }

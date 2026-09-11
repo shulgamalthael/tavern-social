@@ -23,6 +23,7 @@
     "migration:deploy": "prisma migrate deploy",
     "migration:create": "prisma migrate dev --create-only",
     "seed": "ts-node prisma/seed.ts",
+    "seed:creator-categories": "ts-node prisma/seed-creator-categories.ts",
     "promote-admin": "ts-node prisma/promote-admin.ts",
     "promote-super-admin": "ts-node prisma/promote-super-admin.ts",
     "migrate-pages-to-table": "ts-node prisma/migrate-pages-to-table.ts",

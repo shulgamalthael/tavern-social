@@ -21,7 +21,8 @@ export type BlockCategory =
   | 'booking'
   | 'blog'
   | 'forms'
-  | 'utility';
+  | 'utility'
+  | 'advertising';
 
 export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
   layout: 'Структура',
@@ -36,6 +37,7 @@ export const BLOCK_CATEGORY_LABELS: Record<BlockCategory, string> = {
   blog: 'Блог',
   forms: 'Формы',
   utility: 'Утилиты',
+  advertising: 'Реклама',
 };
 
 /** Порядок панели компонентов слева в билдере (см. `ComponentLibraryPanel`)
@@ -61,6 +63,7 @@ export const BLOCK_CATEGORY_ORDER: BlockCategory[] = [
   'blog',
   'navigation',
   'forms',
+  'advertising',
   'utility',
 ];
 
@@ -169,6 +172,15 @@ export interface BlockBusinessContext {
   phone: string | null;
   address: string | null;
   socialLinks: { platform: string; url: string }[];
+  /** Только для `businesshours` (`blocks/business/index.tsx`) — «открыто
+   * сейчас» считается на клиенте от реального времени посетителя, не
+   * сервера. Ключ дня отсутствует или всё поле `null` — «не ограничено»,
+   * то же самое соглашение, что у `entities/business`'s `WorkingHours`
+   * (независимая копия формы, не импорт — `entities/website` не может
+   * импортировать соседний `entities/business`, см. `AGENTS.md` §3). */
+  workingHours: Partial<
+    Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', { open: string; close: string }>
+  > | null;
 }
 
 /** Пропсы, которые получает КАЖДЫЙ рендерер блока — и в билдере (canvas), и
@@ -209,7 +221,7 @@ export interface BlockRendererProps<P = Record<string, unknown>> {
    * `isEditing`, прокидывает и это тоже), пишет через тот же `updateBlock
    * Props`, что и форма в инспекторе, второй источник правды не появляется.
    * Опционально, как `layout` — большинство рендереров его не читают. */
-  onEditProp?: (key: string, value: string) => void;
+  onEditProp?: (key: string, value: unknown) => void;
 }
 
 export interface BlockDefinition<P = Record<string, unknown>> {

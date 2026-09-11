@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { selectPendingIncomingRequestsCount, useFriendStore } from '@/entities/friend';
 import { selectUnreadThreadCount, useThreadStore } from '@/entities/thread';
 import { useCurrentUser } from '@/entities/user';
 import {
@@ -12,7 +13,7 @@ import {
 } from '@/features/section-navigation';
 import { cn } from '@/shared/lib/cn';
 import { Badge } from '@/shared/ui/Badge';
-import { BriefcaseIcon, MoreIcon, ShieldIcon } from '@/shared/ui/icons';
+import { BriefcaseIcon, MegaphoneIcon, MoreIcon, ShieldIcon } from '@/shared/ui/icons';
 import styles from './NavigationDock.module.scss';
 
 const PRIMARY_ITEMS = NAV_ITEMS.slice(0, PRIMARY_NAV_COUNT);
@@ -29,6 +30,7 @@ export function NavigationDock() {
   const section = useNavigationStore((state) => state.section);
   const goToSection = useNavigationStore((state) => state.goToSection);
   const unreadCount = useThreadStore(selectUnreadThreadCount);
+  const pendingRequestsCount = useFriendStore(selectPendingIncomingRequestsCount);
   const { currentUser } = useCurrentUser();
   const [isMoreOpen, setMoreOpen] = useState(false);
   const moreContainerRef = useRef<HTMLDivElement>(null);
@@ -78,6 +80,7 @@ export function NavigationDock() {
         const Icon = SECTION_ICONS[item.id];
         const isActive = section === item.id;
         const showUnreadBadge = item.id === 'messages' && unreadCount > 0 && !isActive;
+        const showRequestsBadge = item.id === 'friends' && pendingRequestsCount > 0 && !isActive;
         return (
           <button
             key={item.id}
@@ -93,6 +96,11 @@ export function NavigationDock() {
             {showUnreadBadge && (
               <Badge variant="soft" className={styles['dock__badge']}>
                 {unreadCount}
+              </Badge>
+            )}
+            {showRequestsBadge && (
+              <Badge variant="soft" className={styles['dock__badge']}>
+                {pendingRequestsCount}
               </Badge>
             )}
           </button>
@@ -141,6 +149,14 @@ export function NavigationDock() {
             <Link href="/businesses" role="menuitem" className={styles['dock__popover-item']}>
               <BriefcaseIcon />
               Бизнесы
+            </Link>
+            {/* Тот же приём, что и «Бизнесы» выше — `/advertise` тоже не
+             * раздел SPA, а публичная страница вне (protected)-группы (см.
+             * AI_PLATFORM_ROADMAP.md §71). Пункт виден всем, не только
+             * рекламодателям — это вход в кабинет, а не индикатор роли. */}
+            <Link href="/advertise" role="menuitem" className={styles['dock__popover-item']}>
+              <MegaphoneIcon />
+              Реклама
             </Link>
             {/* Не `goToSection` — «Админка» больше не клиентский раздел SPA,
              * а отдельный маршрут `/admin` со своей серверной проверкой

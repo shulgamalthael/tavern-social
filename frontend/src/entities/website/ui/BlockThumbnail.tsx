@@ -19,6 +19,7 @@ const PLACEHOLDER_BUSINESS: BlockBusinessContext = {
   phone: null,
   address: null,
   socialLinks: [],
+  workingHours: null,
 };
 
 /** Блоки, чей живой рендер с `defaultProps` либо пуст (структурные примитивы
@@ -74,12 +75,21 @@ export function BlockThumbnail({ definition }: BlockThumbnailProps) {
   return (
     <div className={styles.thumb}>
       <div className={styles.thumb__stage}>
+        {/* `isEditing`, как и в канвасе — не только чтобы формы/кнопки
+         * действия не сработали по-настоящему (уже было так задумано), но и
+         * чтобы блоки с `position: fixed` вне режима редактирования
+         * (`stickybar`/`popupoffer`/`contactbubble(multi)`/`cookiebar(minimal)`,
+         * см. их комментарии в `blocks/content/index.tsx`) рендерились в
+         * своём превью-варианте, а не приклеенными к НАСТОЯЩЕМУ вьюпорту
+         * браузера — иначе их содержимое рисовалось бы за пределами этой
+         * маленькой карточки и превью выглядело бы пустым. */}
         <Renderer
           props={definition.defaultProps}
           theme={theme}
           viewport="desktop"
           business={PLACEHOLDER_BUSINESS}
           pages={[]}
+          isEditing
         />
       </div>
     </div>

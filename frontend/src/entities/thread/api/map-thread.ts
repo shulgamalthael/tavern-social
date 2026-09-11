@@ -4,6 +4,8 @@ import type {
   ForwardedFrom,
   MessageAttachment,
   ReplyTo,
+  SharedPost,
+  SharedPostAuthor,
   Thread,
   ThreadParticipant,
 } from '../model/types';
@@ -36,6 +38,25 @@ export interface ReplyToResponse {
   hasAttachment: boolean;
 }
 
+export interface SharedPostAuthorResponse {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export interface SharedPostPreviewResponse {
+  id: string;
+  author: SharedPostAuthorResponse;
+  wallOwnerId: string | null;
+  text: string;
+  images: string[];
+}
+
+export type SharedPostResponse =
+  | { status: 'visible'; post: SharedPostPreviewResponse }
+  | { status: 'restricted'; author: SharedPostAuthorResponse }
+  | { status: 'not_found' };
+
 export interface MessageResponse {
   id: string;
   threadId: string;
@@ -47,6 +68,7 @@ export interface MessageResponse {
   attachments: MessageAttachmentResponse[];
   forwardedFrom: ForwardedFromResponse | null;
   replyTo: ReplyToResponse | null;
+  sharedPost: SharedPostResponse | null;
 }
 
 export interface ThreadResponse {
@@ -89,6 +111,35 @@ function mapReplyTo(replyTo: ReplyToResponse | null): ReplyTo | null {
   };
 }
 
+function mapSharedPostAuthor(author: SharedPostAuthorResponse): SharedPostAuthor {
+  return {
+    id: author.id,
+    name: author.name,
+    initials: getInitials(author.name),
+    avatarUrl: author.avatarUrl,
+  };
+}
+
+export function mapSharedPost(sharedPost: SharedPostResponse | null): SharedPost | null {
+  if (!sharedPost) return null;
+  if (sharedPost.status === 'visible') {
+    return {
+      status: 'visible',
+      post: {
+        id: sharedPost.post.id,
+        author: mapSharedPostAuthor(sharedPost.post.author),
+        wallOwnerId: sharedPost.post.wallOwnerId,
+        text: sharedPost.post.text,
+        images: sharedPost.post.images,
+      },
+    };
+  }
+  if (sharedPost.status === 'restricted') {
+    return { status: 'restricted', author: mapSharedPostAuthor(sharedPost.author) };
+  }
+  return { status: 'not_found' };
+}
+
 export function mapMessage(message: MessageResponse, currentUserId: string): ChatMessage {
   return {
     id: message.id,
@@ -101,6 +152,7 @@ export function mapMessage(message: MessageResponse, currentUserId: string): Cha
     attachments: message.attachments.map(mapAttachment),
     forwardedFrom: mapForwardedFrom(message.forwardedFrom),
     replyTo: mapReplyTo(message.replyTo),
+    sharedPost: mapSharedPost(message.sharedPost),
   };
 }
 

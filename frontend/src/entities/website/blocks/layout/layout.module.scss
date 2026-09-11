@@ -38,3 +38,85 @@
     border-top-style: dashed;
   }
 }
+
+.divider-label {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.divider-label__line {
+  flex: 1;
+  height: 1px;
+  background: var(--site-border);
+}
+
+.divider-label__text {
+  flex-shrink: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.divider-label__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--site-border);
+  border-radius: 50%;
+  color: var(--site-primary);
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.shape-divider {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  // `transform: scaleY(-1)` (см. `props.flip`) зеркалит и содержимое SVG —
+  // сама фигура остаётся направленной правильно, потому что `fill`
+  // одноцветный, у отражения нет "неправильной" стороны.
+}
+
+.shape-divider__track {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+// Вторая копия волны, встык у правого края первой (`left: 100%`) — обе
+// одновременно едут влево на `-100%` (ширину ОДНОЙ копии), поэтому в
+// момент, когда первая полностью уходит за левый край, вторая как раз
+// занимает её место — бесшовный бесконечный цикл без "прыжка" в конце.
+// Работает независимо от реальных px, потому что `-100%` в CSS transform
+// всегда считается от текущего рендер-размера самого элемента, не от чисел
+// viewBox.
+.shape-divider__track--second {
+  left: 100%;
+}
+
+// На оба `<svg>` разом (первый и второй track, см. `ShapeDividerRenderer`) —
+// едут синхронно с одной и той же анимацией, поэтому между ними никогда не
+// возникает видимого зазора/рывка.
+.shape-divider__track--animated {
+  animation: shape-divider-scroll 14s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes shape-divider-scroll {
+  to {
+    transform: translateX(-100%);
+  }
+}

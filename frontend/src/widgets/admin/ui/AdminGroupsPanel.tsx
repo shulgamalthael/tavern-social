@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { deleteAdminGroup, getAdminGroups, type AdminGroup } from '@/entities/admin';
 import type { AsyncStatus } from '@/shared/lib/async-status';
+import { pluralizeRu } from '@/shared/lib/pluralize-ru';
 import { useDebouncedValue } from '@/shared/lib/use-debounced-value';
 import { useInfiniteScroll } from '@/shared/lib/use-infinite-scroll';
 import { Avatar } from '@/shared/ui/Avatar';
@@ -152,7 +153,10 @@ export function AdminGroupsPanel() {
                     {group.description.slice(0, DESCRIPTION_PREVIEW_LENGTH) || '(без описания)'}
                   </span>
                   <span className={styles['admin-table__meta']}>
-                    {group.membersCount} участников · {group.postsCount} записей
+                    {group.membersCount}{' '}
+                    {pluralizeRu(group.membersCount, ['участник', 'участника', 'участников'])} ·{' '}
+                    {group.postsCount}{' '}
+                    {pluralizeRu(group.postsCount, ['запись', 'записи', 'записей'])}
                   </span>
                 </div>
                 <div className={styles['admin-table__actions']}>

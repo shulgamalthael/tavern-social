@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { resolveLinkHref } from '../../model/resolve-link';
 import type { LinkTarget, WebsitePage } from '../../model/types';
+import { EditableText } from '../../ui/EditableText';
 import { SectionHeading } from './SectionHeading';
 import styles from './primitives.module.scss';
 
@@ -19,6 +20,19 @@ export interface RepeatableSimpleCardsProps {
   items: SimpleCardItem[];
   columns?: number;
   pages: WebsitePage[];
+  editable?: boolean;
+  onEditEyebrow?: (value: string) => void;
+  onEditHeading?: (value: string) => void;
+  onEditDescription?: (value: string) => void;
+  /** См. `RepeatableIconCardsProps.onEditItem`. `title` намеренно не
+   * редактируется на холсте, когда карточка реально ссылается куда-то
+   * (`hasLink` ниже) — обёрнутый в `<a href>` текст сделал бы первый клик
+   * переходом по ссылке вместо входа в редактирование (билдер не перехватывает
+   * клики по вложенным `<a>`, тот же риск, что и у кнопки, `SiteButton`,
+   * `blocks/actions/index.tsx`, — там по той же причине текст кнопки тоже
+   * остался редактируемым только через форму); `description` этому риску не
+   * подвержен и редактируется всегда. */
+  onEditItem?: (index: number, field: 'title' | 'description', value: string) => void;
 }
 
 /** Карточка «картинка сверху + заголовок + текст (+ маленькая мета-строка —
@@ -35,10 +49,24 @@ export function RepeatableSimpleCards({
   items,
   columns = 3,
   pages,
+  editable,
+  onEditEyebrow,
+  onEditHeading,
+  onEditDescription,
+  onEditItem,
 }: RepeatableSimpleCardsProps) {
+  const itemEditable = editable && Boolean(onEditItem);
   return (
     <div className={styles.block}>
-      <SectionHeading eyebrow={eyebrow} heading={heading} description={description} />
+      <SectionHeading
+        eyebrow={eyebrow}
+        heading={heading}
+        description={description}
+        editable={editable}
+        onEditEyebrow={onEditEyebrow}
+        onEditHeading={onEditHeading}
+        onEditDescription={onEditDescription}
+      />
       <div className={styles['simple-grid']} style={{ '--grid-columns': columns } as CSSProperties}>
         {items.map((item, index) => {
           const href = item.url ? resolveLinkHref(item.url, pages) : undefined;
@@ -58,11 +86,29 @@ export function RepeatableSimpleCards({
                 ))}
               <div className={styles['simple-card__body']}>
                 {item.meta && <span className={styles['simple-card__meta']}>{item.meta}</span>}
-                <h3 className={styles['simple-card__title']}>
-                  {hasLink ? <a href={href}>{item.title}</a> : item.title}
-                </h3>
-                {item.description && (
-                  <p className={styles['simple-card__description']}>{item.description}</p>
+                {hasLink ? (
+                  <h3 className={styles['simple-card__title']}>
+                    <a href={href}>{item.title}</a>
+                  </h3>
+                ) : (
+                  <EditableText
+                    as="h3"
+                    value={item.title}
+                    editable={itemEditable}
+                    onCommit={(value) => onEditItem?.(index, 'title', value)}
+                    placeholder="Заголовок карточки"
+                    className={styles['simple-card__title']}
+                  />
+                )}
+                {(item.description || itemEditable) && (
+                  <EditableText
+                    as="p"
+                    value={item.description ?? ''}
+                    editable={itemEditable}
+                    onCommit={(value) => onEditItem?.(index, 'description', value)}
+                    placeholder="Текст карточки"
+                    className={styles['simple-card__description']}
+                  />
                 )}
               </div>
             </div>

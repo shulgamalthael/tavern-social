@@ -45,6 +45,7 @@ export {
   HeartIcon,
   ImageIcon,
   LocationIcon,
+  LockIcon,
   MailIcon,
   MegaphoneIcon,
   MessagesIcon,
@@ -60,6 +61,7 @@ export {
   PreviewDividerIcon,
   PreviewFullWidthIcon,
   PreviewSpacerIcon,
+  PreviewSplitHeroIcon,
   ProfileIcon,
   QuoteIcon,
   ReceiptIcon,
@@ -67,6 +69,7 @@ export {
   ReplyIcon,
   RowsIcon,
   SearchIcon,
+  SendIcon,
   SettingsIcon,
   ShieldIcon,
   ShoppingBagIcon,
@@ -80,5 +83,6 @@ export {
   UtensilsIcon,
   VideoIcon,
   WalletIcon,
+  WaveIcon,
 } from './icons';
 export type { IconProps } from './icons';

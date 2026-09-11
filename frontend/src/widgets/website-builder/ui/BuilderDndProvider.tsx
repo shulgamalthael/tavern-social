@@ -17,6 +17,7 @@ import { useState, type ReactNode } from 'react';
 import {
   findBlock,
   getBlockDefinition,
+  isBlockOrDescendant,
   useWebsiteBuilderStore,
   type WebsitePage,
 } from '@/entities/website';
@@ -121,10 +122,29 @@ export function BuilderDndProvider({ page, children }: BuilderDndProviderProps) 
       return;
     }
 
+    const activeData = active.data.current as LibraryDragData | CanvasBlockDragData | undefined;
+
     const overEmptyData = over.data.current as EmptyZoneDropData | undefined;
     if (overEmptyData?.kind === 'empty-zone') {
       setDragOverTarget(null);
       return;
+    }
+
+    // Наведение на блок, лежащий внутри поддерева самого перетаскиваемого
+    // блока (перетаскиваемый контейнер остаётся смонтированным с `opacity:
+    // 0.5`, не скрывается целиком — его собственные потомки остаются
+    // валидными целями `closestCenter`) — `moveBlock` такой drop всё равно
+    // отклонит (см. её комментарий про `isBlockOrDescendant`), но БЕЗ этой
+    // проверки индикатор «сюда встанет блок» всё равно загорелся бы над
+    // недопустимой целью, вводя в заблуждение реального пользователя, будто
+    // отпускание сработает — живым перетаскиванием подтверждено, что это не
+    // только гипотетический сценарий скриптового вызова.
+    if (activeData?.kind === 'canvas-block') {
+      const moving = findBlock(page.blocks, active.id as string);
+      if (moving && isBlockOrDescendant(moving, over.id as string)) {
+        setDragOverTarget(null);
+        return;
+      }
     }
 
     const activeRect = active.rect.current.translated ?? active.rect.current.initial;

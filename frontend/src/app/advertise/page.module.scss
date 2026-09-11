@@ -1,0 +1,123 @@
+.page {
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px 24px;
+  background: var(--tavern-bg);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+}
+
+.logo-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  box-shadow: 0 0 0 4px var(--tavern-soft);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 440px;
+  color: var(--tavern-muted);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 20px;
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-surface);
+  box-shadow: var(--tavern-shadow-card);
+  text-align: left;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.step__index {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--tavern-soft);
+  color: var(--tavern-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.step__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.step__title {
+  color: var(--tavern-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.step__description {
+  color: var(--tavern-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+// Тот же визуал, что `Button.module.scss`'s `.button--primary` — не
+// импортируется напрямую (та обёртка рендерит `<button>`, здесь нужна
+// навигационная `<Link>`), поэтому продублирован как CTA-специфичный класс,
+// не как компонент.
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  height: 42px;
+  border-radius: 9px;
+  background: var(--tavern-ink);
+  color: var(--tavern-bg);
+  font-size: 14px;
+  font-weight: 600;
+
+  &:hover {
+    background: var(--tavern-accent);
+    color: var(--tavern-accent-ink);
+  }
+}
+
+.existing {
+  color: var(--tavern-muted);
+  font-size: 13px;
+
+  a {
+    color: var(--tavern-accent);
+    font-weight: 600;
+  }
+}

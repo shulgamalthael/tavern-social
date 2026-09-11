@@ -1,0 +1,213 @@
+.status {
+  padding: 32px 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.hint {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.error {
+  margin-bottom: 12px;
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.card {
+  padding: 14px 16px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-card);
+  background: var(--tavern-surface);
+}
+
+.card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.card__title {
+  color: var(--tavern-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+// Та же палитра статусов, что и `AdminAdvertisingPanel.module.scss`
+// (`$status-*`) — админ читает те же значения `AdCampaignStatus`, статус
+// должен выглядеть одинаково в обоих местах.
+$status-draft: #64748b;
+$status-pending: #b45309;
+$status-active: #16a34a;
+$status-paused: #64748b;
+$status-rejected: #dc2626;
+$status-completed: #2563eb;
+
+.badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge--draft {
+  background: $status-draft;
+}
+
+.badge--pending_review {
+  background: $status-pending;
+}
+
+.badge--active {
+  background: $status-active;
+}
+
+.badge--paused {
+  background: $status-paused;
+}
+
+.badge--rejected {
+  background: $status-rejected;
+}
+
+.badge--completed {
+  background: $status-completed;
+}
+
+.card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.card__reason {
+  margin-bottom: 8px;
+  color: var(--tavern-danger);
+  font-size: 12px;
+}
+
+.creatives {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  list-style: none;
+}
+
+.creative {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.creative__image {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--tavern-soft);
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.creative__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.creative__title {
+  color: var(--tavern-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.creative__meta {
+  color: var(--tavern-muted);
+  font-size: 11px;
+}
+
+.creative__action {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--tavern-danger) 12%, transparent);
+    color: var(--tavern-danger);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.paymentModal {
+  width: min(420px, 100%);
+}
+
+.paymentModal__title {
+  margin-bottom: 6px;
+  color: var(--tavern-ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.paymentModal__hint {
+  margin-bottom: 14px;
+  color: var(--tavern-muted);
+  font-size: 12px;
+}

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Comment, Post, PostKind, ReactionType, User } from '@prisma/client';
+import type { Comment, GroupType, Post, PostKind, ReactionType, User } from '@prisma/client';
 import { deleteUploadedFile, uploadedFileUrl } from '@/common/lib/upload';
 import {
   extractImageUrls,
@@ -13,12 +13,15 @@ import {
 import { sanitizePostContent } from '@/common/lib/sanitize-post-content';
 import type { PaginatedDto } from '@/common/types/paginated';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
+import { CommunitiesService } from '@/modules/communities/communities.service';
+import { FriendsService } from '@/modules/friends/friends.service';
+import { SubscriptionsService } from '@/modules/subscriptions/subscriptions.service';
 import { UsersService } from '@/modules/users/users.service';
 import type { CreateCommentDto } from './dto/create-comment.dto';
 import type { CreatePostDto } from './dto/create-post.dto';
 import type { UpdatePostDto } from './dto/update-post.dto';
 import { LinkPreviewService } from './link-preview.service';
-import type { CommentDto, PostDto, PostSummaryDto } from './posts.types';
+import type { CommentDto, PostDto, PostSummaryDto, SharedPostDto } from './posts.types';
 
 /** Тот же лимит по умолчанию, что и у `NotificationsService` — курсорная
  * пагинация ленты/стены (см. `listFeed`/`listWall`). */
@@ -32,10 +35,15 @@ const MAX_POST_IMAGES = 10;
 
 type PostRelations = {
   author: User;
-  wallOwner: { name: string } | null;
-  group: { name: string } | null;
+  wallOwner: { id: string; name: string; isPrivate: boolean } | null;
+  group: { name: string; type: GroupType } | null;
   reactions: { type: ReactionType }[];
   reposts: { id: string }[];
+  /** Активные (`paymentStatus: 'paid'`, `endsAt` в будущем) продвижения —
+   * см. `postInclude`'s `where`. Пусто, если поста никто не продвигает
+   * прямо сейчас; никогда больше одной строки (см. `PostBoostsService.
+   * create`'s проверку на уже активное продвижение). */
+  boosts: { endsAt: Date | null }[];
 };
 type PostWithRelations = Post & PostRelations & { repostOf: (Post & PostRelations) | null };
 
@@ -58,17 +66,47 @@ export class PostsService {
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
     private readonly linkPreviewService: LinkPreviewService,
+    private readonly friendsService: FriendsService,
+    private readonly communitiesService: CommunitiesService,
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
+  /** Relationship-based фильтр (AI_PLATFORM_ROADMAP.md §73) — раньше это
+   * был буквально `where: { groupId: null }` (виден абсолютно каждый пост
+   * каждому пользователю). Теперь видно только: свои посты, посты друзей,
+   * посты тех, на кого подписан (§85 — `Subscription`, сознательно отдельная
+   * от `Friendship`: это и есть реальный канал трафика creator'а к
+   * подписчикам, независимо от дружбы), посты в сообществах, где состоишь, и
+   * — независимо от связи с автором — посты с активным платным продвижением
+   * (см. `PostBoost`'s комментарий в schema.prisma). `orderBy` намеренно не
+   * меняется: продвинутый пост занимает своё обычное хронологическое место
+   * среди всего, что viewer'у и так видно, отличаясь только бейджем
+   * «Продвигается» на frontend — не заводим вторую сортировку/закрепление
+   * сверху ради того, о чём никто не просил. */
   async listFeed(
     currentUserId: string,
     cursor?: string,
     limit = DEFAULT_FEED_LIMIT,
   ): Promise<PaginatedDto<PostDto>> {
+    const [friendIds, followingIds, memberCommunityIds] = await Promise.all([
+      this.friendsService.getFriendIds(currentUserId),
+      this.subscriptionsService.getFollowingIds(currentUserId),
+      this.communitiesService.getMemberCommunityIds(currentUserId),
+    ]);
+
     const posts = await this.prisma.post.findMany({
       // Посты групп в общую ленту не попадают — у группы своя лента
       // (`listGroupPosts`), см. AGENTS.md/план по группам.
-      where: { groupId: null },
+      where: {
+        groupId: null,
+        OR: [
+          { authorId: currentUserId },
+          { authorId: { in: friendIds } },
+          { authorId: { in: followingIds } },
+          { communityId: { in: memberCommunityIds } },
+          { boosts: { some: { paymentStatus: 'paid', endsAt: { gt: new Date() } } } },
+        ],
+      },
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { createdAt: 'desc' },
@@ -139,14 +177,16 @@ export class PostsService {
   }
 
   /** Стена конкретного пользователя — все посты, где он wallOwner, независимо
-   * от того, кто их автор (см. AGENTS.md backend, раздел про стену). */
+   * от того, кто их автор (см. AGENTS.md backend, раздел про стену).
+   * Приватный профиль (§103) — доступ только друзьям/одобренным подписчикам. */
   async listWall(
     wallOwnerId: string,
     currentUserId: string,
     cursor?: string,
     limit = DEFAULT_FEED_LIMIT,
   ): Promise<PaginatedDto<PostDto>> {
-    await this.usersService.findByIdOrThrow(wallOwnerId);
+    const wallOwner = await this.usersService.findByIdOrThrow(wallOwnerId);
+    await this.usersService.assertCanViewRestrictedContent(wallOwner, currentUserId);
 
     const posts = await this.prisma.post.findMany({
       where: { wallOwnerId },
@@ -198,8 +238,10 @@ export class PostsService {
     } else {
       wallOwnerId = dto.wallOwnerId ?? authorId;
       if (wallOwnerId !== authorId) {
-        // Публикация на чужой стене — получатель должен реально существовать.
-        await this.usersService.findByIdOrThrow(wallOwnerId);
+        // Публикация на чужой стене — получатель должен реально существовать,
+        // и (§103) стена не должна быть закрытой для автора поста.
+        const wallOwner = await this.usersService.findByIdOrThrow(wallOwnerId);
+        await this.usersService.assertCanViewRestrictedContent(wallOwner, authorId);
       }
     }
     const groupId = dto.groupId ?? null;
@@ -587,12 +629,15 @@ export class PostsService {
     }
   }
 
-  /** Существование + доступ к посту приватной группы — `NotFoundException`
-   * в обоих случаях (не подтверждаем существование чужого id, та же логика,
-   * что и в `GalleryService`, см. план по группам §5). Используется всеми
-   * действиями над конкретным постом (реакции/комментарии/репост/
-   * редактирование/удаление), кроме `listFeed`/`listGroupPosts`, у которых
-   * своя проверка на уровне списка (`assertGroupContentAccessible`). */
+  /** Существование + доступ к посту приватной группы ИЛИ приватной стены
+   * (§103) — `NotFoundException` в обоих случаях (не подтверждаем
+   * существование чужого id, та же логика, что и в `GalleryService`, см.
+   * план по группам §5 и `UsersService.assertCanViewRestrictedContent`'s
+   * комментарий). Используется всеми действиями над конкретным постом
+   * (реакции/комментарии/репост/редактирование/удаление), кроме
+   * `listFeed`/`listGroupPosts`, у которых своя проверка на уровне списка
+   * (`assertGroupContentAccessible`), и `listWall`, у которой своя —
+   * тот же гейт, что здесь, но до выборки списка, а не одного поста. */
   private async assertPostAccessible(
     postId: string,
     userId: string,
@@ -603,8 +648,10 @@ export class PostsService {
         id: true,
         authorId: true,
         groupId: true,
+        wallOwnerId: true,
         kind: true,
         group: { select: { type: true } },
+        wallOwner: { select: { id: true, isPrivate: true } },
       },
     });
     if (!post) {
@@ -615,6 +662,18 @@ export class PostsService {
         where: { groupId_userId: { groupId: post.groupId, userId } },
       });
       if (!membership) {
+        throw new NotFoundException('Запись не найдена');
+      }
+    }
+    // Пост на чужой приватной стене — та же проверка, что уже есть у
+    // `listWall`/`create`, но для отдельных действий над уже существующим
+    // постом (лайк/комментарий/репост/...), а не только за просмотр стены
+    // целиком: без неё чужой postId с приватной стены (полученный до того,
+    // как её владелец сделал страницу приватной, или как-то ещё) оставался
+    // полностью доступен для реакций/комментариев/чтения через toDto.
+    if (post.wallOwner) {
+      const canView = await this.usersService.canViewRestrictedContent(post.wallOwner, userId);
+      if (!canView) {
         throw new NotFoundException('Запись не найдена');
       }
     }
@@ -695,16 +754,57 @@ export class PostsService {
   private postInclude(userId: string) {
     const relations = {
       author: true,
-      wallOwner: { select: { name: true } },
-      group: { select: { name: true } },
+      wallOwner: { select: { id: true, name: true, isPrivate: true } },
+      group: { select: { name: true, type: true } },
       reactions: { where: { userId }, select: { type: true } },
       reposts: { where: { authorId: userId }, select: { id: true } },
+      boosts: {
+        where: { paymentStatus: 'paid', endsAt: { gt: new Date() } },
+        select: { endsAt: true },
+        orderBy: { endsAt: 'desc' },
+        take: 1,
+      },
     } as const;
 
     return {
       ...relations,
       repostOf: { include: relations },
     };
+  }
+
+  /**
+   * Единая точка правды «может ли `viewerId` сейчас видеть этот пост» — та
+   * же логика доступа, что `assertPostAccessible` (приватная группа,
+   * приватная стена автора, §103), но без throw: используется и на
+   * отправке «Переслать в чат» (`ThreadsService.sendMessage` — там
+   * `!== 'visible'` превращается в `NotFoundException`, отправитель не
+   * может поделиться тем, что сам не видит), и на каждом чтении уже
+   * отправленного сообщения с `sharedPostId` конкретным получателем —
+   * поэтому результат не кэшируется и не сохраняется как снимок, доступ
+   * мог измениться уже после пересылки (см. `SharedPostDto`'s комментарий). */
+  async getShareSummary(postId: string, viewerId: string): Promise<SharedPostDto> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: this.postInclude(viewerId),
+    });
+    if (!post) {
+      return { status: 'not_found' };
+    }
+    if (post.groupId && post.group?.type === 'private') {
+      const membership = await this.prisma.groupMembership.findUnique({
+        where: { groupId_userId: { groupId: post.groupId, userId: viewerId } },
+      });
+      if (!membership) {
+        return { status: 'restricted', author: this.usersService.toPublicProfile(post.author) };
+      }
+    }
+    if (post.wallOwner) {
+      const canView = await this.usersService.canViewRestrictedContent(post.wallOwner, viewerId);
+      if (!canView) {
+        return { status: 'restricted', author: this.usersService.toPublicProfile(post.author) };
+      }
+    }
+    return { status: 'visible', post: await this.toSummaryDto(post) };
   }
 
   private async toDto(post: PostWithRelations): Promise<PostDto> {
@@ -732,6 +832,8 @@ export class PostsService {
       isLikedByMe: post.reactions.some((reaction) => reaction.type === 'like'),
       isDislikedByMe: post.reactions.some((reaction) => reaction.type === 'dislike'),
       isRepostedByMe: post.reposts.length > 0,
+      isPromoted: post.boosts.length > 0,
+      promotedUntil: post.boosts[0]?.endsAt?.toISOString() ?? null,
       createdAt: post.createdAt.toISOString(),
       repostOf,
     };

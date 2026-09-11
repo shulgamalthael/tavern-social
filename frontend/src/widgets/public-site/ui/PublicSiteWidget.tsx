@@ -82,10 +82,11 @@ export function PublicSiteWidget({ businessId, slug }: PublicSiteWidgetProps) {
     businessId: data.business.id,
     name: data.business.name,
     logoUrl: data.business.logoUrl,
-    email: null,
-    phone: null,
-    address: null,
-    socialLinks: [],
+    email: data.business.email,
+    phone: data.business.phone,
+    address: data.business.address,
+    socialLinks: data.business.socialLinks,
+    workingHours: data.business.workingHours,
   };
 
   return (

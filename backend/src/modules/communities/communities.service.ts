@@ -73,6 +73,18 @@ export class CommunitiesService {
     return this.getOneForUser(communityId, userId);
   }
 
+  /** Тот же приём, что `FriendsService.getFriendIds` — `PostsService.
+   * listFeed` использует его для relationship-based фильтра главной ленты
+   * (AI_PLATFORM_ROADMAP.md §73): пост в сообществе виден только его
+   * участникам, не всем подряд. */
+  async getMemberCommunityIds(userId: string): Promise<string[]> {
+    const memberships = await this.prisma.communityMembership.findMany({
+      where: { userId },
+      select: { communityId: true },
+    });
+    return memberships.map((membership) => membership.communityId);
+  }
+
   private async assertExists(communityId: string): Promise<void> {
     const exists = await this.prisma.community.findUnique({
       where: { id: communityId },

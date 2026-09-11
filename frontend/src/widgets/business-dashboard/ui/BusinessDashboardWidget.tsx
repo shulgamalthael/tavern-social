@@ -21,6 +21,7 @@ import {
   FileIcon,
   GridIcon,
   MailIcon,
+  MegaphoneIcon,
   NewspaperIcon,
   ReceiptIcon,
   SettingsIcon,
@@ -28,11 +29,14 @@ import {
   TagIcon,
   WalletIcon,
 } from '@/shared/ui/icons';
+import { AdvertiserDashboardWidget } from './AdvertiserDashboardWidget';
+import { AdvertisingSection } from './AdvertisingSection';
 import { AppointmentsSection } from './AppointmentsSection';
 import { BlogSection } from './BlogSection';
 import { CustomEntitiesSection } from './CustomEntitiesSection';
 import { DiscountsSection } from './DiscountsSection';
 import { FormsSection } from './FormsSection';
+import { NativeAdvertisingSection } from './NativeAdvertisingSection';
 import { OrdersSection } from './OrdersSection';
 import { OverviewSection } from './OverviewSection';
 import { PagesSection } from './PagesSection';
@@ -60,7 +64,9 @@ type DashboardTab =
   | 'rules'
   | 'widgets'
   | 'web3'
-  | 'custom-entities';
+  | 'custom-entities'
+  | 'advertising'
+  | 'native-advertising';
 
 const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[] = [
   { id: 'overview', icon: ChartIcon, label: 'Обзор' },
@@ -76,6 +82,8 @@ const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[
   { id: 'rules', icon: CpuIcon, label: 'Автоматизация' },
   { id: 'web3', icon: WalletIcon, label: 'Web3' },
   { id: 'custom-entities', icon: DatabaseIcon, label: 'База данных' },
+  { id: 'advertising', icon: MegaphoneIcon, label: 'Реклама' },
+  { id: 'native-advertising', icon: MegaphoneIcon, label: 'Реклама в ленте' },
 ];
 
 /**
@@ -132,6 +140,19 @@ const IN_PAGE_TABS: { id: DashboardTab; icon: typeof ChartIcon; label: string }[
  * сущностей ("Клиенты CRM" и т.п.) поверх декларативной EAV-модели, не
  * произвольная схема с реальными DDL-миграциями (см. `CustomEntitiesSection`'s
  * комментарий).
+ *
+ * «Реклама» (Advertising Infrastructure, корневой план фичи) — тоже без
+ * гейта капабилити: self-service, любой бизнес может создать и оплатить
+ * кампанию (согласовано с владельцем), приём слотов на СВОЁМ сайте — отдельный
+ * Builder-блок `adslot`, гейтящийся собственной `AdvertisingInventoryService`
+ * (не капабилити, см. её комментарий), не эта вкладка.
+ *
+ * Внешний рекламодатель (`business.isAdvertiserOnly`, AI_PLATFORM_ROADMAP.md
+ * §71 — создан через облегчённый кабинет `/advertise/new`, не через обычную
+ * форму «Создать бизнес») получает СОВСЕМ другой рендер — см. ранний
+ * `return` ниже на `AdvertiserDashboardWidget`, до самого дерева вкладок:
+ * у такого бизнеса сайт навсегда остаётся пустым черновиком, показывать ему
+ * Товары/Заказы/Конструктор/Настройки было бы чистой путаницей.
  */
 export function BusinessDashboardWidget({ businessId }: BusinessDashboardWidgetProps) {
   const businessFetcher = useCallback(() => getBusiness(businessId), [businessId]);
@@ -173,6 +194,10 @@ export function BusinessDashboardWidget({ businessId }: BusinessDashboardWidgetP
   }
 
   const data = business.data;
+
+  if (data.isAdvertiserOnly) {
+    return <AdvertiserDashboardWidget business={data} />;
+  }
 
   return (
     <div className={styles.root}>
@@ -261,6 +286,8 @@ export function BusinessDashboardWidget({ businessId }: BusinessDashboardWidgetP
             <Web3Section business={data} onWalletChanged={() => void business.refetch()} />
           )}
           {tab === 'custom-entities' && <CustomEntitiesSection businessId={businessId} />}
+          {tab === 'advertising' && <AdvertisingSection business={data} />}
+          {tab === 'native-advertising' && <NativeAdvertisingSection business={data} />}
         </div>
       </div>
     </div>

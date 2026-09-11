@@ -1,23 +1,86 @@
-.friends__requests {
-  margin-bottom: 26px;
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--tavern-line);
+// Сегмент-контрол «Все друзья / Заявки» — первый такой паттерн в проекте
+// (см. AGENTS.md — общий примитив заводится только когда паттерн реально
+// повторяется в 2+ местах, здесь пока единственное использование, поэтому
+// свёрстан прямо тут, а не вынесен в `shared/ui`). Утопленная подложка
+// (`--tavern-sunk`) с приподнятой активной вкладкой — тот же язык, что у
+// инпутов/полей поиска в проекте (сравните `--tavern-sunk` в
+// `widgets/profile/ui/FriendsListModal.module.scss`), не изобретённый
+// заново стиль сегмент-контрола.
+.friends__tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  margin: 20px 0 18px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
 }
 
-.friends__requests-title {
+.friends__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: calc(var(--tavern-radius-control) - 3px);
+  background: none;
+  color: var(--tavern-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    color: var(--tavern-ink);
+  }
+}
+
+.friends__tab--active {
+  background: var(--tavern-surface);
+  color: var(--tavern-ink);
+  box-shadow: var(--tavern-shadow-card);
+}
+
+// Поиск по уже загруженным друзьям — тот же визуальный приём, что и у
+// `.modal__search` в `FriendsListModal.module.scss` (утопленный инпут с
+// иконкой слева), здесь на светлой поверхности страницы вместо модалки,
+// поэтому фон `--tavern-surface` + рамка, а не `--tavern-sunk`.
+.friends__search {
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin: 0 0 14px;
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 16px;
-  font-weight: 500;
+  gap: 8px;
+  max-width: 360px;
+  height: 40px;
+  padding: 0 14px;
+  margin-bottom: 18px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+
+    &::placeholder {
+      color: var(--tavern-muted);
+    }
+  }
 }
 
-.friends__requests-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.friends__search-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--tavern-muted);
 }
 
 // Карточки друзей — сетка, а не список: у карточки теперь своя «личность»
@@ -28,13 +91,44 @@
 // реальных карточек меньше, чем помещается в строку: последняя неполная
 // строка оставалась у левого края шириной в минимум (240px) с пустым
 // местом справа, вместо того чтобы разъехаться на всю ширину. `auto-fit`
-// схлопывает пустые колонки, и `1fr` перераспределяет освободившееся место
-// между уже существующими карточками — они растягиваются до общего
-// максимума (320px) вместо того чтобы остаться на минимуме, и вся плитка
-// (в т.ч. неполная последняя строка) выглядит одинаково плотно набранной.
+// схлопывает пустые колонки, и карточки растягиваются до общего максимума
+// (320px) вместо того чтобы остаться на минимуме — но даже растянутые до
+// максимума, когда карточек мало (1-2 друга на всю ширину секции), они всё
+// равно не заполняют собой контейнер целиком, а по умолчанию у грида это
+// значит «прижаться к левому краю, остаток пустой площадки — справа».
+// `justify-content: center` подбирает эту недостающую разницу поровну по
+// бокам вместо того, чтобы отдавать её всю одной стороне — при полной
+// строке (карточки реально занимают всю ширину) эффекта нет вообще, разница
+// заметна только когда треков меньше, чем помещается в ширину.
 .friends__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+  justify-content: center;
   gap: 14px;
   margin-top: 4px;
+}
+
+// Вкладка «Заявки» — входящие и исходящие двумя явно подписанными группами
+// вместо прежнего единого списка вперемешку (там их отличал только цвет
+// рамки карточки, см. `FriendRequestCard.module.scss`) — так сразу видно,
+// сколько заявок в каждом направлении, без подсчёта на глаз.
+.friends__requests {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  margin-top: 4px;
+}
+
+.friends__requests-group-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tavern-muted);
+}
+
+.friends__requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }

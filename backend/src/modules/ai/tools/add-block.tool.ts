@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable, type OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@/infrastructure/database/prisma.service';
+import { AdvertisingInventoryService } from '@/modules/advertising/advertising-inventory.service';
 import { MediaAssetsService } from '@/modules/media-assets/media-assets.service';
 import { WebsitesService } from '@/modules/websites/websites.service';
 import type { WebsiteBlock, WebsitePage } from '@/modules/websites/websites.types';
@@ -8,14 +9,17 @@ import type { ToolContext, ToolDefinition } from '../ai.types';
 import { buildBlockRefs, needsBlockRefs } from './build-block-refs';
 import {
   ALLOWED_BLOCK_TYPES,
-  ALLOWED_CHILDREN,
   BLOCK_SCHEMAS,
-  CONTAINER_BLOCK_TYPES,
   buildValidatedProps,
   isAllowedBlockType,
   type AllowedBlockType,
   type BuildValidatedPropsRefs,
 } from './lib/add-block-schemas';
+import {
+  assertIsContainer,
+  findDisallowedChild,
+  findMissingCapabilities,
+} from './lib/block-placement';
 import { findBlockInPages, replaceBlockInPages } from './lib/block-tree';
 import { ToolRegistryService } from './tool-registry.service';
 
@@ -76,6 +80,7 @@ export class AddBlockTool implements OnModuleInit {
     private readonly websitesService: WebsitesService,
     private readonly prisma: PrismaService,
     private readonly mediaAssetsService: MediaAssetsService,
+    private readonly advertisingInventoryService: AdvertisingInventoryService,
     private readonly toolRegistry: ToolRegistryService,
   ) {}
 
@@ -155,24 +160,20 @@ export class AddBlockTool implements OnModuleInit {
         // любым допустимым типом, `heading`/`text`/т.п. не читают `children`
         // ни в одном рендерере) и, для `columns`, принимать только `column`
         // (`ALLOWED_CHILDREN`) — тот же контракт, что и у ручного билдера.
+        // Обе проверки — общий `lib/block-placement.ts`, тот же, что и у
+        // `InsertCustomWidgetTool` (раньше независимые копии одной и той же
+        // логики, см. её комментарий).
         let parent: WebsiteBlock | undefined;
         if (input.parentId) {
           const found = findBlockInPages(draft.document.pages, input.parentId);
           if (!found || found.page.id !== page.id) {
             throw new Error(`Блок-родитель с id "${input.parentId}" не найден на этой странице`);
           }
-          if (
-            !isAllowedBlockType(found.block.type) ||
-            !CONTAINER_BLOCK_TYPES.has(found.block.type)
-          ) {
+          assertIsContainer(input.parentId, found.block.type);
+          const disallowed = findDisallowedChild(found.block.type, [input.blockType]);
+          if (disallowed) {
             throw new Error(
-              `Блок "${input.parentId}" не может содержать вложенные блоки (не контейнер)`,
-            );
-          }
-          const allowedChildren = ALLOWED_CHILDREN[found.block.type];
-          if (allowedChildren && !allowedChildren.has(input.blockType)) {
-            throw new Error(
-              `Блок "${found.block.type}" принимает только детей типа: ${[...allowedChildren].join(', ')}`,
+              `Блок "${found.block.type}" принимает только детей типа: ${disallowed.allowedTypesList}`,
             );
           }
           parent = found.block;
@@ -194,9 +195,24 @@ export class AddBlockTool implements OnModuleInit {
             where: { id: ctx.businessId },
             select: { capabilities: true },
           });
-          if (!business?.capabilities.includes(schema.capability)) {
+          const missing = findMissingCapabilities([input.blockType], business?.capabilities ?? []);
+          if (missing.length > 0) {
             throw new Error(
-              `Блок "${schema.label}" требует включённой капабилити "${schema.capability}" — у этого бизнеса она не включена, блок останется пустым. Включите капабилити в настройках бизнеса или используйте другой тип блока.`,
+              `Блок "${schema.label}" требует включённой капабилити "${missing[0]}" — у этого бизнеса она не включена, блок останется пустым. Включите капабилити в настройках бизнеса или используйте другой тип блока.`,
+            );
+          }
+        }
+
+        // Отдельный, не через `capability`, гейт для `adslot` (см. корневой
+        // план фичи §1/§6, `AdvertisingInventoryService`'s комментарий про
+        // то, почему это не то же самое, что `Business.capabilities`): число
+        // доступных рекламных слотов — производная от тарифа, а не
+        // владелец-переключаемое значение.
+        if (input.blockType === 'adslot') {
+          const inventory = await this.advertisingInventoryService.getInventory(ctx.businessId);
+          if (inventory.available <= 0) {
+            throw new Error(
+              `Рекламные слоты недоступны — на текущем тарифе бизнеса их лимит ${inventory.limit}, уже занято ${inventory.occupied}. Повысьте тариф или удалите неиспользуемый рекламный слот.`,
             );
           }
         }

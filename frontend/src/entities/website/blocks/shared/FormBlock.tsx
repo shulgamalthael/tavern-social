@@ -23,6 +23,9 @@ export interface FormBlockProps {
   formType: string;
   businessId: string;
   isEditing?: boolean;
+  onEditEyebrow?: (value: string) => void;
+  onEditHeading?: (value: string) => void;
+  onEditDescription?: (value: string) => void;
 }
 
 /**
@@ -51,6 +54,9 @@ export function FormBlock({
   formType,
   businessId,
   isEditing,
+  onEditEyebrow,
+  onEditHeading,
+  onEditDescription,
 }: FormBlockProps) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [honeypot, setHoneypot] = useState('');
@@ -76,7 +82,16 @@ export function FormBlock({
 
   return (
     <div className={styles.block}>
-      <SectionHeading eyebrow={eyebrow} heading={heading} description={description} align="left" />
+      <SectionHeading
+        eyebrow={eyebrow}
+        heading={heading}
+        description={description}
+        align="left"
+        editable={isEditing}
+        onEditEyebrow={onEditEyebrow}
+        onEditHeading={onEditHeading}
+        onEditDescription={onEditDescription}
+      />
       {status === 'success' ? (
         <p className={styles['form__success']}>{successMessage}</p>
       ) : (

@@ -1,4 +1,22 @@
+import type {
+  AdBillingModel,
+  AdCampaignStatus,
+  AdCreativeStatus,
+  AdFormat,
+  AdPlacement,
+} from '@/entities/advertising';
+import type { BusinessCategory } from '@/entities/business';
+import type { CreatorStatus } from '@/entities/creator';
 import type { GroupType } from '@/entities/group';
+import type {
+  AdBillingModel as NativeAdBillingModel,
+  NativeAdCampaignStatus,
+  NativeAdCreativeStatus,
+  NativeAdCreativeStyle,
+  NativeAdPayoutStatus,
+} from '@/entities/native-ad';
+import type { PaymentStatus } from '@/entities/order';
+import type { PlanTier } from '@/entities/subscription';
 import type { UserRole } from '@/entities/user';
 
 export type AdminUserRoleFilter = 'all' | UserRole;
@@ -218,4 +236,259 @@ export interface AiInfrastructureOverview {
     providerTierDetectionAvailable: false;
     currentLimits: { rpm: number; rpd: number };
   };
+}
+
+// --- Advertising (см. backend `AdminAdvertisingController`, AI_PLATFORM_
+// ROADMAP.md §68) — та же независимая admin-DTO копия, что и `AdminUser`
+// выше: переиспользует только МЕЛКИЕ leaf-типы соседних entities (`PlanTier`/
+// `BusinessCategory`/`PaymentStatus`/`AdPlacement`/`AdFormat`/`AdCampaignStatus`),
+// но сама форма композитного DTO — своя, не импорт целого `AdCampaign` из
+// `entities/advertising` (тому не нужна форма "кампания + все креативы для
+// модерации", это чисто admin-view).
+
+export interface AdminAdCreative {
+  id: string;
+  campaignId: string;
+  format: AdFormat;
+  headline: string;
+  description: string | null;
+  imageUrl: string | null;
+  videoUrl: string | null;
+  ctaLabel: string | null;
+  targetUrl: string;
+  status: AdCreativeStatus;
+  rejectionReason: string | null;
+}
+
+export interface AdminAdCampaign {
+  id: string;
+  advertiserBusinessId: string;
+  name: string;
+  status: AdCampaignStatus;
+  rejectionReason: string | null;
+  budgetCents: number;
+  spentCents: number;
+  currency: string;
+  paymentStatus: PaymentStatus;
+  billingModel: AdBillingModel;
+  bidCents: number;
+  impressionsServed: number;
+  clicksServed: number;
+  targetCategories: BusinessCategory[];
+  targetPlacements: AdPlacement[];
+  createdAt: string;
+  creatives: AdminAdCreative[];
+}
+
+export interface AdminAdBusinessSlots {
+  businessId: string;
+  businessName: string;
+  tier: PlanTier | null;
+  slotLimit: number;
+  slotsOccupied: number;
+  slotsAvailable: number;
+}
+
+export interface AdminAdvertiserBan {
+  businessId: string;
+  businessName: string;
+  reason: string | null;
+  bannedAt: string;
+}
+
+export interface AdminAdvertisingOverview {
+  pendingCampaigns: AdminAdCampaign[];
+  /** Единственное место, откуда админ может дойти до per-creative
+   * модерации отдельного креатива уже одобренной кампании. */
+  activeCampaigns: AdminAdCampaign[];
+  /** `status: 'paused'` — сегодня только автоматически, при исчерпании
+   * бюджета. Read-only здесь (без approve/reject) — "продлить бюджет" не
+   * реализовано в этом слайсе. */
+  pausedCampaigns: AdminAdCampaign[];
+  businesses: AdminAdBusinessSlots[];
+  bannedAdvertisers: AdminAdvertiserBan[];
+  /** Показы/клики по дням за последние 30 дней, платформа целиком — дни
+   * без событий всё равно присутствуют с нулями (см. backend `bucketByDay`). */
+  dailyStats: { date: string; impressions: number; clicks: number }[];
+  totals: {
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    /** Ключ — код валюты, значение — сумма `budgetCents` оплаченных
+     * кампаний В ЭТОЙ валюте (см. backend `AdminAdvertisingOverviewDto`'s
+     * комментарий про то, почему это не единое число). */
+    revenueByCurrency: Record<string, number>;
+  };
+}
+
+// --- Creators (Creator Monetization Phase 1, см. backend
+// `AdminCreatorsController`, AI_PLATFORM_ROADMAP.md §79) — тот же принцип,
+// что у Advertising выше: своя урезанная admin-view форма, переиспользует
+// только `CreatorStatus` из `entities/creator`.
+
+export interface AdminCreatorListItem {
+  id: string;
+  status: CreatorStatus;
+  rejectionReason: string | null;
+  suspendedReason: string | null;
+  user: { id: string; name: string; avatarUrl: string | null };
+  primaryCategory: string | null;
+  createdAt: string;
+}
+
+/** Плоская строка админ-CRUD над `CreatorCategory` (§84, изначально
+ * отложенный nice-to-have §79) — см. backend `AdminCreatorCategoryDto`'s
+ * комментарий про `depth`/зачем не переиспользуется рекурсивный
+ * `CreatorCategoryNode` из `entities/creator`. */
+export interface AdminCreatorCategory {
+  id: string;
+  slug: string;
+  label: string;
+  icon: string | null;
+  parentId: string | null;
+  order: number;
+  depth: number;
+}
+
+export interface CreateCreatorCategoryInput {
+  slug: string;
+  label: string;
+  icon?: string;
+  parentId?: string;
+  order?: number;
+}
+
+export interface UpdateCreatorCategoryInput {
+  slug?: string;
+  label?: string;
+  icon?: string;
+  /** Пустая строка — явно перенести на верхний уровень, см. backend
+   * `UpdateCreatorCategoryDto`'s комментарий. */
+  parentId?: string;
+  order?: number;
+}
+
+// --- Native Advertising (Creator Monetization Phase 2, см. backend
+// `AdminNativeAdsController`, AI_PLATFORM_ROADMAP.md §80) — тот же принцип,
+// что у Advertising/Creators выше: своя урезанная admin-view форма.
+
+export interface AdminNativeAdCreative {
+  id: string;
+  campaignId: string;
+  style: NativeAdCreativeStyle;
+  headline: string;
+  bodyText: string | null;
+  imageUrl: string | null;
+  videoUrl: string | null;
+  ctaLabel: string | null;
+  targetUrl: string;
+  status: NativeAdCreativeStatus;
+  rejectionReason: string | null;
+}
+
+export interface AdminNativeAdCampaign {
+  id: string;
+  advertiserBusinessId: string;
+  name: string;
+  status: NativeAdCampaignStatus;
+  rejectionReason: string | null;
+  budgetCents: number;
+  spentCents: number;
+  currency: string;
+  paymentStatus: PaymentStatus;
+  billingModel: NativeAdBillingModel;
+  bidCents: number;
+  impressionsServed: number;
+  clicksServed: number;
+  targetCategoryIds: string[];
+  targetGeography: string[];
+  adCategory: string | null;
+  createdAt: string;
+  creatives: AdminNativeAdCreative[];
+}
+
+export interface AdminNativeAdsOverview {
+  pendingCampaigns: AdminNativeAdCampaign[];
+  activeCampaigns: AdminNativeAdCampaign[];
+  pausedCampaigns: AdminNativeAdCampaign[];
+  totals: {
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    revenueByCurrency: Record<string, number>;
+    /** Реально реализованная выручка (сумма ledger'а), разбитая на три доли
+     * — см. backend `AdminNativeAdsOverviewDto.totals.realizedRevenueByCurrency`'s
+     * комментарий. */
+    realizedRevenueByCurrency: Record<
+      string,
+      { creatorShareCents: number; platformFeeCents: number; processingFeeCents: number }
+    >;
+  };
+}
+
+/** Компактная строка выбора creator'а при ручном назначении — см. backend
+ * `EligibleCreatorDto`'s комментарий. */
+export interface EligibleCreator {
+  creatorProfileId: string;
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  primaryCategory: string | null;
+}
+
+export interface NativeAdAssignment {
+  id: string;
+  campaignId: string;
+  creatorProfileId: string;
+  status: 'active' | 'paused';
+  assignedAt: string;
+  creatorName: string;
+  creatorAvatarUrl: string | null;
+}
+
+/** Ранжированная подсказка при ручном назначении (Creator Monetization
+ * Phase 3, см. backend `RecommendedCreatorDto`'s комментарий —
+ * детерминированный скоринг, не вызов LLM, admin по-прежнему решает сам). */
+export interface RecommendedCreator {
+  creatorProfileId: string;
+  name: string;
+  avatarUrl: string | null;
+  primaryCategory: string | null;
+  matchPercent: number;
+  reasons: string[];
+}
+
+/** Админ-конфигурируемые проценты распределения выручки (Creator
+ * Monetization Phase 4, см. backend `NativeAdRevenueSettingsService`'s
+ * комментарий — базисные пункты, не хардкод, сумма трёх долей всегда
+ * 10000). */
+export interface NativeAdRevenueSettings {
+  id: string;
+  creatorRevenueShareBps: number;
+  platformFeeBps: number;
+  paymentProcessingFeeBps: number;
+  minimumPayoutCents: number;
+  updatedAt: string;
+}
+
+export interface UpdateNativeAdRevenueSettingsInput {
+  creatorRevenueShareBps: number;
+  platformFeeBps: number;
+  paymentProcessingFeeBps: number;
+  minimumPayoutCents: number;
+}
+
+/** Очередь выплат, ожидающих реального перевода через Stripe Connect
+ * (Creator Monetization Phase 5, см. backend `AdminNativeAdPayoutDto`'s
+ * комментарий). */
+export interface AdminNativeAdPayout {
+  id: string;
+  amountCents: number;
+  currency: string;
+  status: NativeAdPayoutStatus;
+  failureReason: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  creatorProfileId: string;
+  creatorName: string;
 }

@@ -129,6 +129,20 @@
   }
 }
 
+.people-grid--masonry {
+  display: block;
+  column-count: var(--grid-columns, 3);
+  column-gap: 24px;
+
+  @media (max-width: 1024px) {
+    column-count: 2;
+  }
+
+  @media (max-width: 640px) {
+    column-count: 1;
+  }
+}
+
 .people-card {
   display: flex;
   flex-direction: column;
@@ -138,6 +152,11 @@
   border-radius: var(--site-radius);
   background: var(--site-surface);
   box-shadow: var(--site-card-shadow);
+}
+
+.people-card--masonry {
+  break-inside: avoid;
+  margin-bottom: 24px;
 }
 
 .people-card--team {
@@ -240,6 +259,32 @@
 .people-card__role {
   font-size: 12.5px;
   color: var(--site-muted);
+}
+
+.people-card__socials {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.people-card__social-link {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--site-primary) 12%, transparent);
+  color: var(--site-primary);
+
+  svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  &:hover {
+    background: var(--site-primary);
+    color: var(--site-bg);
+  }
 }
 
 // --- RepeatableSimpleCards --------------------------------------------------
@@ -403,4 +448,64 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+// --- Newsletter popup shell ----------------------------------------------
+// Тот же паттерн, что `.popup-offer__*` в `blocks/content/content.module.scss`
+// (не переиспользован напрямую — `forms` не должен зависеть от стилей
+// `content`, у каждой категории блоков свой модуль), только с префиксом
+// `form-popup`, т.к. живёт здесь, рядом с `.form*`, которые уже использует
+// `FormBlock.tsx`.
+
+.form-popup__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 55%);
+}
+
+.form-popup__preview {
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border: 1.5px dashed var(--site-border);
+  border-radius: var(--site-radius);
+}
+
+.form-popup__card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 28px;
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 25%);
+}
+
+.form-popup__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--site-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--site-border);
+    color: var(--site-text);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 }

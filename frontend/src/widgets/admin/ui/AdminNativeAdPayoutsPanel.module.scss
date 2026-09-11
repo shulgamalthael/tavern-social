@@ -1,0 +1,54 @@
+.section-title {
+  margin: 0 0 12px;
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-sunk);
+}
+
+.rowInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.rowAmount {
+  color: var(--tavern-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.rowMeta {
+  color: var(--tavern-muted);
+  font-size: 12px;
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0 0 12px;
+  color: var(--tavern-danger);
+  font-size: 13px;
+}
+
+.success {
+  margin: 0 0 12px;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 600;
+}

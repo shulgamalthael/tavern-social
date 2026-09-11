@@ -208,4 +208,79 @@ describe('buildValidatedStyle', () => {
       maxWidth: 'full',
     });
   });
+
+  describe('AI_PLATFORM_ROADMAP.md §78 — "advanced" CSS bucket', () => {
+    it('accepts a valid transform value', () => {
+      expect(buildValidatedStyle(undefined, { advanced: { transform: 'rotate(-4deg)' } })).toEqual({
+        advanced: { transform: 'rotate(-4deg)' },
+      });
+    });
+
+    it('accepts a valid clip-path polygon value', () => {
+      const value = 'polygon(0 0, 100% 0, 100% 85%, 0 100%)';
+      expect(buildValidatedStyle(undefined, { advanced: { clipPath: value } })).toEqual({
+        advanced: { clipPath: value },
+      });
+    });
+
+    it('accepts a valid filter chain', () => {
+      expect(
+        buildValidatedStyle(undefined, { advanced: { filter: 'blur(6px) saturate(1.3)' } }),
+      ).toEqual({ advanced: { filter: 'blur(6px) saturate(1.3)' } });
+    });
+
+    it('rejects a value containing url(...)', () => {
+      expect(() =>
+        buildValidatedStyle(undefined, { advanced: { filter: 'url(https://evil.example/x.svg)' } }),
+      ).toThrow(/недопустимую конструкцию/);
+    });
+
+    it('rejects a value containing a stray semicolon/braces', () => {
+      expect(() =>
+        buildValidatedStyle(undefined, { advanced: { transform: 'rotate(1deg); } .x{color:red' } }),
+      ).toThrow(/недопустимую конструкцию/);
+    });
+
+    it('rejects an unknown advanced property', () => {
+      expect(() => buildValidatedStyle(undefined, { advanced: { notARealProperty: 'x' } })).toThrow(
+        /Неизвестные поля advanced/,
+      );
+    });
+
+    it('rejects a value over the length cap', () => {
+      expect(() =>
+        buildValidatedStyle(undefined, { advanced: { transform: 'a'.repeat(201) } }),
+      ).toThrow(/не может быть длиннее/);
+    });
+
+    it('validates mixBlendMode/textTransform/fontStyle as exact keyword enums', () => {
+      expect(() =>
+        buildValidatedStyle(undefined, { advanced: { mixBlendMode: 'not-a-real-mode' } }),
+      ).toThrow(/advanced\.mixBlendMode/);
+      expect(buildValidatedStyle(undefined, { advanced: { mixBlendMode: 'multiply' } })).toEqual({
+        advanced: { mixBlendMode: 'multiply' },
+      });
+    });
+
+    it('validates opacity as a number string between 0 and 1', () => {
+      expect(() => buildValidatedStyle(undefined, { advanced: { opacity: '1.5' } })).toThrow(
+        /advanced\.opacity/,
+      );
+      expect(buildValidatedStyle(undefined, { advanced: { opacity: '0.6' } })).toEqual({
+        advanced: { opacity: '0.6' },
+      });
+    });
+
+    it('merges advanced partially and removes a field with null', () => {
+      const existing = { advanced: { transform: 'rotate(4deg)', opacity: '0.9' } };
+      expect(
+        buildValidatedStyle(existing, { advanced: { opacity: null, filter: 'blur(2px)' } }),
+      ).toEqual({ advanced: { transform: 'rotate(4deg)', filter: 'blur(2px)' } });
+    });
+
+    it('removes the whole advanced bucket when given null at the top level', () => {
+      const existing = { background: 'surface', advanced: { transform: 'rotate(4deg)' } };
+      expect(buildValidatedStyle(existing, { advanced: null })).toEqual({ background: 'surface' });
+    });
+  });
 });

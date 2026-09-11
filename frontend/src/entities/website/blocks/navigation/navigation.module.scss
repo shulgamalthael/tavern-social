@@ -103,3 +103,190 @@
   width: 13px;
   height: 13px;
 }
+
+// --- Entity search -------------------------------------------------------
+
+.search {
+  position: relative;
+  max-width: 360px;
+}
+
+.search__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+
+  &:focus-within {
+    border-color: var(--site-primary);
+  }
+}
+
+.search__icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--site-muted);
+}
+
+.search__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+  }
+
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.search__clear {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--site-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--site-muted) 16%, transparent);
+    color: var(--site-text);
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.search__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  overflow: hidden auto;
+  max-height: 360px;
+  border: var(--site-card-border-width) solid var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-surface);
+  box-shadow:
+    var(--site-card-shadow),
+    0 12px 28px rgb(0 0 0 / 12%);
+}
+
+.search__status {
+  margin: 0;
+  padding: 16px;
+  color: var(--site-muted);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.search__result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--site-border);
+  }
+}
+
+.search__result-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.search__result-title {
+  overflow: hidden;
+  color: var(--site-text);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search__result-subtitle {
+  overflow: hidden;
+  color: var(--site-muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search__result-link {
+  flex-shrink: 0;
+  color: var(--site-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// --- Anchor navigation dots -----------------------------------------------
+
+.anchor-nav {
+  position: fixed;
+  top: 50%;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transform: translateY(-50%);
+}
+
+.anchor-nav--left {
+  left: 20px;
+}
+
+.anchor-nav--right {
+  right: 20px;
+}
+
+.anchor-nav__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--site-border);
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    background: var(--site-primary);
+    transform: scale(1.3);
+  }
+}
+
+// В билдере — обычный ряд в потоке, не приклеенный к вьюпорту, та же
+// причина, что у `.sticky-bar--preview` (`blocks/content/content.module.scss`).
+.anchor-nav--preview {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  flex-direction: row;
+  transform: none;
+}

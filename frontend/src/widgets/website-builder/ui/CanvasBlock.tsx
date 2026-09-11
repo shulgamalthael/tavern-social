@@ -194,7 +194,23 @@ export function CanvasBlock({ block, theme, viewport, business, pages }: CanvasB
         </span>
       </div>
 
-      <div style={inner} className={styles['block__content']}>
+      <div
+        style={inner}
+        className={styles['block__content']}
+        // Реальный `<a href>` внутри отрендеренного блока (кнопка/ссылка —
+        // `SiteButton` и т. п.) не должен по-настоящему переходить по
+        // ссылке внутри канваса билдера — иначе первый клик по editable-
+        // тексту кнопки (§67) увёл бы со страницы билдера вместо входа в
+        // редактирование. Только `preventDefault` в capture-фазе, БЕЗ
+        // `stopPropagation` — событие клика всё равно доходит до
+        // `EditableText`'s собственного bubble-фазного `onClick` (тому не
+        // нужно настоящее действие ссылки, только сам факт клика).
+        onClickCapture={(event) => {
+          if ((event.target as HTMLElement).closest('a')) {
+            event.preventDefault();
+          }
+        }}
+      >
         <Renderer
           props={block.props}
           theme={theme}

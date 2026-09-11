@@ -1,5 +1,6 @@
 'use client';
 
+import { useFollowRequestsStore } from '@/entities/follow';
 import { useFriendStore } from '@/entities/friend';
 import { NotificationToast, useNotificationStore, useToastStore } from '@/entities/notification';
 import { useThreadStore } from '@/entities/thread';
@@ -21,6 +22,8 @@ export function NotificationToaster() {
   const setActiveThread = useThreadStore((state) => state.setActiveThread);
   const acceptRequest = useFriendStore((state) => state.acceptRequest);
   const removeRequest = useFriendStore((state) => state.removeRequest);
+  const acceptSubscriptionRequest = useFollowRequestsStore((state) => state.acceptRequest);
+  const removeSubscriptionRequest = useFollowRequestsStore((state) => state.removeRequest);
   const markNotificationRead = useNotificationStore((state) => state.markRead);
 
   if (visible.length === 0) return null;
@@ -40,6 +43,8 @@ export function NotificationToaster() {
                 break;
               case 'friend-request':
               case 'friend-accepted':
+              case 'subscription-request':
+              case 'subscription-accepted':
                 goToSection('friends');
                 break;
               case 'post-like':
@@ -60,10 +65,18 @@ export function NotificationToaster() {
             dismiss(item.id);
           }}
           onAccept={
-            item.kind === 'friend-request' ? () => void acceptRequest(item.senderId) : undefined
+            item.kind === 'friend-request'
+              ? () => void acceptRequest(item.senderId)
+              : item.kind === 'subscription-request'
+                ? () => void acceptSubscriptionRequest(item.senderId)
+                : undefined
           }
           onDecline={
-            item.kind === 'friend-request' ? () => void removeRequest(item.senderId) : undefined
+            item.kind === 'friend-request'
+              ? () => void removeRequest(item.senderId)
+              : item.kind === 'subscription-request'
+                ? () => void removeSubscriptionRequest(item.senderId)
+                : undefined
           }
         />
       ))}

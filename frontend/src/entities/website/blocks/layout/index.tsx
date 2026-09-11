@@ -1,3 +1,4 @@
+import { cn } from '@/shared/lib/cn';
 import {
   ColumnsIcon,
   GridIcon,
@@ -8,11 +9,13 @@ import {
   PreviewFullWidthIcon,
   PreviewSpacerIcon,
   RowsIcon,
+  WaveIcon,
 } from '@/shared/ui/icons';
 import { SPACING_PX } from '../../model/theme-tokens';
 import type { BlockRendererProps, FieldSchema } from '../../model/registry';
 import { registerBlock } from '../../model/registry';
 import type { SpacingSize } from '../../model/types';
+import { ICON_CHOICE_OPTIONS, resolveIconChoice } from '../shared/icon-choices';
 import styles from './layout.module.scss';
 
 // --- Section ---------------------------------------------------------------
@@ -197,4 +200,192 @@ registerBlock<DividerProps>({
   defaultProps: { style: 'solid' },
   fields: dividerFields,
   Renderer: DividerRenderer,
+});
+
+// --- Divider with label / icon ------------------------------------------
+// Отдельные типы, не поля у `divider` выше — у того одна прямая линия и
+// одно простое поле `style`, здесь принципиально другая структура (линия —
+// текст/иконка — линия), плюс `divider` уже используется на существующих
+// сайтах с текущей формой `props`, менять её задним числом рискованно.
+
+interface DividerLabelProps {
+  text: string;
+}
+
+function DividerLabelRenderer({ props }: BlockRendererProps<DividerLabelProps>) {
+  return (
+    <div className={styles['divider-label']}>
+      <span className={styles['divider-label__line']} />
+      <span className={styles['divider-label__text']}>{props.text}</span>
+      <span className={styles['divider-label__line']} />
+    </div>
+  );
+}
+
+registerBlock<DividerLabelProps>({
+  type: 'dividerlabel',
+  label: 'Разделитель с текстом',
+  category: 'layout',
+  icon: MinusIcon,
+  previewIcon: PreviewDividerIcon,
+  description: 'Горизонтальная линия с текстом по центру — например, «или»',
+  defaultProps: { text: 'или' },
+  fields: [{ key: 'text', label: 'Текст', control: 'text' }],
+  Renderer: DividerLabelRenderer,
+});
+
+interface DividerIconProps {
+  icon: string;
+}
+
+function DividerIconRenderer({ props }: BlockRendererProps<DividerIconProps>) {
+  const Icon = resolveIconChoice(props.icon);
+  return (
+    <div className={styles['divider-label']}>
+      <span className={styles['divider-label__line']} />
+      <span className={styles['divider-label__icon']}>
+        {/* eslint-disable-next-line react-hooks/static-components -- то же осознанное отклонение, что и в blocks/actions/index.tsx: иконка выбирается по данным, не статический компонент */}
+        <Icon />
+      </span>
+      <span className={styles['divider-label__line']} />
+    </div>
+  );
+}
+
+registerBlock<DividerIconProps>({
+  type: 'dividericon',
+  label: 'Разделитель с иконкой',
+  category: 'layout',
+  icon: MinusIcon,
+  previewIcon: PreviewDividerIcon,
+  description: 'Горизонтальная линия с иконкой-значком по центру',
+  defaultProps: { icon: 'star' },
+  fields: [{ key: 'icon', label: 'Иконка', control: 'select', options: ICON_CHOICE_OPTIONS }],
+  Renderer: DividerIconRenderer,
+});
+
+// --- Shape divider -----------------------------------------------------
+// Фигурный разделитель между секциями (волна/капля/треугольник) — приём из
+// Wix/Squarespace/Elementor, которого в проекте раньше не было вообще (три
+// существующих `divider*` выше — прямая линия, максимум с текстом/иконкой
+// по центру, никогда не фигура). Владелец кладёт блок на стык двух секций
+// с разным фоном — сам блок прозрачен везде, кроме самой фигуры, поэтому
+// секция ПОД ним просвечивает через него как обычно, а фигура рисуется
+// цветом `props.color` поверх (обычно — тем же цветом, что фон СЛЕДУЮЩЕЙ
+// секции, тогда фигура выглядит как её же выступающий край, а не отдельный
+// элемент). Никакого прева не задаём (`previewIcon` не установлен) —
+// `BlockThumbnail` сам живьём рендерит `defaultProps` для превью в
+// библиотеке, как для любого не-структурного блока без своих данных.
+
+type ShapeDividerShape = 'wave' | 'blob' | 'triangle';
+type ShapeDividerHeight = 'sm' | 'md' | 'lg' | 'xl';
+
+interface ShapeDividerProps {
+  shape: ShapeDividerShape;
+  color: string;
+  height: ShapeDividerHeight;
+  /** Зеркалит фигуру по вертикали — тот же разделитель, но для верхнего,
+   * а не нижнего края секции. */
+  flip: boolean;
+  /** Бесшовная бегущая волна (см. `layout.module.scss`,
+   * `.shape-divider__track--second` + keyframes) — осмысленно только для
+   * `shape: 'wave'`, для `blob`/`triangle` тихо ничего не меняет: не стоило
+   * заводить отдельное поле `showIf` (в реестре блоков такого механизма
+   * нет вообще ни у одного поля) ради одного частного случая. */
+  animated: boolean;
+}
+
+const SHAPE_DIVIDER_HEIGHT_PX: Record<ShapeDividerHeight, number> = {
+  sm: 60,
+  md: 100,
+  lg: 140,
+  xl: 180,
+};
+
+/** Все три — в единой системе координат `viewBox="0 0 1200 120"`,
+ * `preserveAspectRatio="none"` (растягивается на всю ширину блока, форма
+ * не обязана быть пропорциональной). У `wave` начало и конец пути лежат на
+ * одной высоте (y=64) — это то, что даёт бесшовный стык при бегущей
+ * анимации (`.shape-divider__track--second`, см. ниже), у `blob`/`triangle`
+ * это не нужно, они никогда не анимируются. */
+const SHAPE_DIVIDER_PATHS: Record<ShapeDividerShape, string> = {
+  wave: 'M0,64 C300,120 600,0 900,64 C1050,96 1150,80 1200,64 L1200,120 L0,120 Z',
+  blob: 'M0,20 C300,100 700,0 1000,50 C1080,66 1140,70 1200,60 L1200,120 L0,120 Z',
+  triangle: 'M0,120 L600,10 L1200,120 Z',
+};
+
+function ShapeDividerRenderer({ props }: BlockRendererProps<ShapeDividerProps>) {
+  const isAnimatedWave = props.animated && props.shape === 'wave';
+  return (
+    <div
+      className={styles['shape-divider']}
+      style={{
+        height: SHAPE_DIVIDER_HEIGHT_PX[props.height],
+        transform: props.flip ? 'scaleY(-1)' : undefined,
+      }}
+      aria-hidden="true"
+    >
+      <svg
+        className={cn(
+          styles['shape-divider__track'],
+          isAnimatedWave && styles['shape-divider__track--animated'],
+        )}
+        viewBox="0 0 1200 120"
+        preserveAspectRatio="none"
+      >
+        <path d={SHAPE_DIVIDER_PATHS[props.shape]} fill={props.color} />
+      </svg>
+      {isAnimatedWave && (
+        <svg
+          className={cn(
+            styles['shape-divider__track'],
+            styles['shape-divider__track--second'],
+            styles['shape-divider__track--animated'],
+          )}
+          viewBox="0 0 1200 120"
+          preserveAspectRatio="none"
+        >
+          <path d={SHAPE_DIVIDER_PATHS.wave} fill={props.color} />
+        </svg>
+      )}
+    </div>
+  );
+}
+
+const shapeDividerFields: FieldSchema[] = [
+  {
+    key: 'shape',
+    label: 'Форма',
+    control: 'select',
+    options: [
+      { value: 'wave', label: 'Волна' },
+      { value: 'blob', label: 'Капля' },
+      { value: 'triangle', label: 'Треугольник' },
+    ],
+  },
+  { key: 'color', label: 'Цвет фигуры', control: 'color' },
+  {
+    key: 'height',
+    label: 'Высота',
+    control: 'select',
+    options: [
+      { value: 'sm', label: 'Маленькая' },
+      { value: 'md', label: 'Средняя' },
+      { value: 'lg', label: 'Большая' },
+      { value: 'xl', label: 'Очень большая' },
+    ],
+  },
+  { key: 'flip', label: 'Отразить по вертикали', control: 'toggle' },
+  { key: 'animated', label: 'Плавное движение (для волны)', control: 'toggle' },
+];
+
+registerBlock<ShapeDividerProps>({
+  type: 'shapedivider',
+  label: 'Фигурный разделитель',
+  category: 'layout',
+  icon: WaveIcon,
+  description: 'Волна, капля или треугольник между секциями — не просто линия',
+  defaultProps: { shape: 'wave', color: '#2563eb', height: 'md', flip: false, animated: true },
+  fields: shapeDividerFields,
+  Renderer: ShapeDividerRenderer,
 });

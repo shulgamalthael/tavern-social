@@ -12,6 +12,11 @@ import {
   Query,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { AdCampaignsService } from '@/modules/advertising/ad-campaigns.service';
+import { AdEngineService } from '@/modules/advertising/ad-engine.service';
+import { RecordAdEventDto } from '@/modules/advertising/dto/record-ad-event.dto';
+import { SelectAdQueryDto } from '@/modules/advertising/dto/select-ad.query.dto';
+import type { SelectedAdDto } from '@/modules/advertising/advertising.types';
 import { AnalyticsService } from '@/modules/analytics/analytics.service';
 import { AvailabilityQueryDto } from '@/modules/appointments/dto/availability-query.dto';
 import { CreateAppointmentDto } from '@/modules/appointments/dto/create-appointment.dto';
@@ -19,6 +24,8 @@ import type { AppointmentDto } from '@/modules/appointments/appointments.types';
 import { AppointmentsService } from '@/modules/appointments/appointments.service';
 import { BlogPostsService } from '@/modules/blog-posts/blog-posts.service';
 import type { PublicBlogPostDto } from '@/modules/blog-posts/blog-posts.types';
+import { CustomEntitiesService } from '@/modules/custom-entities/custom-entities.service';
+import type { PublicCustomEntityDto } from '@/modules/custom-entities/custom-entities.types';
 import { CouponPreviewDto } from '@/modules/discounts/dto/coupon-preview.dto';
 import type { CouponPreviewResult } from '@/modules/discounts/discounts.types';
 import { DiscountsService } from '@/modules/discounts/discounts.service';
@@ -62,6 +69,8 @@ export class PublicSitesController {
   constructor(
     private readonly domainResolver: DomainResolverService,
     private readonly websitesService: WebsitesService,
+    private readonly adEngineService: AdEngineService,
+    private readonly adCampaignsService: AdCampaignsService,
     private readonly productsService: ProductsService,
     private readonly ordersService: OrdersService,
     private readonly servicesService: ServicesService,
@@ -72,6 +81,7 @@ export class PublicSitesController {
     private readonly discountsService: DiscountsService,
     private readonly rulesService: RulesService,
     private readonly web3Service: Web3Service,
+    private readonly customEntitiesService: CustomEntitiesService,
   ) {}
 
   @Get('resolve')
@@ -110,6 +120,77 @@ export class PublicSitesController {
   @Get(':businessId/products')
   getPublicProducts(@Param('businessId') businessId: string): Promise<PublicProductDto[]> {
     return this.productsService.listPublic(businessId);
+  }
+
+  /** Доставка рекламного креатива для блока `adslot` (см. корневой план
+   * фичи §4/§6, `AdSlotRenderer` на frontend) — анонимно, тот же принцип,
+   * что и `getPublicProducts`: посетитель не аутентифицирован в Таверне.
+   * Ответ обёрнут в `{ creative }` (`creative: null` — "нет подходящей
+   * кампании сейчас", честный пустой результат, а не ошибка) НАРОЧНО, не
+   * голым `SelectedAdDto | null`: Nest/Express на голом `null` отдаёт
+   * ПУСТОЕ тело ответа (не JSON-текст `"null"`), которое `response.json()`
+   * на frontend не может распарсить (`SyntaxError: Unexpected end of JSON
+   * input`) — обёртка в объект гарантирует валидный JSON в любом случае.
+   * Импрешн НЕ пишется здесь — только после того, как креатив реально
+   * отрисовался на клиенте (см. `recordAdImpression` ниже), иначе счётчик
+   * показов рос бы и для кампаний, которые вернулись в ответе, но так и не
+   * попали во вьюпорт/не успели смонтироваться. */
+  @Get(':businessId/ads/select')
+  async selectAd(
+    @Param('businessId') businessId: string,
+    @Query() query: SelectAdQueryDto,
+  ): Promise<{ creative: SelectedAdDto | null }> {
+    const creative = await this.adEngineService.selectCreative({
+      publisherBusinessId: businessId,
+      placement: query.placement,
+      device: query.device,
+      locale: query.locale,
+    });
+    return { creative };
+  }
+
+  /** Анонимный ЗАПИСЫВАЮЩИЙ путь (fire-and-forget от `AdSlotRenderer`,
+   * см. её комментарий) — тот же более строгий `@Throttle`, что и у
+   * заказов/записей/форм ниже: пишет в БД без аутентификации. Не бросает
+   * по неизвестному `campaignId`/`creativeId` — тот же принцип, что
+   * `AnalyticsService.record` (никогда не должен уронить рендер страницы
+   * посетителю из-за проблемы со сбором статистики). */
+  @Post(':businessId/ads/impression')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  async recordAdImpression(
+    @Param('businessId') businessId: string,
+    @Body() dto: RecordAdEventDto,
+  ): Promise<void> {
+    await this.analyticsService.record(businessId, 'ad_impression', {
+      campaignId: dto.campaignId,
+      creativeId: dto.creativeId,
+    });
+    // Реальное списание уже оплаченного бюджета для `billingModel: 'cpm'`
+    // (см. `AdCampaignsService.recordImpression`'s комментарий) — рядом с
+    // аналитикой, не вместо неё.
+    await this.adCampaignsService.recordImpression(dto.campaignId);
+  }
+
+  /** Тот же принцип, что `recordAdImpression` — отдельный тип события
+   * (`ad_click`), чтобы CTR (`clicks / impressions`, см.
+   * `AdminAdvertisingController.getOverview`) считался по двум РАЗНЫМ
+   * счётчикам, а не одним смешанным. */
+  @Post(':businessId/ads/click')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  async recordAdClick(
+    @Param('businessId') businessId: string,
+    @Body() dto: RecordAdEventDto,
+  ): Promise<void> {
+    await this.analyticsService.record(businessId, 'ad_click', {
+      campaignId: dto.campaignId,
+      creativeId: dto.creativeId,
+    });
+    // Реальное списание уже оплаченного бюджета для `billingModel: 'cpc'`
+    // (см. `AdCampaignsService.recordClick`'s комментарий) — рядом с
+    // аналитикой, не вместо неё.
+    await this.adCampaignsService.recordClick(dto.campaignId);
   }
 
   /** Оформление заказа с анонимной витрины (см. `entities/cart`/`Checkout`
@@ -320,5 +401,20 @@ export class PublicSitesController {
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   getPublicWalletInfo(@Param('businessId') businessId: string): Promise<WalletInfoDto> {
     return this.web3Service.getWalletInfoPublic(businessId);
+  }
+
+  /** Записи ОДНОЙ пользовательской сущности (Custom Entities, AI-8) — для
+   * блока `entitysearch` (`entities/website/blocks/navigation`) и любого
+   * будущего публичного потребителя. `:name`, не `:entityId` — см.
+   * `CustomEntitiesService.listPublicRecords`'s комментарий: посетитель/AI
+   * ссылаются на сущность так же, как видит её владелец в дашборде.
+   * 404 одинаково для "нет такой сущности" и "есть, но не публична" — тот же
+   * принцип, что и `getPublicBlogPostBySlug` выше. */
+  @Get(':businessId/custom-entities/:name/records')
+  getPublicCustomEntityRecords(
+    @Param('businessId') businessId: string,
+    @Param('name') name: string,
+  ): Promise<PublicCustomEntityDto> {
+    return this.customEntitiesService.listPublicRecords(businessId, name);
   }
 }

@@ -8,20 +8,34 @@ import {
   FeedIcon,
   FriendsIcon,
   GroupsIcon,
+  MegaphoneIcon,
+  StarIcon,
 } from '@/shared/ui/icons';
 import { PageHead } from '@/shared/ui/PageHead';
 import { SectionContainer } from '@/shared/ui/SectionContainer';
+import { AdminAdvertisingPanel } from './AdminAdvertisingPanel';
 import { AdminAiInfrastructurePanel } from './AdminAiInfrastructurePanel';
 import { AdminCommunitiesPanel } from './AdminCommunitiesPanel';
+import { AdminCreatorCategoriesPanel } from './AdminCreatorCategoriesPanel';
+import { AdminCreatorsPanel } from './AdminCreatorsPanel';
 import { AdminDashboard } from './AdminDashboard';
 import { AdminGroupsPanel } from './AdminGroupsPanel';
+import { AdminNativeAdsPanel } from './AdminNativeAdsPanel';
 import { AdminPostsPanel } from './AdminPostsPanel';
 import { AdminSidebar, type AdminSidebarTabConfig } from './AdminSidebar';
 import { AdminUsersPanel } from './AdminUsersPanel';
 import styles from './AdminWidget.module.scss';
 
 export type AdminTab =
-  'dashboard' | 'users' | 'posts' | 'groups' | 'communities' | 'ai-infrastructure';
+  | 'dashboard'
+  | 'users'
+  | 'posts'
+  | 'groups'
+  | 'communities'
+  | 'ai-infrastructure'
+  | 'advertising'
+  | 'creators'
+  | 'native-ads';
 
 const TABS: AdminSidebarTabConfig[] = [
   { id: 'dashboard', label: 'Дашборд', icon: ChartIcon },
@@ -30,6 +44,9 @@ const TABS: AdminSidebarTabConfig[] = [
   { id: 'groups', label: 'Группы', icon: GroupsIcon },
   { id: 'communities', label: 'Сообщества', icon: CommunitiesIcon },
   { id: 'ai-infrastructure', label: 'AI-инфраструктура', icon: CpuIcon },
+  { id: 'advertising', label: 'Реклама', icon: MegaphoneIcon },
+  { id: 'creators', label: 'Creators', icon: StarIcon },
+  { id: 'native-ads', label: 'Реклама в ленте', icon: MegaphoneIcon },
 ];
 
 const TAB_DESCRIPTION: Record<AdminTab, string> = {
@@ -39,6 +56,9 @@ const TAB_DESCRIPTION: Record<AdminTab, string> = {
   groups: 'Поиск и удаление групп',
   communities: 'Поиск и удаление сообществ',
   'ai-infrastructure': 'Capacity, cost и quota AI Builder’а (Gemini)',
+  advertising: 'Рекламный инвентарь, модерация кампаний и статистика по бизнесам',
+  creators: 'Статус верификации, приостановка и восстановление блогеров',
+  'native-ads': 'Модерация кампаний и ручное назначение creator’ов',
 };
 
 function isAdminTab(value: string): value is AdminTab {
@@ -91,6 +111,14 @@ export function AdminWidget() {
           {tab === 'groups' && <AdminGroupsPanel />}
           {tab === 'communities' && <AdminCommunitiesPanel />}
           {tab === 'ai-infrastructure' && <AdminAiInfrastructurePanel />}
+          {tab === 'advertising' && <AdminAdvertisingPanel />}
+          {tab === 'creators' && (
+            <>
+              <AdminCreatorCategoriesPanel />
+              <AdminCreatorsPanel />
+            </>
+          )}
+          {tab === 'native-ads' && <AdminNativeAdsPanel />}
         </SectionContainer>
       </div>
     </div>

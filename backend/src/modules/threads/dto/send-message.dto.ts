@@ -16,4 +16,12 @@ export class SendMessageDto {
   @IsOptional()
   @IsString()
   replyToId?: string;
+
+  /** «Переслать пост в чат» (§104) — id поста, которым делятся. Проверка
+   * «отправитель правда видит этот пост сейчас» — в `ThreadsService.
+   * sendMessage` (`PostsService.getShareSummary`), не здесь, тот же приём,
+   * что у `replyToId`. */
+  @IsOptional()
+  @IsString()
+  sharedPostId?: string;
 }

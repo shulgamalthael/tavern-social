@@ -1,3 +1,6 @@
+import type { SocialLinkDto } from '@/modules/businesses/businesses.types';
+import type { WorkingHours } from '@/modules/businesses/lib/working-hours';
+
 /**
  * Форма JSON-документа сайта — то, что лежит в `Website.draft`/`Website.
  * published` (см. схему). Backend её почти не разбирает (см.
@@ -86,6 +89,21 @@ export interface WebsitePublicDto {
      * где-нибудь в оформлении сайта, не только там, где уже есть хотя бы
      * один товар. */
     currency: string;
+    /** `email`/`phone`/`address`/`socialLinks`/`workingHours` — публикуются
+     * анонимно намеренно, не случайный недосмотр: это ровно те данные,
+     * которые `contact`/`location`/`sociallinks` блоки (см. frontend'ный
+     * `entities/website/blocks/business/index.tsx`) обещают показать
+     * настоящему посетителю сайта — «Email, телефон и адрес — подтягиваются
+     * из карточки бизнеса». До этого поля здесь не было, и настоящий
+     * анонимный посетитель (`PublicSiteWidget`, `/site/[businessId]`)
+     * реально видел эти блоки пустыми — найдено при проектировании виджета
+     * «сейчас открыто» (партия виджетов №7): баг был в проде с самого
+     * первого дня этих блоков, не мелкая деталь. */
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+    socialLinks: SocialLinkDto[];
+    workingHours: WorkingHours | null;
   };
   document: WebsiteDocument | null;
   isPublished: boolean;

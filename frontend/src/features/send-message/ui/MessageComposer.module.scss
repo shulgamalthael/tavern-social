@@ -1,11 +1,56 @@
-@use '@/shared/styles/mixins' as *;
-
 .composer {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 9px;
+  padding: 14px 18px;
   border-top: 1px solid var(--tavern-line);
+  background: var(--tavern-surface);
+  // Мягкая тень вверх — приподнимает панель ввода над лентой сообщений
+  // (`--tavern-sunk`, заметно темнее самой панели), а не просто отрезает её
+  // одной линией: на плоском фоне граница читалась как техническая, а не
+  // как «сюда печатают».
+  box-shadow: 0 -10px 24px -18px rgb(16 30 54 / 30%);
+}
+
+// Оверлей поверх композера при перетаскивании файлов извне (drag&drop) —
+// `pointer-events: none`, чтобы drag-события (`dragenter`/`dragleave`)
+// считались только по узлам самого композера под ним, а не мигали из-за
+// пересечения курсора с границей самого оверлея (см. `MessageComposer.tsx`,
+// `dragDepth`).
+.composer__drop-overlay {
+  position: absolute;
+  inset: 6px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed var(--tavern-accent);
+  border-radius: calc(var(--tavern-radius-control) + 4px);
+  background: color-mix(in srgb, var(--tavern-accent) 8%, var(--tavern-surface) 92%);
+  color: var(--tavern-accent);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  animation: composer-drop-in 0.15s ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@keyframes composer-drop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .composer__banner {
@@ -149,25 +194,36 @@
 
 .composer__row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 
+// Тот же размер/форма, что и у иконочных кнопок в шапке чата
+// (`MessengerWidget.module.scss`, `.messenger__add-participant-button`) —
+// одна константа «отдельно стоящей» иконочной кнопки на весь мессенджер,
+// а не свой размер в каждом виджете/фиче. Кнопка эмодзи внутри поля
+// (`.composer__emoji-button` ниже) специально другая — она не отдельно
+// стоящая, а врезана в сам инпут, там уместнее меньший безрамочный вид.
 .composer__icon-button {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 50%;
-  background: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--tavern-line);
+  border-radius: var(--tavern-radius-control);
+  background: var(--tavern-surface);
   color: var(--tavern-muted);
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 
   &:hover {
+    border-color: var(--tavern-accent);
     background: var(--tavern-sunk);
-    color: var(--tavern-ink);
+    color: var(--tavern-accent);
   }
 
   &:disabled {
@@ -175,7 +231,9 @@
     opacity: 0.4;
 
     &:hover {
-      background: none;
+      border-color: var(--tavern-line);
+      background: var(--tavern-surface);
+      color: var(--tavern-muted);
     }
   }
 }
@@ -184,26 +242,132 @@
   display: none;
 }
 
+// Растёт вверх вместе с textarea внутри (до `MAX_TEXTAREA_HEIGHT` в
+// `MessageComposer.tsx`) — `align-items: flex-end`, а не `center`, чтобы
+// кнопка эмодзи оставалась прижатой к нижней строке текста, как в
+// большинстве чатов, а не «уплывала» к геометрическому центру многострочного
+// поля.
+// Рамка всегда занимает место (1px, прозрачная в покое), а не появляется
+// только на фокусе — иначе поле на пиксель «подпрыгивало» бы при первом
+// клике, когда у него внезапно возникает бордер, которого не было в макете.
+// `min-height: 44px` — та же высота, что у поля поиска списка диалогов
+// (`.messenger__search-field`): два похожих «пилюля с иконкой» элемента на
+// одной странице не должны быть на глаз разной высоты. Именно `min-height`,
+// а не `height` — при многострочном тексте поле всё равно обязано расти.
 .composer__field {
-  @include control;
   position: relative;
   display: flex;
   flex: 1;
-  align-items: center;
+  align-items: flex-end;
   min-width: 0;
+  min-height: 44px;
   gap: 2px;
-  padding: 0 4px 0 14px;
+  padding: 6px 6px 6px 17px;
+  border: 1px solid transparent;
+  border-radius: 22px;
   background: var(--tavern-sunk);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--tavern-accent);
+    background: var(--tavern-surface);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tavern-accent) 14%, transparent);
+  }
 }
 
 .composer__input {
   flex: 1;
   min-width: 0;
-  height: 100%;
-  padding: 0;
+  max-height: 160px;
+  margin: 0;
+  padding: 5px 0;
   border: 0;
+  overflow-y: auto;
+  resize: none;
   background: none;
   font: inherit;
   font-size: 14.5px;
+  line-height: 1.4;
   outline: none;
+}
+
+// Кнопка эмодзи врезана прямо в пилюлю поля, а не стоит рядом с ней (как
+// скрепка, см. `.composer__icon-button` выше) — поэтому меньше и без
+// рамки, чтобы не рисовать рамку внутри рамки. Меньший размер (30px, не
+// 34px) специально: с паддингом поля (`.composer__field`, `6px`) это даёт
+// ровно 44px высоты пилюли в состоянии одной строки — та же высота, что и
+// у поля поиска списка диалогов.
+.composer__emoji-button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--tavern-muted);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--tavern-line);
+    color: var(--tavern-ink);
+  }
+}
+
+// Круглая кнопка-самолётик — залита акцентом и «оживает» только когда есть
+// что отправить (`disabled` в `MessageComposer.tsx`, не просто визуальная
+// декорация: клавиатурный Enter по-прежнему идёт через `form.requestSubmit`
+// и не зависит от этого атрибута, см. комментарий у `onKeyDown`). Тусклая
+// неактивная кнопка сама подсказывает «печатать ещё нечего» вместо
+// кликабельной на вид кнопки, которая молча ничего не делает по клику.
+// Чуть крупнее (42px) соседних иконочных кнопок (34px) — единственная
+// кнопка-акцент в композере намеренно крупнее остальных, как и в любом
+// чате (Telegram/WhatsApp/iMessage), а не по недосмотру: остальные три
+// элемента ряда (скрепка, поле, эмодзи) теперь ровно на одной сетке.
+.composer__send {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 1px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--tavern-accent);
+  color: var(--tavern-accent-ink);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease,
+    opacity 0.15s ease;
+
+  svg {
+    width: 17px;
+    height: 17px;
+    // Лёгкий сдвиг к центру — самолётик визуально «летит» вперёд, а не
+    // сидит ровно посередине круга.
+    transform: translateX(-1px);
+  }
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--tavern-accent) 85%, #0b1e4a 15%);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.9);
+  }
+
+  &:disabled {
+    background: var(--tavern-sunk);
+    color: var(--tavern-muted);
+    cursor: not-allowed;
+  }
 }
