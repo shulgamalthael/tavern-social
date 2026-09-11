@@ -19,8 +19,9 @@ import { ErrorState } from '@/shared/ui/ErrorState';
 import { Loader } from '@/shared/ui/Loader';
 import { Modal } from '@/shared/ui/Modal';
 import { StripePaymentForm } from '@/shared/ui/StripePaymentForm';
-import { CheckIcon, MegaphoneIcon, PlusIcon, TrashIcon } from '@/shared/ui/icons';
+import { CheckIcon, MegaphoneIcon, PlusIcon, TrashIcon, WalletIcon } from '@/shared/ui/icons';
 import { AdCampaignFormModal } from './AdCampaignFormModal';
+import { AdCampaignTopUpModal } from './AdCampaignTopUpModal';
 import { AdCreativeFormModal } from './AdCreativeFormModal';
 import styles from './AdvertisingSection.module.scss';
 
@@ -43,7 +44,12 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
 
   const [isCreating, setCreating] = useState(false);
   const [addingCreativeFor, setAddingCreativeFor] = useState<AdCampaign | null>(null);
+  const [toppingUpCampaign, setToppingUpCampaign] = useState<AdCampaign | null>(null);
   const [payingCampaign, setPayingCampaign] = useState<AdCampaign | null>(null);
+  // Тот же платёжный модал (`StripePaymentForm` ниже), что и для оплаты при
+  // создании — но подсказка над формой должна отличаться (доплата не ждёт
+  // повторной модерации), поэтому запоминаем, каким путём мы сюда попали.
+  const [isTopUpPayment, setTopUpPayment] = useState(false);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [removingCreativeId, setRemovingCreativeId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -57,6 +63,7 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
       // `clientSecret` заполнен только в этом ответе (см. `AdCampaign`'s
       // комментарий) — список после `refetch` его уже не содержит.
       if (updated.clientSecret) {
+        setTopUpPayment(false);
         setPayingCampaign(updated);
       }
     } catch (submitError) {
@@ -65,6 +72,14 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
       );
     } finally {
       setSubmittingId(null);
+    }
+  }
+
+  function handleTopUpCreated(updated: AdCampaign) {
+    setToppingUpCampaign(null);
+    if (updated.clientSecret) {
+      setTopUpPayment(true);
+      setPayingCampaign(updated);
     }
   }
 
@@ -211,6 +226,19 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
                   </Button>
                 </div>
               )}
+
+              {/* `paused` сегодня попадает сюда только автоматически, при
+                  исчерпании бюджета (см. backend `AdCampaignsService.
+                  applySpend`) — доплата (`AdCampaignTopUpModal`) её снова
+                  запускает без повторной модерации. */}
+              {campaign.status === 'paused' && (
+                <div className={styles.card__actions}>
+                  <Button variant="outline" onClick={() => setToppingUpCampaign(campaign)}>
+                    <WalletIcon />
+                    Доплатить бюджет
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -240,6 +268,15 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
         />
       )}
 
+      {toppingUpCampaign && (
+        <AdCampaignTopUpModal
+          businessId={business.id}
+          campaign={toppingUpCampaign}
+          onTopUp={handleTopUpCreated}
+          onClose={() => setToppingUpCampaign(null)}
+        />
+      )}
+
       {payingCampaign && payingCampaign.clientSecret && (
         <Modal
           onClose={() => setPayingCampaign(null)}
@@ -248,12 +285,13 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
         >
           <h2 className={styles['paymentModal__title']}>Оплата кампании «{payingCampaign.name}»</h2>
           <p className={styles['paymentModal__hint']}>
-            Спишем {formatMoney(payingCampaign.budgetCents, payingCampaign.currency)} — кампания
-            начнёт показываться после одобрения администратором.
+            {isTopUpPayment
+              ? 'Спишем доплату — как только платёж пройдёт, бюджет кампании увеличится и, если этого хватит, показ возобновится.'
+              : `Спишем ${formatMoney(payingCampaign.budgetCents, payingCampaign.currency)} — кампания начнёт показываться после одобрения администратором.`}
           </p>
           <StripePaymentForm
             clientSecret={payingCampaign.clientSecret}
-            submitLabel="Оплатить и отправить на модерацию"
+            submitLabel={isTopUpPayment ? 'Оплатить доплату' : 'Оплатить и отправить на модерацию'}
             onPaid={() => {
               setPayingCampaign(null);
               void refetch();

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -16,6 +17,7 @@ import { PaymentAmountTooLowError } from '@/modules/payments/payments.types';
 import { PaymentProvider } from '@/modules/payments/payment-provider';
 import type { AddAdCreativeDto } from './dto/add-ad-creative.dto';
 import type { CreateAdCampaignDto } from './dto/create-ad-campaign.dto';
+import type { TopUpAdCampaignDto } from './dto/top-up-ad-campaign.dto';
 import {
   toAdCampaignDto,
   toAdCreativeDto,
@@ -369,6 +371,133 @@ export class AdCampaignsService {
     });
   }
 
+  /** Закрывает §68.8's "extending/topping up a paused campaign's budget"
+   * gap — см. `AdCampaignTopUp`'s комментарий в schema.prisma. Только для
+   * `status: 'paused'` — сегодня единственный способ туда попасть это
+   * автопауза по исчерпанию бюджета (`applySpend`), доплата бюджета имеет
+   * смысл ровно в этом случае; `draft`/`pending_review`/`active`/`rejected`
+   * кампании доплату не принимают (`active` ещё не исчерпала бюджет —
+   * доплачивать нечему, `draft`/`pending_review`/`rejected` вообще не были
+   * одобрены к показу).
+   *
+   * Отдельный `PaymentIntent` на каждую доплату (см. `AdCampaignTopUp`'s
+   * комментарий) — ledger-строка создаётся ДО вызова `createPaymentIntent`,
+   * не после: её `id` генерируется заранее (`randomUUID()`) именно чтобы
+   * быть стабильно известным ключом поиска ДО того, как Stripe вообще
+   * узнал об этой доплате, а не только чтобы попасть в metadata. Если бы
+   * порядок был обратным (сначала `createPaymentIntent`, потом `create`
+   * строки, как исходно и было сделано здесь) — обрыв связи между реальным
+   * успешным списанием у Stripe и ЕЩЁ не записанной строкой ledger навсегда
+   * терял бы деньги рекламодателя: `markTopUpPaidByPaymentIntent` ищет по
+   * `stripePaymentIntentId`, а этого поля просто не существовало бы нигде
+   * в БД, если `create` не успел выполниться до прихода вебхука. Строка
+   * теперь всегда существует до звонка в Stripe (`stripePaymentIntentId:
+   * null` первый момент), поэтому дальше нужно только ДОПИСАТЬ её тем же
+   * `id`, а не найти заново по значению, которого могло не быть. */
+  async requestTopUp(
+    businessId: string,
+    campaignId: string,
+    ownerId: string,
+    dto: TopUpAdCampaignDto,
+  ): Promise<AdCampaignDto> {
+    await this.assertOwnership(businessId, ownerId);
+    await this.assertNotBannedAdvertiser(businessId);
+    const campaign = await this.findOwnedCampaign(businessId, campaignId);
+    if (campaign.status !== 'paused') {
+      throw new BadRequestException(
+        'Доплатить бюджет можно только у кампании, приостановленной из-за исчерпания бюджета',
+      );
+    }
+    if (!this.paymentProvider.isConfigured()) {
+      throw new BadRequestException('Приём оплаты временно недоступен, попробуйте позже');
+    }
+
+    const topUpId = randomUUID();
+    await this.prisma.adCampaignTopUp.create({
+      data: { id: topUpId, campaignId: campaign.id, amountCents: dto.amountCents },
+    });
+
+    let clientSecret: string;
+    try {
+      const result = await this.paymentProvider.createPaymentIntent({
+        amountCents: dto.amountCents,
+        currency: campaign.currency,
+        metadata: { adTopUpId: topUpId, campaignId: campaign.id, businessId },
+      });
+      // Может не успеть выполниться (сеть/БД оборвалась ПОСЛЕ того, как
+      // Stripe уже реально списал деньги) — тогда строка остаётся без
+      // `stripePaymentIntentId`, но `markTopUpPaidByPaymentIntent` всё
+      // равно находит и дозаполняет её по СВОЕМУ `id` (`adTopUpId` из
+      // metadata вебхука), не по этому полю — см. её комментарий.
+      await this.prisma.adCampaignTopUp.update({
+        where: { id: topUpId },
+        data: { stripePaymentIntentId: result.paymentIntentId },
+      });
+      clientSecret = result.clientSecret;
+    } catch (error) {
+      const message =
+        error instanceof PaymentAmountTooLowError
+          ? 'Сумма доплаты слишком мала для оплаты'
+          : 'Не удалось создать платёж — попробуйте позже';
+      this.logger.error(
+        `Не удалось создать доплату бюджета для кампании ${campaign.id}: ${(error as Error).message}`,
+      );
+      throw new BadRequestException(message);
+    }
+
+    return toAdCampaignDto(campaign, clientSecret);
+  }
+
+  /** Вызывается только вебхуком Stripe, симметрично `markPaidByPaymentIntent`
+   * выше — но, в отличие от неё, реально двигает деньги в БД (увеличивает
+   * `budgetCents`), а не просто помечает статус, поэтому нуждается в защите
+   * от повторной доставки того же вебхука (Stripe документированно может
+   * прислать `payment_intent.succeeded` больше одного раза): `updateMany`
+   * с условием `paymentStatus: 'unpaid'` в `WHERE` атомарно гарантирует, что
+   * зачисление бюджета произойдёт РОВНО один раз даже при дублирующей
+   * доставке — второй вызов увидит `count: 0` и тихо остановится, не
+   * начислив тот же топ-ап дважды.
+   *
+   * Ищет строку по `adTopUpId` (её собственный `id`, известный с момента
+   * `requestTopUp`'s `create`) — НЕ по `stripePaymentIntentId`, хотя оно
+   * тоже приходит в metadata: строка создаётся раньше, чем `stripePaymentIntentId`
+   * дозаписывается в неё (см. `requestTopUp`'s комментарий), так что поиск
+   * по нему потерял бы ровно те доплаты, где это дозаполнение не успело
+   * выполниться после реального успешного списания у Stripe — самый
+   * дорогой момент для потери связи. Заодно дозаполняет `stripePaymentIntentId`,
+   * если он почему-то ещё пуст — тот случай.
+   *
+   * Возвращает кампанию из `paused` в `active`, только если доплаченного
+   * бюджета хватает покрыть уже потраченное (`budgetCents > spentCents`
+   * после начисления) — иначе кампания честно остаётся `paused` (доплата
+   * меньше уже потраченного, хоть и учтена, реально ничего не открывает). */
+  async markTopUpPaidByPaymentIntent(paymentIntentId: string, topUpId: string): Promise<void> {
+    const topUp = await this.prisma.adCampaignTopUp.findUnique({ where: { id: topUpId } });
+    if (!topUp) {
+      this.logger.warn(
+        `Вебхук Stripe для неизвестной доплаты рекламной кампании ${topUpId} (${paymentIntentId})`,
+      );
+      return;
+    }
+
+    const claimed = await this.prisma.adCampaignTopUp.updateMany({
+      where: { id: topUp.id, paymentStatus: 'unpaid' },
+      data: { paymentStatus: 'paid', stripePaymentIntentId: paymentIntentId },
+    });
+    if (claimed.count === 0) return;
+
+    const campaign = await this.prisma.adCampaign.update({
+      where: { id: topUp.campaignId },
+      data: { budgetCents: { increment: topUp.amountCents } },
+    });
+    if (campaign.status === 'paused' && campaign.budgetCents > campaign.spentCents) {
+      await this.prisma.adCampaign.update({
+        where: { id: campaign.id },
+        data: { status: 'active' },
+      });
+    }
+  }
+
   /** Реальное списание уже оплаченного `budgetCents` (см. `AdBillingModel`'s
    * комментарий) — вызывается из `PublicSitesController.recordAdImpression`
    * рядом с (не вместо) записью в `AnalyticsEvent`, fire-and-forget, не
@@ -475,8 +604,11 @@ export class AdCampaignsService {
    * исчерпании бюджета (см. `applySpend`), ручной паузы админом в этом
    * слайсе нет. Без этого списка исчерпавшая бюджет кампания стала бы
    * невидимой для админа — не в очереди модерации, не среди активных.
-   * Read-only здесь (без approve/reject) — единственное осмысленное
-   * действие, "продлить бюджет", в этом слайсе не реализовано. */
+   * Read-only здесь (без approve/reject) — "продлить бюджет" теперь
+   * реализовано, но как self-service действие РЕКЛАМОДАТЕЛЯ
+   * (`AdCampaignsService.requestTopUp`), а не администратора: тот же
+   * self-service принцип, что у создания самой кампании (см. класса
+   * комментарий) — админ здесь только наблюдает. */
   async listPaused(): Promise<AdCampaignDto[]> {
     const campaigns = await this.prisma.adCampaign.findMany({
       where: { status: 'paused' },

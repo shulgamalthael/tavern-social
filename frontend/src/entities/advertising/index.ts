@@ -9,6 +9,7 @@ export { createAdCampaign } from './api/create-ad-campaign';
 export { addAdCreative } from './api/add-ad-creative';
 export { removeAdCreative } from './api/remove-ad-creative';
 export { submitAdCampaignForReview } from './api/submit-ad-campaign-for-review';
+export { topUpAdCampaign } from './api/top-up-ad-campaign';
 export { uploadAdCreativeImage } from './api/upload-ad-creative-image';
 export { uploadAdCreativeVideo } from './api/upload-ad-creative-video';
 export {

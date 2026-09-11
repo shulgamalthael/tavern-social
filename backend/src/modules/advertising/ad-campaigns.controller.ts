@@ -24,6 +24,7 @@ import { MediaAssetsService } from '@/modules/media-assets/media-assets.service'
 import { AdvertisingInventoryService } from './advertising-inventory.service';
 import { AddAdCreativeDto } from './dto/add-ad-creative.dto';
 import { CreateAdCampaignDto } from './dto/create-ad-campaign.dto';
+import { TopUpAdCampaignDto } from './dto/top-up-ad-campaign.dto';
 import type { AdCampaignDto, AdInventoryDto, PlacementInsightDto } from './advertising.types';
 import { AdCampaignsService } from './ad-campaigns.service';
 
@@ -117,6 +118,19 @@ export class AdCampaignsController {
     @Param('campaignId') campaignId: string,
   ): Promise<AdCampaignDto> {
     return this.adCampaignsService.submitForReview(businessId, campaignId, currentUser.id);
+  }
+
+  /** Доплата бюджета к `paused`-кампании — см. `AdCampaignsService.
+   * requestTopUp`'s комментарий. Тот же ответ-с-`clientSecret` приём, что и
+   * `submitForReview` — фронтенд открывает тот же `StripePaymentForm`. */
+  @Post('campaigns/:campaignId/topup')
+  requestTopUp(
+    @CurrentUser() currentUser: RequestUser,
+    @Param('businessId') businessId: string,
+    @Param('campaignId') campaignId: string,
+    @Body() dto: TopUpAdCampaignDto,
+  ): Promise<AdCampaignDto> {
+    return this.adCampaignsService.requestTopUp(businessId, campaignId, currentUser.id, dto);
   }
 
   /** См. `ProductsController.uploadImage` — тот же приём: файл валиден

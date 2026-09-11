@@ -1198,10 +1198,48 @@ model AdCampaign {
   updatedAt DateTime @updatedAt
 
   creatives AdCreative[]
+  /// Ledger доплат бюджета — см. `AdCampaignTopUp`'s комментарий. Одна
+  /// кампания копит СПИСОК доплат поверх изначального `budgetCents`, не
+  /// одно поле "второй платёж": `AdCampaign` сама по-прежнему хранит только
+  /// ОДИН `stripePaymentIntentId` (изначальный платёж при `submitForReview`)
+  /// — доплаты идут через отдельные `PaymentIntent`, каждый учтён своей
+  /// строкой здесь, а не перезаписью того же поля.
+  topUps AdCampaignTopUp[]
 
   @@index([advertiserBusinessId])
   @@index([status])
   @@map("ad_campaigns")
+}
+
+/// Доплата бюджета к уже существующей (и обычно уже `paused` из-за
+/// исчерпания бюджета — см. `AdCampaignsService.applySpend`) кампании —
+/// закрывает §68.8's "extending/topping up a paused campaign's budget"
+/// gap, названный явно как отложенный именно из-за этого: `AdCampaign`
+/// хранит только ОДИН `stripePaymentIntentId`, а доплате нужен СВОЙ
+/// собственный `PaymentIntent`, независимый от изначального. Отдельная
+/// таблица, а не второе Nullable-поле на `AdCampaign` — доплат может быть
+/// сколько угодно (кампания может исчерпать бюджет, доплатить, исчерпать
+/// снова), и каждая должна быть по отдельности видна для честной истории
+/// платежей, а не только последняя.
+model AdCampaignTopUp {
+  id         String     @id @default(uuid())
+  campaignId String
+  campaign   AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  /// Валюта НЕ хранится отдельно — всегда `AdCampaign.currency` в момент
+  /// доплаты (та же валюта, что и изначальный бюджет; кампания не может
+  /// менять валюту после создания), поэтому нет собственного поля
+  /// `currency` здесь, в отличие от `AdCampaign`.
+  amountCents Int
+
+  paymentStatus         PaymentStatus @default(unpaid)
+  stripePaymentIntentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([campaignId])
+  @@map("ad_campaign_topups")
 }
 
 /// Модерация одного креатива внутри уже одобренной кампании — НЕЗАВИСИМО
