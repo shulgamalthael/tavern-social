@@ -308,14 +308,21 @@ export interface AdminAdvertisingOverview {
    * модерации отдельного креатива уже одобренной кампании. */
   activeCampaigns: AdminAdCampaign[];
   /** `status: 'paused'` — сегодня только автоматически, при исчерпании
-   * бюджета. Read-only здесь (без approve/reject) — "продлить бюджет" не
-   * реализовано в этом слайсе. */
+   * бюджета. Read-only здесь (без approve/reject) — "продлить бюджет"
+   * доплачивает сам рекламодатель (self-service, `AdCampaignTopUpModal`),
+   * не админ, см. backend `AdCampaignsService.requestTopUp`. */
   pausedCampaigns: AdminAdCampaign[];
   businesses: AdminAdBusinessSlots[];
   bannedAdvertisers: AdminAdvertiserBan[];
   /** Показы/клики по дням за последние 30 дней, платформа целиком — дни
-   * без событий всё равно присутствуют с нулями (см. backend `bucketByDay`). */
+   * без событий всё равно присутствуют с нулями (см. backend `bucketByDay`).
+   * Разбивка ПО КАЖДОЙ кампании — `campaignPerformance` ниже. */
   dailyStats: { date: string; impressions: number; clicks: number }[];
+  /** См. backend `AdminCampaignPerformanceDto`'s комментарий — все кампании,
+   * кроме `draft`, отсортированы по `spentCents` по убыванию. Деньги
+   * нативно в своей валюте каждой строки, между строками не суммируются
+   * (та же причина, что у `revenueByCurrency` ниже). */
+  campaignPerformance: AdminCampaignPerformance[];
   totals: {
     impressions: number;
     clicks: number;
@@ -325,6 +332,20 @@ export interface AdminAdvertisingOverview {
      * комментарий про то, почему это не единое число). */
     revenueByCurrency: Record<string, number>;
   };
+}
+
+export interface AdminCampaignPerformance {
+  campaignId: string;
+  campaignName: string;
+  businessId: string;
+  businessName: string;
+  status: AdCampaignStatus;
+  impressionsServed: number;
+  clicksServed: number;
+  ctr: number;
+  spentCents: number;
+  budgetCents: number;
+  currency: string;
 }
 
 // --- Creators (Creator Monetization Phase 1, см. backend

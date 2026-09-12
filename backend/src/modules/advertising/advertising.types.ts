@@ -213,11 +213,21 @@ export interface AdminAdvertisingOverviewDto {
     bannedAt: string;
   }[];
   /** Показы/клики по дням за последние 30 дней — платформа целиком, не по
-   * кампаниям (см. корневой план фичи, "полноценный дашборд с разбивкой по
-   * кампаниям" — реальный, отдельный follow-up, не этот слайс). Дни без
-   * событий всё равно присутствуют с нулями (см. `bucketByDay`) — иначе
-   * график читался бы как "дыра", а не честный ноль. */
+   * кампаниям (разбивка по кампаниям — `campaignPerformance` ниже, закрывает
+   * тот самый "полноценный дашборд с разбивкой по кампаниям" из корневого
+   * плана). Дни без событий всё равно присутствуют с нулями (см.
+   * `bucketByDay`) — иначе график читался бы как "дыра", а не честный ноль. */
   dailyStats: { date: string; impressions: number; clicks: number }[];
+  /** Разбивка ПО КАЖДОЙ отдельной кампании, не только платформа целиком —
+   * см. `dailyStats`'s комментарий. Все кампании, кроме `draft` (черновик
+   * никогда не был отправлен на модерацию — гарантированно нулевая
+   * активность, чистый шум в отчёте), отсортированы по `spentCents` по
+   * убыванию (админа прежде всего интересует, кто реально тратит). Деньги
+   * — `spentCents`/`budgetCents`/`currency` НАТИВНО, В СВОЕЙ валюте каждой
+   * строки, не приведены к одной — та же причина, что у `revenueByCurrency`
+   * выше: сравнивать/суммировать это поле между строками разных валют
+   * нельзя, только смотреть по одной строке за раз. */
+  campaignPerformance: AdminCampaignPerformanceDto[];
   totals: {
     impressions: number;
     clicks: number;
@@ -230,4 +240,24 @@ export interface AdminAdvertisingOverviewDto {
      * сумму. */
     revenueByCurrency: Record<string, number>;
   };
+}
+
+/** Одна строка `AdminAdvertisingOverviewDto.campaignPerformance` — см. её
+ * комментарий. Не переиспользует `AdCampaignDto` целиком (это была бы
+ * лишняя dozen полей — таргетинг/креативы админу здесь не нужны, только
+ * что кампания заработала/потратила), только `businessName` добавлен
+ * поверх (`AdCampaignDto.advertiserBusinessId` — голый id, бесполезен без
+ * похода в другую таблицу за именем на каждой строке фронтенда). */
+export interface AdminCampaignPerformanceDto {
+  campaignId: string;
+  campaignName: string;
+  businessId: string;
+  businessName: string;
+  status: AdCampaignStatus;
+  impressionsServed: number;
+  clicksServed: number;
+  ctr: number;
+  spentCents: number;
+  budgetCents: number;
+  currency: string;
 }

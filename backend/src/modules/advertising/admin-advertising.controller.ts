@@ -3,6 +3,10 @@ import { PrismaService } from '@/infrastructure/database/prisma.service';
 import { AdminGuard } from '@/common/guards/admin.guard';
 import { bucketByDay } from '@/modules/admin/lib/bucket-by-day';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
+import {
+  convertUsingRates,
+  ExchangeRatesService,
+} from '@/modules/currencies/exchange-rates.service';
 import { AdvertisingInventoryService } from './advertising-inventory.service';
 import { BanAdvertiserDto } from './dto/ban-advertiser.dto';
 import { RejectAdCampaignDto } from './dto/review-ad-campaign.dto';
@@ -31,6 +35,7 @@ export class AdminAdvertisingController {
     private readonly adCampaignsService: AdCampaignsService,
     private readonly inventoryService: AdvertisingInventoryService,
     private readonly prisma: PrismaService,
+    private readonly exchangeRatesService: ExchangeRatesService,
   ) {}
 
   @Get('overview')
@@ -50,6 +55,7 @@ export class AdminAdvertisingController {
       recentClicks,
       revenueByCurrencyRows,
       bannedAdvertisers,
+      campaignsForPerformance,
     ] = await Promise.all([
       this.adCampaignsService.listPendingReview(),
       this.adCampaignsService.listActive(),
@@ -79,6 +85,34 @@ export class AdminAdvertisingController {
         _sum: { budgetCents: true },
       }),
       this.adCampaignsService.listBannedAdvertisers(),
+      // Разбивка по кампаниям (`campaignPerformance` ниже) — ВСЕ кампании,
+      // кроме `draft` (никогда не отправлялся на модерацию, гарантированно
+      // нулевая активность). Отдельный лёгкий `select`, не переиспользует
+      // `listPendingReview`/`listActive`/`listPaused` (те тянут `creatives`
+      // целиком через `include` — здесь эти поля не нужны, а `rejected`/
+      // `completed` кампании эти три списка вообще не покрывают).
+      // Без `orderBy: { spentCents: 'desc' }` — та же причина, что и у
+      // `revenueByCurrency` выше: сортировать сырые центы РАЗНЫХ валют как
+      // одно измерение значило бы честно вычислить бессмысленный порядок
+      // (кампания в UAH с тем же числом центов, что и в USD, потратила на
+      // порядки меньше реальных денег). Сортируется ниже, ПОСЛЕ приведения
+      // к USD через `ExchangeRatesService` — тот же приём, что у
+      // `AdCampaignsService.getPlacementInsights`.
+      this.prisma.adCampaign.findMany({
+        where: { status: { not: 'draft' } },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          advertiserBusinessId: true,
+          advertiserBusiness: { select: { name: true } },
+          impressionsServed: true,
+          clicksServed: true,
+          spentCents: true,
+          budgetCents: true,
+          currency: true,
+        },
+      }),
     ]);
 
     // Одна строка админ-панели на подписанный бизнес — не горячий путь
@@ -122,6 +156,32 @@ export class AdminAdvertisingController {
       clicks: clicksByDay[index].count,
     }));
 
+    // Один запрос курсов на весь список, не по одному на кампанию — тот же
+    // приём, что `AdCampaignsService.getPlacementInsights`.
+    const rates = await this.exchangeRatesService.getRatesToUsd();
+    const campaignPerformance = campaignsForPerformance
+      .map((campaign) => ({
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        businessId: campaign.advertiserBusinessId,
+        businessName: campaign.advertiserBusiness.name,
+        status: campaign.status,
+        impressionsServed: campaign.impressionsServed,
+        clicksServed: campaign.clicksServed,
+        ctr:
+          campaign.impressionsServed > 0 ? campaign.clicksServed / campaign.impressionsServed : 0,
+        spentCents: campaign.spentCents,
+        budgetCents: campaign.budgetCents,
+        currency: campaign.currency,
+        // Только для сортировки ниже, НЕ часть DTO — `null`, если курс для
+        // этой валюты недоступен (см. `convertUsingRates`'s комментарий),
+        // такие строки сортируются в конец, а не поднимаются наверх из-за
+        // случайного порядка `null`.
+        usdSpentCentsForSort: convertUsingRates(campaign.spentCents, campaign.currency, rates),
+      }))
+      .sort((a, b) => (b.usdSpentCentsForSort ?? -Infinity) - (a.usdSpentCentsForSort ?? -Infinity))
+      .map(({ usdSpentCentsForSort: _usdSpentCentsForSort, ...row }) => row);
+
     return {
       pendingCampaigns,
       activeCampaigns,
@@ -129,6 +189,7 @@ export class AdminAdvertisingController {
       businesses,
       bannedAdvertisers,
       dailyStats,
+      campaignPerformance,
       totals: {
         impressions: impressionCount,
         clicks: clickCount,

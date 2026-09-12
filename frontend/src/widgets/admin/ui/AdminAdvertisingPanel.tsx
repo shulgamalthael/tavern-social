@@ -352,6 +352,38 @@ export function AdminAdvertisingPanel() {
       </div>
 
       <Card>
+        <h3 className={styles['section-title']}>Разбивка по кампаниям</h3>
+        {data.campaignPerformance.length === 0 ? (
+          <EmptyState
+            title="Пока нет ни одной отправленной кампании"
+            description="Черновики сюда не попадают — только кампании, хотя бы раз отправленные на модерацию."
+          />
+        ) : (
+          <ul className={styles['performance-list']}>
+            {data.campaignPerformance.map((row) => (
+              <li key={row.campaignId} className={styles['performance-item']}>
+                <div className={styles['performance-item__header']}>
+                  <span className={styles['performance-item__name']}>{row.campaignName}</span>
+                  <span
+                    className={cn(styles['status-badge'], styles[`status-badge--${row.status}`])}
+                  >
+                    {AD_CAMPAIGN_STATUS_LABELS[row.status]}
+                  </span>
+                </div>
+                <span className={styles['performance-item__business']}>{row.businessName}</span>
+                <span className={styles['performance-item__stats']}>
+                  {row.impressionsServed} показов · {row.clicksServed} кликов · CTR{' '}
+                  {formatPercent(row.impressionsServed > 0 ? row.ctr : 0)} · потрачено{' '}
+                  {formatMoney(row.spentCents, row.currency)} /{' '}
+                  {formatMoney(row.budgetCents, row.currency)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
         <h3 className={styles['section-title']}>Кампании на модерации</h3>
         {data.pendingCampaigns.length === 0 ? (
           <EmptyState

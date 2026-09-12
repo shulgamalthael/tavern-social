@@ -43,19 +43,15 @@ interface AdEventContext {
   visitorCountry: string | null;
 }
 
-/** Тот же закрытый набор значений, что и ключи `AD_PLACEMENT_ALLOWED_FORMATS`
- * (`lib/ad-placement-config.ts`) — отдельная константа здесь, а не импорт
- * оттуда, потому что там это ключи объекта конфигурации форматов, а не
- * самостоятельный список; дублировать шесть строковых литералов дешевле,
- * чем городить общий экспорт ради одного места использования. */
-const ALL_AD_PLACEMENTS: AdPlacement[] = [
-  'header',
-  'content',
-  'sidebar',
-  'footer',
-  'in_feed',
-  'feed_sidebar',
-];
+/** Выведено из ключей `AD_PLACEMENT_ALLOWED_FORMATS` (`lib/ad-placement-
+ * config.ts`), а не продублировано шестью строковыми литералами заново —
+ * та константа уже сама по себе исчерпывающий список всех `AdPlacement`
+ * (объект с полем на каждое значение enum), так что переписывать его сюда
+ * вручную было чистым риском рассинхронизации без единственной пользы:
+ * если в схему добавят новый `AdPlacement`, TypeScript заставит заполнить
+ * его формат там, и это автоматически подтянется сюда же, а не потребует
+ * помнить про вторую копию списка. */
+const ALL_AD_PLACEMENTS = Object.keys(AD_PLACEMENT_ALLOWED_FORMATS) as AdPlacement[];
 
 /**
  * Self-service self-serve кампании (согласовано с владельцем — «Self-service
@@ -454,24 +450,20 @@ export class AdCampaignsService {
       data: { id: topUpId, campaignId: campaign.id, amountCents: dto.amountCents },
     });
 
-    let clientSecret: string;
+    let result: { paymentIntentId: string; clientSecret: string };
     try {
-      const result = await this.paymentProvider.createPaymentIntent({
+      result = await this.paymentProvider.createPaymentIntent({
         amountCents: dto.amountCents,
         currency: campaign.currency,
         metadata: { adTopUpId: topUpId, campaignId: campaign.id, businessId },
       });
-      // Может не успеть выполниться (сеть/БД оборвалась ПОСЛЕ того, как
-      // Stripe уже реально списал деньги) — тогда строка остаётся без
-      // `stripePaymentIntentId`, но `markTopUpPaidByPaymentIntent` всё
-      // равно находит и дозаполняет её по СВОЕМУ `id` (`adTopUpId` из
-      // metadata вебхука), не по этому полю — см. её комментарий.
-      await this.prisma.adCampaignTopUp.update({
-        where: { id: topUpId },
-        data: { stripePaymentIntentId: result.paymentIntentId },
-      });
-      clientSecret = result.clientSecret;
     } catch (error) {
+      // Ещё НЕТ реального платежа у Stripe (звонок сам не удался) — строку
+      // можно честно удалить, а не оставлять вечным мёртвым `unpaid`-мусором
+      // без `stripePaymentIntentId`. В отличие от сбоя чуть ниже (после
+      // успешного `createPaymentIntent`), здесь нечего "самоисцелять"
+      // вебхуком — платежа, который мог бы за него прийти, просто не было.
+      await this.prisma.adCampaignTopUp.deleteMany({ where: { id: topUpId } });
       const message =
         error instanceof PaymentAmountTooLowError
           ? 'Сумма доплаты слишком мала для оплаты'
@@ -482,7 +474,21 @@ export class AdCampaignsService {
       throw new BadRequestException(message);
     }
 
-    return toAdCampaignDto(campaign, clientSecret);
+    // Может не успеть выполниться (сеть/БД оборвалась ПОСЛЕ того, как
+    // Stripe уже реально списал деньги) — тогда строка остаётся без
+    // `stripePaymentIntentId`, но `markTopUpPaidByPaymentIntent` всё равно
+    // находит и дозаполняет её по СВОЕМУ `id` (`adTopUpId` из metadata
+    // вебхука), не по этому полю — см. её комментарий. НЕ в одном try/catch
+    // с `createPaymentIntent` выше и НИЧЕГО не удаляет при сбое — в отличие
+    // от него, здесь реальный платёж у Stripe уже мог состояться, удалять
+    // строку сейчас значило бы повторить ровно ту потерю денег, которую
+    // §87's самоисцеляющийся вебхук существует, чтобы предотвратить.
+    await this.prisma.adCampaignTopUp.update({
+      where: { id: topUpId },
+      data: { stripePaymentIntentId: result.paymentIntentId },
+    });
+
+    return toAdCampaignDto(campaign, result.clientSecret);
   }
 
   /** Вызывается только вебхуком Stripe, симметрично `markPaidByPaymentIntent`
@@ -652,6 +658,7 @@ export class AdCampaignsService {
         context.publisherBusinessId,
         context.placement,
         context.visitorCountry,
+        campaign.id,
       );
       const ownEffectiveBidCents = calculateEffectiveCpmCents(campaign);
       const clearingEcpmCents = calculateClearingPriceCents(ownEffectiveBidCents, poolBidsCents);

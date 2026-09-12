@@ -167,11 +167,24 @@ export class AdEngineService {
    * и там. Несуществующий `publisherBusinessId` — пустой пул (кампания,
    * очевидно, ни с кем не конкурирует за место, которого не существует),
    * не ошибка — вызывающий код (`recordImpression`/`recordClick`) и так
-   * уже не бросает на плохой анонимный ввод. */
+   * уже не бросает на плохой анонимный ввод.
+   *
+   * `excludeCampaignId` — исключает эту кампанию из пула ПО ID, не по
+   * значению ставки: пул читается из `getEligibleCandidates`'s 60-секундного
+   * Redis-кэша и может честно содержать УСТАРЕВШУЮ копию ЭТОЙ ЖЕ кампании
+   * (например, для `cpc` — её `clicksServed`/`impressionsServed`, а значит
+   * и eCPM, только что изменились в `recordClick`, ДО пересчёта пула).
+   * `calculateClearingPriceCents` пропускает только ТОЧНО совпадающие
+   * ставки (`bid < winnerBid`, не `<=`) — устаревшая копия себя самого с
+   * ЧУТЬ ДРУГИМ eCPM не была бы распознана как "тот же участник" и
+   * ошибочно засчиталась бы конкурентом, искажая цену погашения. Исключение
+   * по ID убирает эту двусмысленность в принципе, а не полагается на то,
+   * что значения совпадут. */
   async getCompetingEffectiveBidsCents(
     publisherBusinessId: string | null,
     placement: AdPlacement,
     visitorCountry: string | null,
+    excludeCampaignId: string,
   ): Promise<number[]> {
     let publisherCategory: BusinessCategory | null = null;
     if (publisherBusinessId) {
@@ -187,7 +200,9 @@ export class AdEngineService {
       await this.getEligibleCandidates(publisherCategory, placement),
       visitorCountry,
     );
-    return candidates.map((candidate) => calculateEffectiveCpmCents(candidate.campaign));
+    return candidates
+      .filter((candidate) => candidate.campaign.id !== excludeCampaignId)
+      .map((candidate) => calculateEffectiveCpmCents(candidate.campaign));
   }
 
   /** `AdCampaign.targetCountries` — НЕ запечено в `getEligibleCandidates`'s

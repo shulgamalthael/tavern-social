@@ -261,3 +261,47 @@ $status-completed: #2563eb;
 .inventory-item__slots {
   color: var(--tavern-muted);
 }
+
+.performance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.performance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--tavern-line);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.performance-item__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.performance-item__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tavern-ink);
+}
+
+.performance-item__business {
+  font-size: 12px;
+  color: var(--tavern-muted);
+}
+
+.performance-item__stats {
+  font-size: 12px;
+  color: var(--tavern-muted);
+}
