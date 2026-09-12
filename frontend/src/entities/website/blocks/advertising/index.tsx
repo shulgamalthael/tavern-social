@@ -106,8 +106,9 @@ function AdSlotRenderer({ props, business, viewport, isEditing }: BlockRendererP
     void recordAdImpression(business.businessId, {
       campaignId: data.campaignId,
       creativeId: data.creativeId,
+      placement: props.placement,
     });
-  }, [isEditing, status, data, business.businessId]);
+  }, [isEditing, status, data, business.businessId, props.placement]);
 
   if (isEditing) {
     return (
@@ -131,6 +132,7 @@ function AdSlotRenderer({ props, business, viewport, isEditing }: BlockRendererP
     void recordAdClick(business.businessId, {
       campaignId: data.campaignId,
       creativeId: data.creativeId,
+      placement: props.placement,
     });
   }
 

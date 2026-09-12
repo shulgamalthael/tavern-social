@@ -25,7 +25,9 @@ import {
   type AdCreativeDto,
   type PlacementInsightDto,
 } from './advertising.types';
-import { calculateEffectiveCpmCents } from './lib/effective-bid';
+import { AdEngineService } from './ad-engine.service';
+import { calculateClearingPriceCents } from './lib/clearing-price';
+import { calculateCtr, calculateEffectiveCpmCents } from './lib/effective-bid';
 import { AD_PLACEMENT_ALLOWED_FORMATS } from './lib/ad-placement-config';
 
 type CampaignWithCreatives = AdCampaign & { creatives: AdCreative[] };
@@ -68,6 +70,7 @@ export class AdCampaignsService {
     private readonly paymentProvider: PaymentProvider,
     private readonly mediaAssetsService: MediaAssetsService,
     private readonly exchangeRatesService: ExchangeRatesService,
+    private readonly adEngineService: AdEngineService,
   ) {}
 
   async list(businessId: string, ownerId: string): Promise<AdCampaignDto[]> {
@@ -523,18 +526,31 @@ export class AdCampaignsService {
    * untrusted input (см. `RecordAdEventDto`, проверяет только "непустая
    * строка", не "существующая кампания"). Обёрнуто целиком в try/catch —
    * несуществующий/чужой id не должен превращаться в 500 у анонимного
-   * посетителя, тот же принцип, что и `AnalyticsService.record`. */
-  async recordImpression(campaignId: string): Promise<void> {
+   * посетителя, тот же принцип, что и `AnalyticsService.record`.
+   *
+   * `placement`/`publisherBusinessId` — контекст, в котором РЕАЛЬНО
+   * произошёл этот конкретный показ, нужен только для `refreshClearingPrice`
+   * (второй-цена-аукцион честен ровно настолько, насколько честен пул
+   * конкурентов, а он зависит от места, не только от кампании). Оба —
+   * untrusted, как и `campaignId`/`creativeId` — тот же уровень доверия
+   * anonymous-эндпоинта, что и всегда: `placement`, не входящий в
+   * `campaign.targetPlacements` этой кампании, явно отбрасывается ниже
+   * (не тихо принимается как повод пересчитать цену против выдуманного
+   * места). */
+  async recordImpression(
+    campaignId: string,
+    placement: AdPlacement | undefined,
+    publisherBusinessId: string | null,
+  ): Promise<void> {
     try {
       const campaign = await this.prisma.adCampaign.update({
         where: { id: campaignId },
         data: { impressionsServed: { increment: 1 } },
       });
       if (campaign.billingModel !== 'cpm') return;
-      await this.applySpend(
-        campaign,
-        Math.floor((campaign.impressionsServed * campaign.bidCents) / 1000),
-      );
+      const priced = await this.refreshClearingPrice(campaign, placement, publisherBusinessId);
+      const unitPriceCents = priced.effectiveUnitPriceCents ?? priced.bidCents;
+      await this.applySpend(priced, Math.floor((priced.impressionsServed * unitPriceCents) / 1000));
     } catch (error) {
       this.logger.warn(
         `Не удалось учесть показ рекламы для кампании ${campaignId}: ${(error as Error).message}`,
@@ -542,18 +558,89 @@ export class AdCampaignsService {
     }
   }
 
-  async recordClick(campaignId: string): Promise<void> {
+  /** См. `recordImpression`'s комментарий — тот же приём, для `cpc`. */
+  async recordClick(
+    campaignId: string,
+    placement: AdPlacement | undefined,
+    publisherBusinessId: string | null,
+  ): Promise<void> {
     try {
       const campaign = await this.prisma.adCampaign.update({
         where: { id: campaignId },
         data: { clicksServed: { increment: 1 } },
       });
       if (campaign.billingModel !== 'cpc') return;
-      await this.applySpend(campaign, campaign.clicksServed * campaign.bidCents);
+      const priced = await this.refreshClearingPrice(campaign, placement, publisherBusinessId);
+      const unitPriceCents = priced.effectiveUnitPriceCents ?? priced.bidCents;
+      await this.applySpend(priced, priced.clicksServed * unitPriceCents);
     } catch (error) {
       this.logger.warn(
         `Не удалось учесть клик по рекламе для кампании ${campaignId}: ${(error as Error).message}`,
       );
+    }
+  }
+
+  /** Generalized Second Price (см. `AdCampaign.effectiveUnitPriceCents`'s
+   * комментарий в schema.prisma и `lib/clearing-price.ts`) — пересчитывает
+   * ТЕКУЩУЮ цену погашения против РЕАЛЬНОГО пула конкурентов на этом месте
+   * прямо сейчас (`AdEngineService.getCompetingEffectiveBidsCents`, тот же
+   * Redis-кэшированный пул, что использует сама выдача) и сохраняет её —
+   * `applySpend` ниже потом честно пересчитывает АГРЕГАТ `spentCents` из
+   * НАКОПЛЕННОГО счётчика показов/кликов на эту (обновлённую) цену, та же
+   * идемпотентная формула, что была до Vickrey, просто цена в ней теперь не
+   * постоянна.
+   *
+   * ИЗВЕСТНОЕ упрощение (названо, не скрыто): цена обновляется на каждое
+   * событие, но применяется РЕТРОАКТИВНО ко ВСЕЙ истории кампании (та же
+   * формула `count × price`, не помесячный/поштучный учёт цены на каждый
+   * отдельный показ) — если цена погашения выросла/упала между показами,
+   * пересчёт задним числом слегка меняет стоимость уже показанных
+   * импрессий/кликов, а не только новых. Точный поштучный учёт истории цен
+   * потребовал бы либо накопления в долях цента (риск дрейфа округления
+   * для `cpm`, где цена за один показ обычно меньше цента), либо отдельной
+   * таблицы-леджера на каждое событие — непропорционально этому слайсу;
+   * цена конкурентов на практике меняется не на каждый отдельный показ (тот
+   * же 60-секундный кэш пула, что и у самой выдачи), так что дрейф в
+   * реальности мал.
+   *
+   * Для `cpc` цена погашения приходит в eCPM (то же измерение, что и
+   * `calculateEffectiveCpmCents`) — обратно конвертируется в цену ЗА КЛИК
+   * тем же CTR (`calculateCtr`), что использовался для прямого
+   * преобразования при ранжировании: симметричная операция, тот же CTR
+   * "сейчас", не подобранный отдельно.
+   *
+   * Никогда не бросает — сбой пересчёта цены (Redis/Postgres недоступны)
+   * не должен ронять сам учёт показа/клика: возвращает кампанию как есть
+   * (с уже существующим `effectiveUnitPriceCents`, если он был, иначе
+   * `recordImpression`/`recordClick` откатятся на `bidCents`). */
+  private async refreshClearingPrice(
+    campaign: AdCampaign,
+    placement: AdPlacement | undefined,
+    publisherBusinessId: string | null,
+  ): Promise<AdCampaign> {
+    if (!placement || !campaign.targetPlacements.includes(placement)) return campaign;
+
+    try {
+      const poolBidsCents = await this.adEngineService.getCompetingEffectiveBidsCents(
+        publisherBusinessId,
+        placement,
+      );
+      const ownEffectiveBidCents = calculateEffectiveCpmCents(campaign);
+      const clearingEcpmCents = calculateClearingPriceCents(ownEffectiveBidCents, poolBidsCents);
+      const unitPriceCents =
+        campaign.billingModel === 'cpm'
+          ? clearingEcpmCents
+          : Math.round(clearingEcpmCents / (calculateCtr(campaign) * 1000));
+
+      return await this.prisma.adCampaign.update({
+        where: { id: campaign.id },
+        data: { effectiveUnitPriceCents: unitPriceCents },
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось пересчитать цену погашения аукциона для кампании ${campaign.id}: ${(error as Error).message}`,
+      );
+      return campaign;
     }
   }
 

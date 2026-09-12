@@ -31,10 +31,18 @@ export interface EffectiveBidInput {
  */
 export function calculateEffectiveCpmCents(campaign: EffectiveBidInput): number {
   if (campaign.billingModel === 'cpm') return campaign.bidCents;
+  return campaign.bidCents * calculateCtr(campaign) * 1000;
+}
 
-  const ctr =
-    campaign.impressionsServed > 0
-      ? campaign.clicksServed / campaign.impressionsServed
-      : DEFAULT_ASSUMED_CTR;
-  return campaign.bidCents * ctr * 1000;
+/** Вынесено из `calculateEffectiveCpmCents` — нужна отдельно
+ * `AdCampaignsService.refreshClearingPrice` для обратного преобразования
+ * (eCPM цены погашения → цена за клик для `cpc`, см. её комментарий), тем
+ * же CTR, что использовался для прямого преобразования при ранжировании —
+ * симметричная операция, не с нуля выведенное число. */
+export function calculateCtr(
+  campaign: Pick<EffectiveBidInput, 'impressionsServed' | 'clicksServed'>,
+): number {
+  return campaign.impressionsServed > 0
+    ? campaign.clicksServed / campaign.impressionsServed
+    : DEFAULT_ASSUMED_CTR;
 }

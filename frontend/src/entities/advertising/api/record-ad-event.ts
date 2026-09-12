@@ -1,10 +1,16 @@
 'use server';
 
 import { backendFetch } from '@/shared/lib/backend-client';
+import type { AdPlacement } from '../model/types';
 
 interface RecordAdEventInput {
   campaignId: string;
   creativeId: string;
+  /** Место, где реально произошёл этот показ/клик — нужно backend'у только
+   * для пересчёта цены погашения второй-цена-аукциона (см. backend
+   * `AdCampaignsService.refreshClearingPrice`'s комментарий), сам учёт
+   * показа/клика от него не зависит. */
+  placement: AdPlacement;
 }
 
 /** Fire-and-forget — вызывается `AdSlotRenderer` ПОСЛЕ того, как креатив

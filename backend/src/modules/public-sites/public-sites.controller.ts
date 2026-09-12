@@ -169,7 +169,7 @@ export class PublicSitesController {
     // Реальное списание уже оплаченного бюджета для `billingModel: 'cpm'`
     // (см. `AdCampaignsService.recordImpression`'s комментарий) — рядом с
     // аналитикой, не вместо неё.
-    await this.adCampaignsService.recordImpression(dto.campaignId);
+    await this.adCampaignsService.recordImpression(dto.campaignId, dto.placement, businessId);
   }
 
   /** Тот же принцип, что `recordAdImpression` — отдельный тип события
@@ -190,7 +190,7 @@ export class PublicSitesController {
     // Реальное списание уже оплаченного бюджета для `billingModel: 'cpc'`
     // (см. `AdCampaignsService.recordClick`'s комментарий) — рядом с
     // аналитикой, не вместо неё.
-    await this.adCampaignsService.recordClick(dto.campaignId);
+    await this.adCampaignsService.recordClick(dto.campaignId, dto.placement, businessId);
   }
 
   /** Оформление заказа с анонимной витрины (см. `entities/cart`/`Checkout`

@@ -155,8 +155,21 @@ export function AdvertisingSection({ business }: AdvertisingSectionProps) {
                   {formatMoney(campaign.budgetCents, campaign.currency)}
                 </span>
                 <span>
-                  {AD_BILLING_MODEL_LABELS[campaign.billingModel]} ·{' '}
+                  {AD_BILLING_MODEL_LABELS[campaign.billingModel]} · ставка{' '}
                   {formatMoney(campaign.bidCents, campaign.currency)}
+                  {/* Второй-цена-аукцион — реально списывается по цене
+                      конкурента, не по собственной ставке (см. backend
+                      `AdCampaign.effectiveUnitPriceCents`'s комментарий);
+                      показываем, только когда она уже реально пересчитана
+                      хотя бы раз и хоть немного ниже ставки — иначе строка
+                      просто дублировала бы уже показанную ставку. */}
+                  {campaign.currentUnitPriceCents !== null &&
+                    campaign.currentUnitPriceCents < campaign.bidCents && (
+                      <>
+                        {' '}
+                        · платите {formatMoney(campaign.currentUnitPriceCents, campaign.currency)}
+                      </>
+                    )}
                 </span>
                 <span>
                   {campaign.targetPlacements.map((p) => AD_PLACEMENT_LABELS[p]).join(', ')}

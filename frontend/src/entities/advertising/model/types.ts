@@ -127,6 +127,11 @@ export interface AdCampaign {
   paymentStatus: PaymentStatus;
   billingModel: AdBillingModel;
   bidCents: number;
+  /** Generalized Second Price — реальная цена списания сейчас (см. backend
+   * `AdCampaign.effectiveUnitPriceCents`'s комментарий), не собственная
+   * ставка `bidCents`. `null` — ни один показ/клик ещё не пересчитал цену
+   * погашения. Обычно `<= bidCents`, никогда не больше. */
+  currentUnitPriceCents: number | null;
   impressionsServed: number;
   clicksServed: number;
   startDate: string | null;

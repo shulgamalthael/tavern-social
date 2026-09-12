@@ -52,16 +52,19 @@ export class FeedAdsController {
    * `AdEngineService.selectCreativesForFeed`'s комментарий). Реальное
    * списание бюджета рекламодателя (`AdCampaignsService.recordImpression`)
    * — уже полноценный источник истины для его собственной статистики
-   * кампании. */
+   * кампании. `placement`/`publisherBusinessId` захардкожены, не берутся
+   * из `dto` (см. `RecordAdEventDto.placement`'s комментарий) — лента
+   * Таверны и так ВСЕГДА `'feed_sidebar'` без паблишера, доверять клиенту
+   * здесь нечего. */
   @Post('impression')
   @HttpCode(HttpStatus.NO_CONTENT)
   async recordImpression(@Body() dto: RecordAdEventDto): Promise<void> {
-    await this.adCampaignsService.recordImpression(dto.campaignId);
+    await this.adCampaignsService.recordImpression(dto.campaignId, 'feed_sidebar', null);
   }
 
   @Post('click')
   @HttpCode(HttpStatus.NO_CONTENT)
   async recordClick(@Body() dto: RecordAdEventDto): Promise<void> {
-    await this.adCampaignsService.recordClick(dto.campaignId);
+    await this.adCampaignsService.recordClick(dto.campaignId, 'feed_sidebar', null);
   }
 }

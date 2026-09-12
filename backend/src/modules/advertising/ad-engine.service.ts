@@ -27,16 +27,27 @@ interface EligibleCandidate {
 
 /**
  * Ad Engine v1 (см. корневой план фичи §4, ранжирование по ставке — §68.8,
- * честное cpm/cpc-сравнение через eCPM — §68.9) — таргетинг + конкурентное
- * исключение + Redis-кэш пула кандидатов, ранжирует подходящих кандидатов
- * по эффективной ставке (`calculateEffectiveCpmCents`, `lib/effective-bid.ts`
- * — приводит `cpm` и `cpc` к одному измерению через накопленный CTR
- * кампании), round-robin — только ТАЙБРЕЙК среди кампаний с ОДИНАКОВОЙ
- * максимальной эффективной ставкой, не замена ранжирования. НЕ настоящий
- * второй-цена-аукцион — реальное списание бюджета по СОБСТВЕННОЙ ставке уже
- * есть (`AdCampaignsService.recordImpression/recordClick`), но сама выдача —
- * "кто больше платит — тот и показывается", не открытая ставка в реальном
- * времени между несколькими одновременными заявками.
+ * честное cpm/cpc-сравнение через eCPM — §68.9, настоящий второй-цена-
+ * аукцион — закрытие §68.8's "не настоящий аукцион") — таргетинг +
+ * конкурентное исключение + Redis-кэш пула кандидатов, ранжирует подходящих
+ * кандидатов по эффективной ставке (`calculateEffectiveCpmCents`, `lib/
+ * effective-bid.ts` — приводит `cpm` и `cpc` к одному измерению через
+ * накопленный CTR кампании), round-robin — только ТАЙБРЕЙК среди кампаний с
+ * ОДИНАКОВОЙ максимальной эффективной ставкой, не замена ранжирования.
+ * ВЫДАЧА по-прежнему "кто больше платит — тот и показывается", но реальное
+ * СПИСАНИЕ (`AdCampaignsService.refreshClearingPrice`, вызывается из
+ * `recordImpression`/`recordClick`) теперь честный Generalized Second Price
+ * (`getCompetingEffectiveBidsCents` ниже + `lib/clearing-price.ts`) —
+ * победитель платит следующую по убыванию ставку конкурента, не свою
+ * собственную. Известное упрощение, оставшееся с §68.8/§68.9: сравнение
+ * `bidCents`/эффективных ставок между кампаниями НЕ приводится к единой
+ * валюте (в отличие от `AdCampaignsService.getPlacementInsights`, где это
+ * сделано через `ExchangeRatesService`) — у разных рекламодателей может
+ * быть разная `AdCampaign.currency`, и ранжирование/цена погашения сегодня
+ * сравнивают их сырые центы как будто это одна валюта; названо явно здесь,
+ * не тихо, но не исправлено в этом слайсе — требует отдельного пересмотра
+ * горячего пути выдачи (Redis-кэш пула хранит сырые поля кампаний, не
+ * заранее приведённые к USD).
  */
 @Injectable()
 export class AdEngineService {
@@ -110,6 +121,43 @@ export class AdEngineService {
       )
       .slice(0, count)
       .map(toSelectedAdDto);
+  }
+
+  /** Единственный вызывающий — `AdCampaignsService.refreshClearingPrice`
+   * (см. её комментарий) — эффективные ставки ВСЕХ кандидатов, реально
+   * конкурирующих за ЭТО МЕСТО прямо сейчас, для расчёта Generalized Second
+   * Price (`lib/clearing-price.ts`). Намеренно переиспользует тот же
+   * `getEligibleCandidates` (тот же Redis-кэш пула, та же логика
+   * таргетинга/конкурентного исключения), что и `selectCreative` — цена
+   * погашения должна считаться против ТОГО ЖЕ пула, что определяет саму
+   * выдачу, не против отдельного, потенциально рассинхронизированного
+   * запроса. Пересчитывается заново на каждый показ/клик (не замораживается
+   * на момент `selectCreative`, который мог случиться секундами раньше) —
+   * честная цена "прямо сейчас", а не устаревший снимок; практически
+   * дёшево благодаря тому же 60-секундному кэшу пула.
+   *
+   * `publisherBusinessId: null` — лента Таверны (`feed_sidebar`, см.
+   * `selectCreativesForFeed`), тот же смысл `publisherCategory: null`, что
+   * и там. Несуществующий `publisherBusinessId` — пустой пул (кампания,
+   * очевидно, ни с кем не конкурирует за место, которого не существует),
+   * не ошибка — вызывающий код (`recordImpression`/`recordClick`) и так
+   * уже не бросает на плохой анонимный ввод. */
+  async getCompetingEffectiveBidsCents(
+    publisherBusinessId: string | null,
+    placement: AdPlacement,
+  ): Promise<number[]> {
+    let publisherCategory: BusinessCategory | null = null;
+    if (publisherBusinessId) {
+      const publisher = await this.prisma.business.findUnique({
+        where: { id: publisherBusinessId },
+        select: { category: true },
+      });
+      if (!publisher) return [];
+      publisherCategory = publisher.category;
+    }
+
+    const candidates = await this.getEligibleCandidates(publisherCategory, placement);
+    return candidates.map((candidate) => calculateEffectiveCpmCents(candidate.campaign));
   }
 
   /** Кэшируется по `(категория паблишера, placement)` — НЕ по конкретному

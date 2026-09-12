@@ -1179,6 +1179,20 @@ model AdCampaign {
   impressionsServed Int            @default(0)
   clicksServed      Int            @default(0)
 
+  /// Generalized Second Price (§68.8's "не настоящий аукцион" закрыт) —
+  /// `null`, пока ни один показ/клик ещё не пересчитал цену погашения
+  /// (`AdCampaignsService.refreshClearingPrice`); тогда `bidCents`
+  /// используется как есть (первая цена — платить меньше не с чем
+  /// сравнивать). После первого пересчёта хранит ТЕКУЩУЮ цену погашения в
+  /// ТОМ ЖЕ измерении, что и `bidCents` (eCPM за 1000 показов для `cpm`,
+  /// цена за клик для `cpc`) — следующая по убыванию ОТЛИЧНАЯ эффективная
+  /// ставка среди реальных конкурентов на этом же месте прямо сейчас (см.
+  /// `lib/clearing-price.ts`), не собственная ставка кампании. `bidCents`
+  /// остаётся неизменным потолком для РАНЖИРОВАНИЯ (`AdEngineService`) —
+  /// это поле ТОЛЬКО про то, сколько реально списывается, никогда не
+  /// перетирает `bidCents` сам.
+  effectiveUnitPriceCents Int?
+
   paymentStatus         PaymentStatus @default(unpaid)
   stripePaymentIntentId String?
 

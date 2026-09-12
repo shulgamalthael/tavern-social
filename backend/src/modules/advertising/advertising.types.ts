@@ -78,9 +78,20 @@ export interface AdCampaignDto {
   paymentStatus: PaymentStatus;
   /** См. `AdBillingModel`'s комментарий в schema.prisma — `bidCents` за 1000
    * показов (`cpm`) или за клик (`cpc`), определяет ранжирование в
-   * `AdEngineService` и скорость расходования `budgetCents`. */
+   * `AdEngineService` и скорость расходования `budgetCents`. `bidCents` —
+   * СОБСТВЕННАЯ ставка (потолок ранжирования), а не то, что реально
+   * списывается — см. `currentUnitPriceCents` ниже. */
   billingModel: AdBillingModel;
   bidCents: number;
+  /** Generalized Second Price — реальная цена, по которой сейчас
+   * списывается бюджет (см. `AdCampaign.effectiveUnitPriceCents`'s
+   * комментарий в schema.prisma), в том же измерении, что `bidCents`
+   * (eCPM за 1000 показов для `cpm`, цена за клик для `cpc`). `null` — ни
+   * один показ/клик ещё не пересчитал цену погашения (списание пойдёт по
+   * `bidCents`, как первая цена). Прозрачность для рекламодателя: обычно
+   * `<= bidCents`, никогда не больше — Vickrey никогда не заставляет
+   * платить больше собственной ставки. */
+  currentUnitPriceCents: number | null;
   impressionsServed: number;
   clicksServed: number;
   startDate: string | null;
@@ -132,6 +143,7 @@ export function toAdCampaignDto(
     paymentStatus: campaign.paymentStatus,
     billingModel: campaign.billingModel,
     bidCents: campaign.bidCents,
+    currentUnitPriceCents: campaign.effectiveUnitPriceCents,
     impressionsServed: campaign.impressionsServed,
     clicksServed: campaign.clicksServed,
     startDate: campaign.startDate ? campaign.startDate.toISOString() : null,
