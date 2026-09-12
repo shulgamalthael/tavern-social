@@ -159,7 +159,16 @@ function CampaignCard({ campaign, showCampaignDecision, onDecided }: CampaignCar
     <Card className={styles['campaign-card']}>
       <div className={styles['campaign-card__header']}>
         <div>
-          <h4 className={styles['campaign-card__name']}>{campaign.name}</h4>
+          <h4 className={styles['campaign-card__name']}>
+            {campaign.name}
+            {/* Декларативный флаг — рекламодатель сам его выставил при
+                создании, не проверка возраста посетителя (см. backend
+                `AdCampaign.isAdultContent`'s комментарий). Только сигнал
+                администратору при модерации. */}
+            {campaign.isAdultContent && (
+              <span className={styles['campaign-card__adult-badge']}>🔞 18+</span>
+            )}
+          </h4>
           <span className={styles['campaign-card__meta']}>
             Бизнес {campaign.advertiserBusinessId} · потрачено{' '}
             {formatMoney(campaign.spentCents, campaign.currency)} /{' '}
@@ -172,6 +181,11 @@ function CampaignCard({ campaign, showCampaignDecision, onDecided }: CampaignCar
             {campaign.billingModel === 'cpm' ? '1000 показов' : 'клик'} · показов{' '}
             {campaign.impressionsServed} · кликов {campaign.clicksServed}
           </span>
+          {campaign.targetCountries.length > 0 && (
+            <span className={styles['campaign-card__meta']}>
+              Только страны: {campaign.targetCountries.join(', ')}
+            </span>
+          )}
         </div>
         <span className={cn(styles['status-badge'], styles[`status-badge--${campaign.status}`])}>
           {AD_CAMPAIGN_STATUS_LABELS[campaign.status]}

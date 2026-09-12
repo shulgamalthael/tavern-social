@@ -99,7 +99,12 @@ export interface AdCampaignDto {
   targetCategories: BusinessCategory[];
   targetPlacements: AdPlacement[];
   targetDevices: string[];
-  targetLocales: string[];
+  /** ISO 3166-1 alpha-2 — см. `AdCampaign.targetCountries`'s комментарий в
+   * schema.prisma. Пусто — любая страна. */
+  targetCountries: string[];
+  /** Декларативный флаг «18+», НЕ реальная проверка возраста посетителя —
+   * см. `AdCampaign.isAdultContent`'s комментарий в schema.prisma. */
+  isAdultContent: boolean;
   createdAt: string;
   updatedAt: string;
   creatives: AdCreativeDto[];
@@ -151,7 +156,8 @@ export function toAdCampaignDto(
     targetCategories: campaign.targetCategories,
     targetPlacements: campaign.targetPlacements,
     targetDevices: campaign.targetDevices,
-    targetLocales: campaign.targetLocales,
+    targetCountries: campaign.targetCountries,
+    isAdultContent: campaign.isAdultContent,
     createdAt: campaign.createdAt.toISOString(),
     updatedAt: campaign.updatedAt.toISOString(),
     creatives: campaign.creatives.map(toAdCreativeDto),

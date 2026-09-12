@@ -72,6 +72,16 @@ $status-completed: #2563eb;
   color: var(--tavern-ink);
 }
 
+.campaign-card__adult-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tavern-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .campaign-card__meta {
   display: block;
   font-size: 12px;

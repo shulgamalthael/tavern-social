@@ -3,12 +3,14 @@ import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
   IsOptional,
   IsString,
   Length,
+  Matches,
   Min,
 } from 'class-validator';
 
@@ -66,11 +68,25 @@ export class CreateAdCampaignDto {
   @IsEnum(['desktop', 'tablet', 'mobile'], { each: true })
   targetDevices?: ('desktop' | 'tablet' | 'mobile')[];
 
+  /** ISO 3166-1 alpha-2 (`'US'`, `'UA'`) — пусто значит "любая страна".
+   * Определяется по IP посетителя на выдаче (`resolveVisitorCountry`), не
+   * приходит от посетителя — только рекламодатель здесь ЗАДАЁТ список
+   * разрешённых стран, реальную страну ПОСЕТИТЕЛЯ подставляет `AdEngineService`
+   * сам (см. её комментарий). */
   @IsOptional()
   @IsArray()
   @ArrayUnique()
-  @IsString({ each: true })
-  targetLocales?: string[];
+  @Matches(/^[A-Z]{2}$/, {
+    each: true,
+    message: 'Код страны должен быть в формате ISO 3166-1 (например, US)',
+  })
+  targetCountries?: string[];
+
+  /** Декларативный флаг «18+», не проверка возраста — см. `AdCampaign.
+   * isAdultContent`'s комментарий в schema.prisma. */
+  @IsOptional()
+  @IsBoolean()
+  isAdultContent?: boolean;
 
   @IsOptional()
   @IsDateString()

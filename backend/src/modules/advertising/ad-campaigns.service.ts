@@ -29,8 +29,19 @@ import { AdEngineService } from './ad-engine.service';
 import { calculateClearingPriceCents } from './lib/clearing-price';
 import { calculateCtr, calculateEffectiveCpmCents } from './lib/effective-bid';
 import { AD_PLACEMENT_ALLOWED_FORMATS } from './lib/ad-placement-config';
+import { findRestrictedKeywordMatch } from './lib/restricted-keywords';
 
 type CampaignWithCreatives = AdCampaign & { creatives: AdCreative[] };
+
+/** Реальный контекст показа/клика, нужный `refreshClearingPrice` — см. её
+ * комментарий и `recordImpression`'s. Оба вызывающих контроллера
+ * (`PublicSitesController`/`FeedAdsController`) собирают это сами, ничего
+ * из этого не приходит готовым от одного общего источника. */
+interface AdEventContext {
+  placement: AdPlacement | undefined;
+  publisherBusinessId: string | null;
+  visitorCountry: string | null;
+}
 
 /** Тот же закрытый набор значений, что и ключи `AD_PLACEMENT_ALLOWED_FORMATS`
  * (`lib/ad-placement-config.ts`) — отдельная константа здесь, а не импорт
@@ -172,7 +183,8 @@ export class AdCampaignsService {
         targetCategories: dto.targetCategories ?? [],
         targetPlacements: dto.targetPlacements,
         targetDevices: dto.targetDevices ?? [],
-        targetLocales: dto.targetLocales ?? [],
+        targetCountries: dto.targetCountries ?? [],
+        isAdultContent: dto.isAdultContent ?? false,
         startDate: dto.startDate ? new Date(dto.startDate) : null,
         endDate: dto.endDate ? new Date(dto.endDate) : null,
       },
@@ -226,6 +238,13 @@ export class AdCampaignsService {
         );
       }
 
+      // Compliance rule-engine (см. `findRestrictedKeywordMatch`'s
+      // комментарий) — проверяем СНЯТЫЙ СЛЕПОК (headline/description
+      // товара), не сам товар: рекламный текст должен быть чист, даже если
+      // сам магазин легитимно продаёт что-то из ограниченного списка (спор
+      // о легитимности самого товара — не задача этой проверки).
+      const restrictedMatch = findRestrictedKeywordMatch(product.name, product.description);
+
       await this.prisma.adCreative.create({
         data: {
           campaignId,
@@ -236,6 +255,12 @@ export class AdCampaignsService {
           imageUrl: product.images[0] ?? null,
           ctaLabel: dto.ctaLabel ?? null,
           targetUrl: dto.targetUrl,
+          ...(restrictedMatch
+            ? {
+                status: 'rejected',
+                rejectionReason: `Автоматически отклонено: обнаружено слово «${restrictedMatch.keyword}» (тема: ${restrictedMatch.topic})`,
+              }
+            : {}),
         },
       });
     } else {
@@ -265,6 +290,9 @@ export class AdCampaignsService {
         }
       }
 
+      // Compliance rule-engine — см. комментарий в `productId`-ветке выше.
+      const restrictedMatch = findRestrictedKeywordMatch(dto.headline, dto.description);
+
       await this.prisma.adCreative.create({
         data: {
           campaignId,
@@ -275,6 +303,12 @@ export class AdCampaignsService {
           videoUrl: dto.videoUrl ?? null,
           ctaLabel: dto.ctaLabel ?? null,
           targetUrl: dto.targetUrl,
+          ...(restrictedMatch
+            ? {
+                status: 'rejected',
+                rejectionReason: `Автоматически отклонено: обнаружено слово «${restrictedMatch.keyword}» (тема: ${restrictedMatch.topic})`,
+              }
+            : {}),
         },
       });
     }
@@ -528,27 +562,23 @@ export class AdCampaignsService {
    * несуществующий/чужой id не должен превращаться в 500 у анонимного
    * посетителя, тот же принцип, что и `AnalyticsService.record`.
    *
-   * `placement`/`publisherBusinessId` — контекст, в котором РЕАЛЬНО
-   * произошёл этот конкретный показ, нужен только для `refreshClearingPrice`
-   * (второй-цена-аукцион честен ровно настолько, насколько честен пул
-   * конкурентов, а он зависит от места, не только от кампании). Оба —
-   * untrusted, как и `campaignId`/`creativeId` — тот же уровень доверия
-   * anonymous-эндпоинта, что и всегда: `placement`, не входящий в
-   * `campaign.targetPlacements` этой кампании, явно отбрасывается ниже
-   * (не тихо принимается как повод пересчитать цену против выдуманного
-   * места). */
-  async recordImpression(
-    campaignId: string,
-    placement: AdPlacement | undefined,
-    publisherBusinessId: string | null,
-  ): Promise<void> {
+   * `context` — где/для кого РЕАЛЬНО произошёл этот конкретный показ,
+   * нужен только для `refreshClearingPrice` (второй-цена-аукцион и
+   * гео-таргетинг честны ровно настолько, насколько честен пул
+   * конкурентов, а он зависит от места/страны, не только от кампании).
+   * Все поля — untrusted, как и `campaignId`/`creativeId` — тот же
+   * уровень доверия anonymous-эндпоинта, что и всегда: `placement`, не
+   * входящий в `campaign.targetPlacements` этой кампании, явно
+   * отбрасывается ниже (не тихо принимается как повод пересчитать цену
+   * против выдуманного места). */
+  async recordImpression(campaignId: string, context: AdEventContext): Promise<void> {
     try {
       const campaign = await this.prisma.adCampaign.update({
         where: { id: campaignId },
         data: { impressionsServed: { increment: 1 } },
       });
       if (campaign.billingModel !== 'cpm') return;
-      const priced = await this.refreshClearingPrice(campaign, placement, publisherBusinessId);
+      const priced = await this.refreshClearingPrice(campaign, context);
       const unitPriceCents = priced.effectiveUnitPriceCents ?? priced.bidCents;
       await this.applySpend(priced, Math.floor((priced.impressionsServed * unitPriceCents) / 1000));
     } catch (error) {
@@ -559,18 +589,14 @@ export class AdCampaignsService {
   }
 
   /** См. `recordImpression`'s комментарий — тот же приём, для `cpc`. */
-  async recordClick(
-    campaignId: string,
-    placement: AdPlacement | undefined,
-    publisherBusinessId: string | null,
-  ): Promise<void> {
+  async recordClick(campaignId: string, context: AdEventContext): Promise<void> {
     try {
       const campaign = await this.prisma.adCampaign.update({
         where: { id: campaignId },
         data: { clicksServed: { increment: 1 } },
       });
       if (campaign.billingModel !== 'cpc') return;
-      const priced = await this.refreshClearingPrice(campaign, placement, publisherBusinessId);
+      const priced = await this.refreshClearingPrice(campaign, context);
       const unitPriceCents = priced.effectiveUnitPriceCents ?? priced.bidCents;
       await this.applySpend(priced, priced.clicksServed * unitPriceCents);
     } catch (error) {
@@ -615,15 +641,17 @@ export class AdCampaignsService {
    * `recordImpression`/`recordClick` откатятся на `bidCents`). */
   private async refreshClearingPrice(
     campaign: AdCampaign,
-    placement: AdPlacement | undefined,
-    publisherBusinessId: string | null,
+    context: AdEventContext,
   ): Promise<AdCampaign> {
-    if (!placement || !campaign.targetPlacements.includes(placement)) return campaign;
+    if (!context.placement || !campaign.targetPlacements.includes(context.placement)) {
+      return campaign;
+    }
 
     try {
       const poolBidsCents = await this.adEngineService.getCompetingEffectiveBidsCents(
-        publisherBusinessId,
-        placement,
+        context.publisherBusinessId,
+        context.placement,
+        context.visitorCountry,
       );
       const ownEffectiveBidCents = calculateEffectiveCpmCents(campaign);
       const clearingEcpmCents = calculateClearingPriceCents(ownEffectiveBidCents, poolBidsCents);

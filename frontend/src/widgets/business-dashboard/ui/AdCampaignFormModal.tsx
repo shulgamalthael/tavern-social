@@ -63,6 +63,8 @@ export function AdCampaignFormModal({
   const [placements, setPlacements] = useState<AdPlacement[]>([]);
   const [categories, setCategories] = useState<BusinessCategory[]>([]);
   const [devices, setDevices] = useState<('desktop' | 'tablet' | 'mobile')[]>([]);
+  const [countriesInput, setCountriesInput] = useState('');
+  const [isAdultContent, setAdultContent] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [isSubmitting, setSubmitting] = useState(false);
@@ -112,6 +114,25 @@ export function AdCampaignFormModal({
       setError('Выберите хотя бы одно место размещения');
       return;
     }
+    // ISO 3166-1 alpha-2 — та же проверка формата, что и backend
+    // `CreateAdCampaignDto.targetCountries` (`@Matches(/^[A-Z]{2}$/)`) —
+    // лучше сказать об ошибке здесь понятным текстом, чем отдать её как
+    // сырую 400 от backend. Дедуп через `Set` ДО отправки — backend
+    // отдельно требует `@ArrayUnique()`; "US, us" — очевидно один и тот же
+    // код с точки зрения пользователя, тихо схлопнуть его в один лучше,
+    // чем заставлять чинить "дубликат" самому.
+    const countries = [
+      ...new Set(
+        countriesInput
+          .split(',')
+          .map((code) => code.trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    ];
+    if (countries.some((code) => !/^[A-Z]{2}$/.test(code))) {
+      setError('Код страны должен быть из двух латинских букв (например, US, UA) через запятую');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -124,6 +145,8 @@ export function AdCampaignFormModal({
         targetPlacements: placements,
         targetCategories: categories.length > 0 ? categories : undefined,
         targetDevices: devices.length > 0 ? devices : undefined,
+        targetCountries: countries.length > 0 ? countries : undefined,
+        isAdultContent,
         startDate: startDate ? new Date(`${startDate}T00:00:00.000Z`).toISOString() : undefined,
         endDate: endDate ? new Date(`${endDate}T23:59:59.999Z`).toISOString() : undefined,
       });
@@ -286,6 +309,28 @@ export function AdCampaignFormModal({
             ))}
           </div>
         </div>
+
+        <label className={formStyles.field}>
+          <span className={formStyles.label}>
+            Страны показа (необязательно, коды через запятую — например, US, UA)
+          </span>
+          <input
+            type="text"
+            className={formStyles.input}
+            value={countriesInput}
+            onChange={(event) => setCountriesInput(event.target.value)}
+            placeholder="Пусто — показывать в любой стране"
+          />
+        </label>
+
+        <label className={checkboxStyles.checkboxOption}>
+          <input
+            type="checkbox"
+            checked={isAdultContent}
+            onChange={(event) => setAdultContent(event.target.checked)}
+          />
+          Рекламирует товары/услуги 18+
+        </label>
 
         <div className={checkboxStyles.row}>
           <label className={formStyles.field}>

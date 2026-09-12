@@ -139,7 +139,13 @@ export interface AdCampaign {
   targetCategories: BusinessCategory[];
   targetPlacements: AdPlacement[];
   targetDevices: string[];
-  targetLocales: string[];
+  /** ISO 3166-1 alpha-2 — см. backend `AdCampaign.targetCountries`'s
+   * комментарий. Пусто — любая страна; определяется по IP посетителя на
+   * backend, сам список здесь только задаёт разрешённые страны. */
+  targetCountries: string[];
+  /** Декларативный флаг «18+», НЕ реальная проверка возраста посетителя —
+   * см. backend `AdCampaign.isAdultContent`'s комментарий. */
+  isAdultContent: boolean;
   createdAt: string;
   updatedAt: string;
   creatives: AdCreative[];
@@ -159,7 +165,8 @@ export interface CreateAdCampaignInput {
   targetCategories?: BusinessCategory[];
   targetPlacements: AdPlacement[];
   targetDevices?: ('desktop' | 'tablet' | 'mobile')[];
-  targetLocales?: string[];
+  targetCountries?: string[];
+  isAdultContent?: boolean;
   startDate?: string;
   endDate?: string;
 }

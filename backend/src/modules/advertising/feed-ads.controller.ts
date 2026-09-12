@@ -6,14 +6,17 @@ import {
   HttpStatus,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { SessionAuthGuard } from '@/common/guards/session-auth.guard';
 import { AdCampaignsService } from './ad-campaigns.service';
 import { AdEngineService } from './ad-engine.service';
 import type { SelectedAdDto } from './advertising.types';
 import { RecordAdEventDto } from './dto/record-ad-event.dto';
 import { SelectFeedAdsQueryDto } from './dto/select-feed-ads.query.dto';
+import { resolveVisitorCountry } from './lib/resolve-visitor-country';
 
 const DEFAULT_SLOT_COUNT = 3;
 
@@ -39,10 +42,11 @@ export class FeedAdsController {
   ) {}
 
   @Get('select')
-  select(@Query() query: SelectFeedAdsQueryDto): Promise<SelectedAdDto[]> {
+  select(@Query() query: SelectFeedAdsQueryDto, @Req() request: Request): Promise<SelectedAdDto[]> {
     return this.adEngineService.selectCreativesForFeed(
       'feed_sidebar',
       query.count ?? DEFAULT_SLOT_COUNT,
+      resolveVisitorCountry(request.ip),
     );
   }
 
@@ -55,16 +59,24 @@ export class FeedAdsController {
    * кампании. `placement`/`publisherBusinessId` захардкожены, не берутся
    * из `dto` (см. `RecordAdEventDto.placement`'s комментарий) — лента
    * Таверны и так ВСЕГДА `'feed_sidebar'` без паблишера, доверять клиенту
-   * здесь нечего. */
+   * здесь нечего; `visitorCountry` всё же реальный, по IP этого запроса. */
   @Post('impression')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async recordImpression(@Body() dto: RecordAdEventDto): Promise<void> {
-    await this.adCampaignsService.recordImpression(dto.campaignId, 'feed_sidebar', null);
+  async recordImpression(@Body() dto: RecordAdEventDto, @Req() request: Request): Promise<void> {
+    await this.adCampaignsService.recordImpression(dto.campaignId, {
+      placement: 'feed_sidebar',
+      publisherBusinessId: null,
+      visitorCountry: resolveVisitorCountry(request.ip),
+    });
   }
 
   @Post('click')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async recordClick(@Body() dto: RecordAdEventDto): Promise<void> {
-    await this.adCampaignsService.recordClick(dto.campaignId, 'feed_sidebar', null);
+  async recordClick(@Body() dto: RecordAdEventDto, @Req() request: Request): Promise<void> {
+    await this.adCampaignsService.recordClick(dto.campaignId, {
+      placement: 'feed_sidebar',
+      publisherBusinessId: null,
+      visitorCountry: resolveVisitorCountry(request.ip),
+    });
   }
 }

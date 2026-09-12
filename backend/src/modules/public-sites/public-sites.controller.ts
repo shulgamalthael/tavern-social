@@ -10,11 +10,14 @@ import {
   Param,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import type { Request } from 'express';
 import { AdCampaignsService } from '@/modules/advertising/ad-campaigns.service';
 import { AdEngineService } from '@/modules/advertising/ad-engine.service';
 import { RecordAdEventDto } from '@/modules/advertising/dto/record-ad-event.dto';
+import { resolveVisitorCountry } from '@/modules/advertising/lib/resolve-visitor-country';
 import { SelectAdQueryDto } from '@/modules/advertising/dto/select-ad.query.dto';
 import type { SelectedAdDto } from '@/modules/advertising/advertising.types';
 import { AnalyticsService } from '@/modules/analytics/analytics.service';
@@ -139,12 +142,14 @@ export class PublicSitesController {
   async selectAd(
     @Param('businessId') businessId: string,
     @Query() query: SelectAdQueryDto,
+    @Req() request: Request,
   ): Promise<{ creative: SelectedAdDto | null }> {
     const creative = await this.adEngineService.selectCreative({
       publisherBusinessId: businessId,
       placement: query.placement,
       device: query.device,
       locale: query.locale,
+      visitorCountry: resolveVisitorCountry(request.ip),
     });
     return { creative };
   }
@@ -161,6 +166,7 @@ export class PublicSitesController {
   async recordAdImpression(
     @Param('businessId') businessId: string,
     @Body() dto: RecordAdEventDto,
+    @Req() request: Request,
   ): Promise<void> {
     await this.analyticsService.record(businessId, 'ad_impression', {
       campaignId: dto.campaignId,
@@ -169,7 +175,11 @@ export class PublicSitesController {
     // Реальное списание уже оплаченного бюджета для `billingModel: 'cpm'`
     // (см. `AdCampaignsService.recordImpression`'s комментарий) — рядом с
     // аналитикой, не вместо неё.
-    await this.adCampaignsService.recordImpression(dto.campaignId, dto.placement, businessId);
+    await this.adCampaignsService.recordImpression(dto.campaignId, {
+      placement: dto.placement,
+      publisherBusinessId: businessId,
+      visitorCountry: resolveVisitorCountry(request.ip),
+    });
   }
 
   /** Тот же принцип, что `recordAdImpression` — отдельный тип события
@@ -182,6 +192,7 @@ export class PublicSitesController {
   async recordAdClick(
     @Param('businessId') businessId: string,
     @Body() dto: RecordAdEventDto,
+    @Req() request: Request,
   ): Promise<void> {
     await this.analyticsService.record(businessId, 'ad_click', {
       campaignId: dto.campaignId,
@@ -190,7 +201,11 @@ export class PublicSitesController {
     // Реальное списание уже оплаченного бюджета для `billingModel: 'cpc'`
     // (см. `AdCampaignsService.recordClick`'s комментарий) — рядом с
     // аналитикой, не вместо неё.
-    await this.adCampaignsService.recordClick(dto.campaignId, dto.placement, businessId);
+    await this.adCampaignsService.recordClick(dto.campaignId, {
+      placement: dto.placement,
+      publisherBusinessId: businessId,
+      visitorCountry: resolveVisitorCountry(request.ip),
+    });
   }
 
   /** Оформление заказа с анонимной витрины (см. `entities/cart`/`Checkout`

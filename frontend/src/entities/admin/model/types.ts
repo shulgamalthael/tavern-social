@@ -276,6 +276,12 @@ export interface AdminAdCampaign {
   clicksServed: number;
   targetCategories: BusinessCategory[];
   targetPlacements: AdPlacement[];
+  /** ISO 3166-1 alpha-2 — см. backend `AdCampaign.targetCountries`'s
+   * комментарий. Пусто — любая страна. */
+  targetCountries: string[];
+  /** Декларативный флаг «18+» — см. backend `AdCampaign.isAdultContent`'s
+   * комментарий, только сигнал администратору при модерации. */
+  isAdultContent: boolean;
   createdAt: string;
   creatives: AdminAdCreative[];
 }

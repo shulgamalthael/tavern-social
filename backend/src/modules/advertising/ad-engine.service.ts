@@ -6,6 +6,7 @@ import { REDIS_CLIENT } from '@/infrastructure/redis/redis-client.provider';
 import type { SelectedAdDto } from './advertising.types';
 import { AD_PLACEMENT_ALLOWED_FORMATS } from './lib/ad-placement-config';
 import { calculateEffectiveCpmCents } from './lib/effective-bid';
+import { matchesVisitorCountry } from './lib/matches-visitor-country';
 
 export interface SelectCreativeInput {
   publisherBusinessId: string;
@@ -16,6 +17,17 @@ export interface SelectCreativeInput {
    * позже. */
   device?: string;
   locale?: string;
+  /** Реальная фильтрация по `AdCampaign.targetCountries` (см. её
+   * комментарий в schema.prisma) — В ОТЛИЧИЕ от `device`/`locale` выше,
+   * НЕ клиентский параметр: вычисляется контроллером по IP посетителя
+   * (`resolveVisitorCountry`), не приходит из query. Доверять клиентскому
+   * значению здесь означало бы, что гео-ограничение обходится одним
+   * поддельным параметром запроса — весь смысл был бы потерян. `null` —
+   * страну определить не удалось (локальный/приватный IP, нет данных
+   * GeoIP) — кампании с непустым `targetCountries` в этом случае не
+   * показываются (безопасный дефолт), кампании без ограничения — как
+   * обычно. */
+  visitorCountry?: string | null;
 }
 
 const CACHE_TTL_SECONDS = 60;
@@ -47,7 +59,11 @@ interface EligibleCandidate {
  * сравнивают их сырые центы как будто это одна валюта; названо явно здесь,
  * не тихо, но не исправлено в этом слайсе — требует отдельного пересмотра
  * горячего пути выдачи (Redis-кэш пула хранит сырые поля кампаний, не
- * заранее приведённые к USD).
+ * заранее приведённые к USD). Реальное региональное ограничение
+ * (`AdCampaign.targetCountries`, `resolveVisitorCountry`) закрывает
+ * §68's "restricted-category/age/region rule engine" в части region —
+ * фильтруется после чтения из кэша (`filterByCountry`), не запечено в
+ * него: страна своя у каждого посетителя, а кэш общий для всех.
  */
 @Injectable()
 export class AdEngineService {
@@ -65,7 +81,10 @@ export class AdEngineService {
     });
     if (!publisher) return null;
 
-    const candidates = await this.getEligibleCandidates(publisher.category, input.placement);
+    const candidates = this.filterByCountry(
+      await this.getEligibleCandidates(publisher.category, input.placement),
+      input.visitorCountry,
+    );
     if (candidates.length === 0) return null;
 
     // Ранжирование по эффективной ставке (см. `calculateEffectiveCpmCents`
@@ -104,8 +123,15 @@ export class AdEngineService {
    * креатив на кампанию за вызов — иначе один рекламодатель занял бы
    * несколько слотов своими разными креативами.
    */
-  async selectCreativesForFeed(placement: AdPlacement, count: number): Promise<SelectedAdDto[]> {
-    const candidates = await this.getEligibleCandidates(null, placement);
+  async selectCreativesForFeed(
+    placement: AdPlacement,
+    count: number,
+    visitorCountry: string | null,
+  ): Promise<SelectedAdDto[]> {
+    const candidates = this.filterByCountry(
+      await this.getEligibleCandidates(null, placement),
+      visitorCountry,
+    );
     if (candidates.length === 0) return [];
 
     const bestPerCampaign = new Map<string, EligibleCandidate>();
@@ -145,6 +171,7 @@ export class AdEngineService {
   async getCompetingEffectiveBidsCents(
     publisherBusinessId: string | null,
     placement: AdPlacement,
+    visitorCountry: string | null,
   ): Promise<number[]> {
     let publisherCategory: BusinessCategory | null = null;
     if (publisherBusinessId) {
@@ -156,8 +183,27 @@ export class AdEngineService {
       publisherCategory = publisher.category;
     }
 
-    const candidates = await this.getEligibleCandidates(publisherCategory, placement);
+    const candidates = this.filterByCountry(
+      await this.getEligibleCandidates(publisherCategory, placement),
+      visitorCountry,
+    );
     return candidates.map((candidate) => calculateEffectiveCpmCents(candidate.campaign));
+  }
+
+  /** `AdCampaign.targetCountries` — НЕ запечено в `getEligibleCandidates`'s
+   * Redis-кэш (тот кэшируется по `(категория паблишера, placement)`,
+   * ОБЩИЙ для всех посетителей этой пары, а страна — своя у каждого
+   * посетителя) — фильтруется здесь, после чтения из кэша, отдельным
+   * дешёвым проходом по уже небольшому пулу. Пусто в `targetCountries` —
+   * кампания видна из любой страны, та же семантика "пусто значит везде",
+   * что у `targetCategories`. */
+  private filterByCountry(
+    candidates: EligibleCandidate[],
+    visitorCountry: string | null | undefined,
+  ): EligibleCandidate[] {
+    return candidates.filter(({ campaign }) =>
+      matchesVisitorCountry(campaign.targetCountries, visitorCountry),
+    );
   }
 
   /** Кэшируется по `(категория паблишера, placement)` — НЕ по конкретному
